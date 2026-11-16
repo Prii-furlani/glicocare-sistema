@@ -1,0 +1,8 @@
+{
+  "short_name": "GlicoCare",
+  "name": "GlicoCare — Acolhimento e Saúde Integrada em DM1",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#7C533F",
+  "background_color": "#EAE4D9"
+}

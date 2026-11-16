@@ -1,0 +1,61 @@
+/* ==========================================================================
+   ARQUIVO: variables.css
+   OBJETIVO: Centralizar todos os Design Tokens (variáveis CSS) da plataforma
+   GlicoCare, fiel ao layout editorial "Porto Seguro" enviado pela usuária.
+   ========================================================================== */
+
+/* INÍCIO DOS DESIGN TOKENS (VARIÁVEIS GLOBAIS) */
+:root {
+  /* --- Paleta de Cores Oficial ("Porto Seguro" - memory.md & Design Editorial) --- */
+  --cor-fundo: #EAE4D9;              /* Fundo principal: Bege neutro suave */
+  --cor-superficie: #F6F3EE;         /* Superfícies e Cards: Branco acolhedor / marfim suave */
+  --cor-texto: #2E2824;              /* Títulos editoriais e textos fortes: Café quente escuro */
+  --cor-texto-suave: #5C534C;        /* Parágrafos e subtítulos serenos */
+  --cor-primaria: #7C533F;           /* Destaques em itálico, subtítulos e selos: Terracota Executivo */
+  --cor-primaria-hover: #634130;     /* Variação mais escura do terracota */
+  --cor-cta: #3B7E48;                /* Botões primários, sublinhados curvos e pontos de status: Verde alívio */
+  --cor-cta-hover: #2F683A;          /* Hover do botão verde alívio */
+  --cor-cta-suave: #E5F2E7;          /* Fundo suave verde para feedbacks e selos */
+  --cor-taupe: #9E8C7A;              /* Terceiro tom dos avatares da rede de apoio */
+  --cor-branco: #FFFFFF;             /* Branco puro */
+
+  /* --- Bordas, Divisores e Sombras Padronizadas --- */
+  --cor-borda: #C7BAA7;              /* Bordas e divisores em Bege fendi */
+  --cor-borda-suave: #D8CFC0;        /* Borda delicada para pílulas e containers */
+  --cor-borda-foco: #7C533F;         /* Cor de foco acessível */
+  --sombra-card: 0 8px 28px rgba(46, 40, 36, 0.06);
+  --sombra-card-hover: 0 14px 34px rgba(46, 40, 36, 0.11);
+  --sombra-flutuante: 0 12px 32px rgba(46, 40, 36, 0.16);
+
+  /* --- Tipografia Oficial --- */
+  --fonte-titulo: 'Fraunces', Georgia, serif;
+  --fonte-corpo: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* --- Escala Tipográfica Editorial --- */
+  --tamanho-h1: clamp(2.5rem, 5vw, 3.85rem);     /* Título Hero editorial amplo como no design */
+  --tamanho-h2: clamp(1.85rem, 3.2vw, 2.55rem);  /* Títulos de seção em Fraunces */
+  --tamanho-h3: clamp(1.22rem, 1.9vw, 1.45rem);  /* Títulos internos de cards */
+  --tamanho-corpo: 1rem;
+  --tamanho-corpo-leitura: 1.12rem;
+  --tamanho-pequeno: 0.92rem;
+  --tamanho-micro: 0.76rem;
+
+  /* --- Espaçamentos Responsivos e Raios de Borda --- */
+  --espaco-xs: 0.4rem;
+  --espaco-sm: 0.75rem;
+  --espaco-md: 1.15rem;
+  --espaco-lg: 1.65rem;
+  --espaco-xl: 2.25rem;
+  --espaco-2xl: clamp(3.25rem, 6.5vw, 5.25rem);
+
+  --raio-pequeno: 8px;
+  --raio-medio: 12px;
+  --raio-card: 16px;
+  --raio-card-grande: 22px;
+  --raio-pilula: 9999px;
+
+  --largura-container: 1160px;
+  --largura-leitura: 840px;
+  --transicao-padrao: 0.22s ease;
+}
+/* FIM DOS DESIGN TOKENS (VARIÁVEIS GLOBAIS) */

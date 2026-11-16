@@ -1,0 +1,1592 @@
+/* ==========================================================================
+   ARQUIVO: index.css
+   OBJETIVO: Folha de estilo global da plataforma GlicoCare. Implementa:
+   - Experiência Híbrida Responsiva da Seção de Conteúdos:
+     * Desktop: Grade (Grid) estruturada da Biblioteca de Conteúdos;
+     * Mobile (<= 768px): Feed Vertical fluido e contínuo otimizado para
+       rolagem com o polegar, cards empilhados com border-radius de 12px e
+       superfície em marfim suave (#F6F3EE);
+   - Estilos fiéis do Manifesto, FAQ numerado (01..05) e Footer.
+   ========================================================================== */
+
+@import './styles/variables.css';
+
+/* INÍCIO DO RESET E ESTILOS BASE DO DOCUMENTO */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
+}
+
+body {
+  background-color: var(--cor-fundo);      /* #EAE4D9 */
+  color: var(--cor-texto);                 /* #2E2824 */
+  font-family: var(--fonte-corpo);         /* Plus Jakarta Sans */
+  font-size: var(--tamanho-corpo);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .serif-title {
+  font-family: var(--fonte-titulo);        /* Fraunces */
+  color: var(--cor-texto);
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+}
+
+h1 { font-size: var(--tamanho-h1); }
+h2 { font-size: var(--tamanho-h2); }
+h3 {
+  font-size: var(--tamanho-h3);
+  font-weight: 400;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transicao-padrao);
+}
+/* FIM DO RESET E ESTILOS BASE DO DOCUMENTO */
+
+/* INÍCIO DOS ELEMENTOS EDITORIAIS */
+.palavra-destaque-segura {
+  font-style: italic;
+  color: var(--cor-primaria);
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.08em;
+}
+
+.palavra-destaque-curva {
+  position: absolute;
+  left: -2%;
+  bottom: -6px;
+  width: 104%;
+  height: 12px;
+  pointer-events: none;
+}
+
+.texto-italico-terracota {
+  font-family: var(--fonte-titulo);
+  font-style: italic;
+  color: var(--cor-primaria);
+}
+
+.eyebrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  padding: 0.48rem 1.15rem;
+  font-size: var(--tamanho-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cor-primaria);
+}
+
+.eyebrow-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--cor-cta);
+  flex-shrink: 0;
+}
+
+.section-line-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cor-primaria);
+  margin-bottom: 1rem;
+}
+
+.section-line-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  background-color: var(--cor-primaria);
+}
+
+.section-line-eyebrow--claro {
+  color: #D2B49C;
+}
+
+.section-line-eyebrow--claro::before {
+  background-color: #D2B49C;
+}
+/* FIM DOS ELEMENTOS EDITORIAIS */
+
+/* INÍCIO DOS CONTAINERS E GRIDS RESPONSIVOS */
+.container {
+  max-width: var(--largura-container);
+  margin: 0 auto;
+  padding: 0 var(--espaco-lg);
+}
+
+.container-leitura {
+  max-width: var(--largura-leitura);
+  margin: 0 auto;
+  padding: 0 var(--espaco-lg);
+}
+
+.grid-cards,
+.grid-3-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--espaco-lg);
+}
+
+.grid-2-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.75rem;
+}
+
+.section-spacing {
+  padding: var(--espaco-2xl) 0;
+}
+/* FIM DOS CONTAINERS E GRIDS RESPONSIVOS */
+
+/* INÍCIO DA EXPERIÊNCIA HÍBRIDA RESPONSIVA DA SEÇÃO DE CONTEÚDOS
+   - DESKTOP (> 768px): Grade estruturada da Biblioteca de Conteúdos
+   - MOBILE (<= 768px): Feed Vertical fluido otimizado para rolagem com o polegar
+   ========================================================================== */
+
+/* Barra de filtros por categoria (rolagem horizontal suave com o polegar no mobile) */
+.conteudos-filtros-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-bottom: 2.25rem;
+}
+
+/* Container Híbrido: Grid de 2 colunas no Desktop -> Feed Vertical empilhado no Mobile */
+.conteudos-hibrido-container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem;
+  margin-bottom: 2.75rem;
+}
+
+/* Card de Conteúdo (Marfim suave #F6F3EE) */
+.biblioteca-card {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--sombra-card);
+  transition: transform var(--transicao-padrao), box-shadow var(--transicao-padrao);
+}
+
+.biblioteca-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.biblioteca-card__topo {
+  position: relative;
+  height: 235px;
+  overflow: hidden;
+}
+
+.biblioteca-card__circulos-deco {
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  border: 1px solid rgba(246, 243, 238, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.biblioteca-card__circulos-deco::after {
+  content: '';
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  border: 1px solid rgba(246, 243, 238, 0.24);
+}
+
+.biblioteca-card__seta-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #B5CBB9;
+  background-color: transparent;
+  color: var(--cor-cta);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  transition: all var(--transicao-padrao);
+}
+
+.biblioteca-card:hover .biblioteca-card__seta-btn,
+.biblioteca-card__seta-btn--solido {
+  background-color: var(--cor-cta);
+  border-color: var(--cor-cta);
+  color: var(--cor-branco);
+}
+
+/* Indicador discreto de modo de visualização (ajuda a evidenciar a adaptação híbrida) */
+.indicador-modo-feed {
+  display: none;
+}
+
+/* REGRAS EXCLUSIVAS DO MODO MOBILE: FEED VERTICAL CONTÍNUO (<= 768px) */
+@media (max-width: 768px) {
+  /* Filtros deslizáveis com o polegar sem quebrar linha de forma truncada */
+  .conteudos-filtros-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.35rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .conteudos-filtros-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .conteudos-filtros-bar .filtro-pilula {
+    flex-shrink: 0;
+  }
+
+  /* Transforma o Grid Desktop em um Feed Vertical fluido e contínuo */
+  .conteudos-hibrido-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem; /* Espaçamento confortável para rolagem contínua com o polegar */
+  }
+
+  /* Cards no Feed Vertical Mobile: border-radius exato de 12px e fundo #F6F3EE */
+  .biblioteca-card {
+    background-color: #F6F3EE;
+    border-radius: 12px;
+    border: 1px solid var(--cor-borda);
+  }
+
+  /* Altura da capa ajustada para leitura ágil no feed mobile */
+  .biblioteca-card__topo {
+    height: 185px;
+  }
+
+  /* Área de toque ampliada no rodapé do post para o polegar */
+  .biblioteca-card__seta-btn {
+    width: 44px;
+    height: 44px;
+    background-color: var(--cor-cta);
+    border-color: var(--cor-cta);
+    color: var(--cor-branco);
+  }
+
+  .indicador-modo-feed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cor-primaria);
+    margin-bottom: 0.85rem;
+  }
+}
+/* FIM DA EXPERIÊNCIA HÍBRIDA RESPONSIVA DA SEÇÃO DE CONTEÚDOS */
+
+/* INÍCIO DOS BOTÕES E PÍLULAS */
+.gc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  font-family: var(--fonte-corpo);
+  font-weight: 600;
+  font-size: 0.94rem;
+  padding: 0.95rem 1.75rem;
+  border-radius: var(--raio-pilula);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transicao-padrao);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.gc-btn--primario {
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+  box-shadow: 0 6px 18px rgba(59, 126, 72, 0.22);
+}
+
+.gc-btn--primario:hover:not(:disabled) {
+  background-color: var(--cor-cta-hover);
+  transform: translateY(-1px);
+}
+
+.gc-btn--secundario,
+.gc-btn--pilula-seta {
+  background-color: transparent;
+  color: var(--cor-texto);
+  border-color: var(--cor-borda);
+}
+
+.gc-btn--secundario:hover:not(:disabled),
+.gc-btn--pilula-seta:hover:not(:disabled) {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+}
+
+.gc-btn--contorno-verde {
+  background-color: transparent;
+  color: var(--cor-cta);
+  border: 1px solid var(--cor-cta);
+}
+
+.gc-btn--contorno-verde:hover {
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+}
+
+.filtro-pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: var(--raio-pilula);
+  font-family: var(--fonte-corpo);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--cor-borda);
+  background-color: #EFECE5;
+  color: var(--cor-texto);
+  cursor: pointer;
+  transition: all var(--transicao-padrao);
+}
+
+.filtro-pilula--ativo {
+  background-color: var(--cor-cta);
+  border-color: var(--cor-cta);
+  color: var(--cor-branco);
+}
+/* FIM DOS BOTÕES E PÍLULAS */
+
+/* INÍCIO DA REDE DE APOIO E SHOWCASE DO LUFY */
+.rede-apoio-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: var(--espaco-lg);
+}
+
+.rede-apoio-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.rede-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cor-branco);
+  border: 2.5px solid var(--cor-fundo);
+}
+
+.rede-avatar + .rede-avatar {
+  margin-left: -10px;
+}
+
+.hero-lufy-showcase {
+  position: relative;
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-card-grande);
+  padding: 1.35rem;
+  box-shadow: var(--sombra-card);
+  margin-top: 2rem;
+}
+
+.lufy-dark-bubble {
+  position: absolute;
+  top: -18px;
+  right: 28px;
+  z-index: 5;
+  background-color: var(--cor-texto);
+  color: var(--cor-superficie);
+  padding: 1.1rem 1.35rem;
+  border-radius: 14px;
+  max-width: 320px;
+  box-shadow: 0 12px 28px rgba(46, 40, 36, 0.22);
+  text-align: left;
+}
+
+.lufy-dark-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  right: 42px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 10px solid var(--cor-texto);
+}
+/* FIM DA REDE DE APOIO E SHOWCASE DO LUFY */
+
+/* INÍCIO DOS CARDS DE DIFERENCIAIS, ESPECIALISTAS E PLANOS */
+.card-surface,
+.gc-card {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: var(--raio-card);
+  padding: var(--espaco-xl);
+  box-shadow: var(--sombra-card);
+}
+
+.diferencial-card {
+  background-color: var(--cor-superficie); /* Branco Acolhedor #F6F3EE */
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: 12px; /* Bordas suaves e arredondadas (12px) conforme Seção 5 do memory.md */
+  padding: 2.1rem 1.85rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all var(--transicao-padrao);
+}
+
+.diferencial-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-card-hover);
+  border-color: var(--cor-borda);
+}
+
+.diferencial-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #E7E0D3;
+  color: var(--cor-primaria);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transicao-padrao), color var(--transicao-padrao);
+}
+
+.diferencial-card:hover .diferencial-icon-circle {
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+}
+
+.especialista-card {
+  background-color: #EFECE4;
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: 18px;
+  padding: 1.85rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform var(--transicao-padrao), box-shadow var(--transicao-padrao);
+}
+
+.especialista-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.especialista-cta-bar {
+  width: 100%;
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+  border-radius: var(--raio-pilula);
+  padding: 0.9rem 1.35rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color var(--transicao-padrao);
+}
+
+.especialista-cta-bar:hover {
+  background-color: var(--cor-cta-hover);
+}
+
+.secao-escura-planos {
+  background-color: #2B2420;
+  color: var(--cor-superficie);
+  padding: var(--espaco-2xl) 0;
+}
+
+.plano-card-claro {
+  position: relative;
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto);
+  border: 2.5px solid var(--cor-cta);
+  border-radius: 20px;
+  padding: 2.5rem 2.25rem 2.15rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.plano-badge-flutuante {
+  position: absolute;
+  top: -15px;
+  left: 28px;
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.42rem 1.1rem;
+  border-radius: var(--raio-pilula);
+}
+
+.plano-card-escuro {
+  background-color: #352E29;
+  color: var(--cor-superficie);
+  border: 1px solid #4A413B;
+  border-radius: 20px;
+  padding: 2.35rem 2.25rem 2.15rem;
+  margin-bottom: 1.75rem;
+}
+/* FIM DOS CARDS DE DIFERENCIAIS, ESPECIALISTAS E PLANOS */
+
+/* INÍCIO DO ACORDEÃO EDITORIAL NUMERADO DO FAQ (01..05) */
+.faq-lista-editorial {
+  border-top: 1px solid var(--cor-borda);
+}
+
+.faq-linha-editorial {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.faq-botao-editorial {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 1.65rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--fonte-corpo);
+}
+
+.faq-numero-editorial {
+  font-family: var(--fonte-titulo);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--cor-primaria);
+  min-width: 28px;
+}
+
+.faq-titulo-editorial {
+  flex: 1;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+}
+
+.faq-resposta-editorial {
+  padding: 0 0 1.65rem 2.95rem;
+  color: var(--cor-texto-suave);
+  font-size: 0.98rem;
+  max-width: 680px;
+  line-height: 1.65;
+}
+
+.badge,
+.gc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.9rem;
+  border-radius: var(--raio-pilula);
+  font-size: var(--tamanho-micro);
+  font-weight: 700;
+  background-color: var(--cor-fundo);
+  color: var(--cor-primaria);
+  border: 1px solid var(--cor-borda);
+}
+
+/* Inputs e Formulários */
+.gc-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: var(--espaco-md);
+}
+
+.gc-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--cor-texto);
+}
+
+.gc-input,
+.gc-select,
+.gc-textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: var(--raio-medio);
+  border: 1.5px solid var(--cor-borda);
+  background-color: var(--cor-branco);
+  color: var(--cor-texto);
+  font-family: var(--fonte-corpo);
+  font-size: 0.96rem;
+}
+/* FIM DO ACORDEÃO EDITORIAL DO FAQ E INPUTS */
+
+/* ==========================================================================
+   INÍCIO DOS ESTILOS DA PÁGINA DE LEITURA COMPLETA (ARTIGO / GUIA)
+   ========================================================================== */
+
+/* Container centralizado focado em leitura serena e sem poluição visual */
+.pagina-leitura-container {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--espaco-xl) var(--espaco-md) var(--espaco-2xl);
+}
+
+/* Superfície de leitura em Branco Acolhedor / Marfim Suave (#F6F3EE) */
+.artigo-superficie-leitura {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: 22px;
+  padding: 3.25rem 3.5rem;
+  box-shadow: var(--sombra-card);
+  margin-bottom: var(--espaco-xl);
+}
+
+/* Indicador de Categoria + Tempo de Leitura no topo (ex: "🐾 Com o Lufy • 6 min de leitura") */
+.artigo-indicador-topo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background-color: var(--cor-fundo); /* #EAE4D9 */
+  color: var(--cor-primaria);         /* #7C533F */
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* Título principal grande em fonte serifada Fraunces com generoso entrelinhas */
+.artigo-titulo-principal {
+  font-family: var(--fonte-titulo); /* Fraunces */
+  font-size: clamp(2rem, 3.6vw, 2.85rem);
+  line-height: 1.22;
+  color: var(--cor-texto); /* #2E2824 */
+  margin-bottom: 1.25rem;
+  letter-spacing: -0.015em;
+}
+
+/* Subtítulo introdutório acolhedor preparando o leitor */
+.artigo-subtitulo-acolhedor {
+  font-family: var(--fonte-corpo);
+  font-size: 1.18rem;
+  line-height: 1.65;
+  color: var(--cor-primaria); /* Terracota Executivo #7C533F */
+  font-weight: 500;
+  padding-bottom: 1.85rem;
+  margin-bottom: 2.25rem;
+  border-bottom: 1px solid var(--cor-borda-suave);
+}
+
+/* Corpo do texto em Plus Jakarta Sans (18px) e line-height 1.7 para leitura fluida */
+.artigo-corpo-fluido {
+  font-family: var(--fonte-corpo); /* Plus Jakarta Sans */
+  font-size: 18px;                 /* 1.125rem - conforto visual sem cansaço */
+  line-height: 1.7;                /* Entrelinhas generoso */
+  color: var(--cor-texto);         /* Café Quente #2E2824 */
+}
+
+.artigo-corpo-fluido p {
+  margin-bottom: 1.65rem;
+}
+
+.artigo-corpo-fluido h2 {
+  font-family: var(--fonte-titulo);
+  font-size: 1.55rem;
+  line-height: 1.3;
+  color: var(--cor-primaria); /* #7C533F */
+  margin: 2.4rem 0 1rem;
+}
+
+/* Blocos de imagens ilustrativas com border-radius 12px e legenda em itálico */
+.artigo-bloco-imagem {
+  margin: 2.25rem 0;
+  background-color: var(--cor-fundo);
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--cor-borda-suave);
+}
+
+.artigo-bloco-imagem img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: 12px; /* Cantos arredondados 12px solicitados */
+  display: block;
+}
+
+.artigo-bloco-imagem figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--cor-texto-suave);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Caixa de destaque "Respiro do Guardião" com barra lateral em Verde Alívio ou Terracota */
+.respiro-do-guardiao {
+  margin: 2.25rem 0;
+  padding: 1.5rem 1.75rem;
+  border-radius: 14px;
+  background-color: var(--cor-fundo); /* #EAE4D9 suave sobre #F6F3EE */
+  border-left: 5px solid var(--cor-cta); /* Barra lateral Verde Alívio #3B7E48 */
+  box-shadow: 0 4px 16px rgba(46, 40, 36, 0.04);
+}
+
+.respiro-do-guardiao.variante-terracota {
+  border-left-color: var(--cor-primaria); /* Barra lateral Terracota Executivo #7C533F */
+  background-color: #EFEAE0;
+}
+
+.respiro-guardiao-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cor-cta);
+  margin-bottom: 0.55rem;
+}
+
+.respiro-do-guardiao.variante-terracota .respiro-guardiao-selo {
+  color: var(--cor-primaria);
+}
+
+.respiro-guardiao-texto {
+  font-family: var(--fonte-titulo);
+  font-size: 1.15rem;
+  line-height: 1.55;
+  color: var(--cor-texto);
+  font-style: italic;
+  margin: 0 !important;
+}
+
+/* Card de encerramento acolhedor com mensagem do mascote Lufy */
+.artigo-card-encerramento-lufy {
+  margin-top: 2.75rem;
+  padding: 1.85rem 2rem;
+  border-radius: 18px;
+  background-color: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.artigo-card-encerramento-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--cor-cta);
+  background-color: var(--cor-superficie);
+  flex-shrink: 0;
+}
+
+/* Seção interativa "Comentários e Acolhimento em Família" */
+.artigo-secao-comentarios {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda-suave);
+  border-radius: 22px;
+  padding: 3rem 3.5rem;
+  box-shadow: var(--sombra-card);
+}
+
+.comentario-familia-card {
+  background-color: var(--cor-fundo); /* #EAE4D9 */
+  border: 1px solid var(--cor-borda-suave);
+  border-left: 4px solid var(--cor-cta); /* #3B7E48 */
+  border-radius: 14px;
+  padding: 1.35rem 1.5rem;
+  transition: transform var(--transicao-padrao);
+}
+
+/* Responsividade Mobile para a Página de Leitura */
+@media (max-width: 768px) {
+  .artigo-superficie-leitura,
+  .artigo-secao-comentarios {
+    padding: 1.75rem 1.35rem;
+    border-radius: 16px;
+  }
+
+  .artigo-card-encerramento-lufy {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .form-grid-nome-cidade {
+    grid-template-columns: 1fr !important;
+  }
+}
+/* ==========================================================================
+   FIM DOS ESTILOS DA PÁGINA DE LEITURA COMPLETA (ARTIGO / GUIA)
+   ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DO COMPONENTE CTA SECUNDÁRIO EM BARRA/PÍLULA ("SUGERIR UM CONTEÚDO ↗")
+   ========================================================================== */
+
+/* Wrapper centralizado logo abaixo da grade de cards da biblioteca */
+.cta-sugerir-conteudo-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Botão largo em formato de pílula horizontal (border-radius >= 30px / 999px) */
+.cta-pilula-sugerir {
+  width: 100%;
+  max-width: 680px;
+  min-height: 62px;
+  padding: 0.95rem 2.25rem;
+  border-radius: 999px; /* Pílula horizontal completa (> 30px) */
+  background-color: var(--cor-superficie); /* Branco Acolhedor / Marfim #F6F3EE */
+  border: 1.5px solid var(--cor-cta);      /* Outline delicado em Verde Alívio #3B7E48 */
+  color: var(--cor-cta);                   /* Texto e ícone em Verde Alívio #3B7E48 */
+  font-family: var(--fonte-corpo);         /* Plus Jakarta Sans */
+  font-size: 1rem;                         /* 16px confortável */
+  font-weight: 600;                        /* SemiBold */
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(46, 40, 36, 0.04);
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.22s ease,
+    box-shadow 0.25s ease;
+}
+
+/* Variante com outline Terracota Executivo (#7C533F) e texto Café Quente (#2E2824) */
+.cta-pilula-sugerir--terracota {
+  border-color: var(--cor-primaria); /* #7C533F */
+  color: var(--cor-texto);           /* #2E2824 */
+}
+
+/* Variante com fundo transparente */
+.cta-pilula-sugerir--transparente {
+  background-color: transparent;
+}
+
+/* Hover sutil e elegante mantendo a serenidade visual */
+.cta-pilula-sugerir:hover {
+  background-color: #EDF3EC;
+  border-color: var(--cor-cta-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 126, 72, 0.11);
+}
+
+.cta-pilula-sugerir--terracota:hover {
+  background-color: #EFEAE1;
+  border-color: var(--cor-primaria);
+  box-shadow: 0 8px 24px rgba(124, 83, 63, 0.12);
+}
+
+/* Círculo discreto que envolve a seta diagonal (↗) */
+.cta-pilula-sugerir-icone {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(59, 126, 72, 0.35);
+  background-color: rgba(59, 126, 72, 0.08);
+  color: var(--cor-cta);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.98rem;
+  line-height: 1;
+  transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+}
+
+.cta-pilula-sugerir--terracota .cta-pilula-sugerir-icone {
+  border-color: rgba(124, 83, 63, 0.35);
+  background-color: rgba(124, 83, 63, 0.08);
+  color: var(--cor-primaria);
+}
+
+.cta-pilula-sugerir:hover .cta-pilula-sugerir-icone {
+  transform: translate(2px, -2px);
+  background-color: var(--cor-cta);
+  color: var(--cor-branco);
+}
+
+.cta-pilula-sugerir--terracota:hover .cta-pilula-sugerir-icone {
+  background-color: var(--cor-primaria);
+  color: var(--cor-branco);
+}
+
+/* Painel expansível de engajamento comunitário ao clicar na pílula */
+.cta-sugerir-painel-comunidade {
+  width: 100%;
+  max-width: 680px;
+  margin-top: 1rem;
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda);
+  border-radius: 20px;
+  padding: 1.75rem 2rem;
+  box-shadow: var(--sombra-card);
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .cta-pilula-sugerir {
+    padding: 0.85rem 1.35rem;
+    min-height: 56px;
+    font-size: 0.95rem;
+  }
+
+  .cta-sugerir-painel-comunidade {
+    padding: 1.35rem 1.25rem;
+  }
+}
+/* ==========================================================================
+   FIM DO COMPONENTE CTA SECUNDÁRIO EM BARRA/PÍLULA ("SUGERIR UM CONTEÚDO ↗")
+   ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DOS ESTILOS DO WIDGET DE CHAT FLUTUANTE DO LUFY (LufyChatbot.jsx)
+   ========================================================================== */
+
+/* Posicionamento fixo no canto inferior direito (bottom: 24px, right: 24px) */
+.lufy-widget-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--fonte-corpo);
+}
+
+/* Janela do Chat quando aberta */
+.lufy-chat-window {
+  width: 410px;
+  max-width: calc(100vw - 32px);
+  background-color: #EFEAE1; /* Fundo creme acolhedor da área de mensagens */
+  border: 1px solid var(--cor-borda);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(46, 40, 36, 0.22);
+  overflow: hidden;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabeçalho em Terracota Executivo (#7C533F) fiel às imagens */
+.lufy-chat-header {
+  background-color: var(--cor-primaria); /* #7C533F */
+  color: var(--cor-superficie);
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.lufy-chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.lufy-chat-header-avatar-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.lufy-chat-header-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: var(--cor-superficie);
+  border: 2px solid rgba(246, 243, 238, 0.85);
+}
+
+.lufy-chat-status-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #59A96A; /* Verde indicador ativo */
+  border: 2px solid var(--cor-primaria);
+}
+
+.lufy-chat-header-title {
+  font-family: var(--fonte-titulo); /* Fraunces */
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.15;
+  margin: 0 0 0.2rem 0;
+}
+
+.lufy-chat-header-subtitle {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #E7D8C9;
+}
+
+.lufy-chat-close-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: 1px solid rgba(246, 243, 238, 0.32);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.lufy-chat-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Corpo rolável da conversa */
+.lufy-chat-body {
+  padding: 1.25rem 1.2rem 1.1rem;
+  max-height: 470px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Linha de mensagem do Lufy com mini selo circular à esquerda */
+.lufy-msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.lufy-msg-mini-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--cor-borda);
+  background-color: var(--cor-superficie);
+  flex-shrink: 0;
+}
+
+.lufy-msg-bubble {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid #DED6C8;
+  border-radius: 18px 18px 18px 6px;
+  padding: 1rem 1.15rem;
+  color: var(--cor-texto); /* #2E2824 */
+  font-size: 0.95rem;
+  line-height: 1.55;
+  box-shadow: 0 2px 8px rgba(46, 40, 36, 0.03);
+  flex: 1;
+}
+
+/* Coluna indentada para os cards complementares da resposta */
+.lufy-response-thread {
+  padding-left: 2.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* Pílula de escolha do usuário alinhada à direita em Verde Alívio (#3B7E48) */
+.lufy-user-choice-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.15rem 0;
+}
+
+.lufy-user-choice-bubble {
+  background-color: var(--cor-cta); /* #3B7E48 */
+  color: #FFFFFF;
+  border-radius: 18px 18px 4px 18px;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(59, 126, 72, 0.18);
+}
+
+/* Lista dos 4 Botões de Cenários Rápidos */
+.lufy-scenarios-section {
+  padding-left: 2.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lufy-scenarios-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cor-primaria); /* #7C533F */
+  margin-bottom: 0.15rem;
+}
+
+.lufy-scenario-btn {
+  width: 100%;
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid #D9D0C1;
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--fonte-corpo);
+  transition: transform 0.18s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lufy-scenario-btn:hover {
+  border-color: var(--cor-primaria);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(46, 40, 36, 0.06);
+}
+
+.lufy-scenario-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #EAE3D7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.lufy-scenario-label {
+  flex: 1;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+  line-height: 1.35;
+}
+
+.lufy-scenario-arrow {
+  color: var(--cor-texto);
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+/* Card de Orientação Médica Obrigatória */
+.lufy-medical-disclaimer-card {
+  background-color: #FAF6F0;
+  border: 1px solid #E3D6C7;
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+}
+
+.lufy-medical-disclaimer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cor-primaria); /* #7C533F */
+  margin-bottom: 0.5rem;
+}
+
+.lufy-medical-disclaimer-text {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--cor-texto);
+  margin: 0;
+}
+
+/* Card de Sugestão de Conteúdo Contextual ("PARA LER COM CALMA") */
+.lufy-content-suggestion-card {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid #BDD4C0;
+  border-radius: 16px;
+  padding: 1.05rem 1.15rem;
+}
+
+.lufy-content-suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cor-cta); /* #3B7E48 */
+  margin-bottom: 0.55rem;
+}
+
+.lufy-content-suggestion-category {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cor-primaria);
+  margin-bottom: 0.25rem;
+}
+
+.lufy-content-suggestion-title {
+  font-family: var(--fonte-titulo); /* Fraunces */
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+  line-height: 1.25;
+  margin: 0 0 0.4rem 0;
+}
+
+.lufy-content-suggestion-desc {
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--cor-texto-suave);
+  margin: 0 0 0.9rem 0;
+}
+
+.lufy-content-suggestion-cta {
+  width: 100%;
+  background-color: var(--cor-cta); /* #3B7E48 */
+  color: #FFFFFF;
+  border-radius: var(--raio-pilula);
+  padding: 0.72rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
+}
+
+.lufy-content-suggestion-cta:hover {
+  background-color: var(--cor-cta-hover);
+}
+
+/* Botão link "Escolher outro cenário" */
+.lufy-reset-scenario-btn {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--fonte-corpo);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--cor-primaria);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+/* Rodapé fixo da janela de chat */
+.lufy-chat-footer {
+  background-color: #EFEAE1;
+  border-top: 1px solid #DDD4C6;
+  padding: 0.75rem 1.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--cor-texto-suave);
+}
+
+/* Botão Flutuante (Trigger) no canto inferior direito */
+.lufy-floating-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  padding: 0.45rem 1.35rem 0.45rem 0.5rem;
+  box-shadow: 0 10px 28px rgba(46, 40, 36, 0.14);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--fonte-corpo);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lufy-floating-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(46, 40, 36, 0.18);
+}
+/* ==========================================================================
+   FIM DOS ESTILOS DO WIDGET DE CHAT FLUTUANTE DO LUFY
+   ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DOS ESTILOS DA NAVBAR RESPONSIVA (DESKTOP / MOBILE / LEITURA)
+   ========================================================================== */
+
+/* Compensação de altura da Navbar fixa para rolagem suave sem cobrir títulos */
+section[id] {
+  scroll-margin-top: 86px;
+}
+
+.gc-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background-color: var(--cor-fundo); /* Bege neutro suave #EAE4D9 */
+  border-bottom: 1px solid var(--cor-borda-suave);
+  padding: 0.85rem 0;
+}
+
+.gc-navbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+/* Marca oficial à esquerda (Logo + Selo do Lufy + Nome GlicoCare) */
+.gc-navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.gc-navbar__logo-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--cor-borda);
+  background-color: var(--cor-superficie);
+}
+
+.gc-navbar__brand-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  display: block;
+  line-height: 1.05;
+  color: var(--cor-texto); /* #2E2824 */
+}
+
+.gc-navbar__brand-subtitle {
+  font-size: 0.62rem;
+  color: var(--cor-primaria); /* #7C533F */
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+/* Links horizontais diretos do Desktop */
+.gc-navbar__desktop-links {
+  display: flex;
+  align-items: center;
+  gap: 1.65rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+.gc-navbar__link {
+  color: var(--cor-texto);
+  transition: color 0.2s ease;
+  padding: 0.25rem 0;
+  position: relative;
+}
+
+.gc-navbar__link:hover,
+.gc-navbar__link--ativo {
+  color: var(--cor-primaria);
+}
+
+.gc-navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* No Desktop (> 980px), o botão de menu hambúrguer fica oculto */
+.gc-navbar__hamburger-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: 1px solid var(--cor-borda);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--cor-texto);
+}
+
+.gc-navbar__hamburger-line {
+  width: 16px;
+  height: 1.8px;
+  background-color: var(--cor-texto);
+  border-radius: 2px;
+}
+
+/* Botão secundário "← Voltar à biblioteca" na Navbar Interna de Leitura */
+.gc-navbar__btn-voltar {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--cor-texto);
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  padding: 0.6rem 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.gc-navbar__btn-voltar:hover {
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+  transform: translateX(-2px);
+}
+
+/* Gaveta (Overlay) Mobile em tom de Marfim Suave (#F6F3EE) */
+.gc-navbar__mobile-overlay {
+  background-color: var(--cor-superficie); /* #F6F3EE */
+  border-top: 1px solid var(--cor-borda-suave);
+  border-bottom: 1px solid var(--cor-borda);
+  margin-top: 0.85rem;
+  padding: 1.5rem 0 1.75rem;
+  box-shadow: 0 16px 36px rgba(46, 40, 36, 0.12);
+}
+
+.gc-navbar__mobile-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.gc-navbar__mobile-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gc-navbar__mobile-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.5rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--cor-texto);
+  border-bottom: 1px solid rgba(199, 186, 167, 0.35);
+}
+
+.gc-navbar__mobile-divider {
+  border: none;
+  border-top: 1px solid var(--cor-borda-suave);
+  margin: 0.5rem 0;
+}
+
+.gc-navbar__mobile-sublink {
+  padding: 0.45rem 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cor-primaria);
+}
+
+.gc-navbar__mobile-cta-footer {
+  padding-top: 0.35rem;
+}
+
+/* Regras Responsivas Distintas entre Computador (> 980px) e Celular (<= 980px) */
+@media (max-width: 980px) {
+  .gc-navbar__desktop-links,
+  .gc-navbar__desktop-cta {
+    display: none !important;
+  }
+
+  .gc-navbar__hamburger-btn {
+    display: inline-flex !important;
+  }
+}
+
+@media (min-width: 981px) {
+  .gc-navbar__mobile-overlay {
+    display: none !important;
+  }
+}
+/* ==========================================================================
+   FIM DOS ESTILOS DA NAVBAR RESPONSIVA
+   ========================================================================== */
