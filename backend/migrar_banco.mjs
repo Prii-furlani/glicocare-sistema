@@ -38,10 +38,22 @@ async function main() {
 
   console.log('✅ Conexão estabelecida com sucesso!');
 
+  // Garante que o ENUM de logs_auditoria suporte LOGIN e FALHA_LOGIN
+  try {
+    await connection.query('USE `glicocare_db`;');
+    await connection.query(`
+      ALTER TABLE \`logs_auditoria\`
+      MODIFY COLUMN \`acao\` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN') NOT NULL;
+    `);
+    console.log('✅ ENUM acao em logs_auditoria atualizado para suportar LOGIN e FALHA_LOGIN.');
+  } catch (err) {
+    console.log('ℹ️ Verificação de enum logs_auditoria:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 
-  console.log('⏳ Executando script SQL...');
+  console.log('⏳ Executando script SQL completo...');
   await connection.query(sql);
 
   console.log('✅ Script executado com sucesso!');
@@ -50,10 +62,6 @@ async function main() {
   const [tables] = await connection.query('SHOW TABLES;');
   console.log('\n📋 Tabelas ativas no banco:');
   console.table(tables);
-
-  const [logs] = await connection.query('SELECT id, usuario_nome, acao, tabela_afetada, registro_id, pagina_impacto, data_hora_local FROM logs_auditoria LIMIT 10;');
-  console.log('\n🛡️ Registros em logs_auditoria (RN-AUD-01):');
-  console.table(logs);
 
   await connection.end();
 }

@@ -184,10 +184,43 @@ export default function Navbar() {
           >
             FAQ
           </a>
+
+          {/* Link para Tela de Login / Espaço Seguro */}
+          <Link
+            to="/login"
+            className={`gc-navbar__link ${
+              location.pathname === '/login' ? 'gc-navbar__link--ativo' : ''
+            }`}
+            style={{ fontWeight: 600, color: '#3B7E48' }}
+          >
+            Entrar
+          </Link>
         </nav>
 
         {/* Extrema Direita (Desktop CTA / Mobile Botão Hambúrguer) */}
         <div className="gc-navbar__actions">
+          {/* Botão de Entrar compacto (Desktop) */}
+          <Link
+            to="/login"
+            className="gc-navbar__btn-entrar-desktop"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              color: '#3B7E48',
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(59, 126, 72, 0.45)',
+              borderRadius: '20px',
+              padding: '0.5rem 1rem',
+              transition: 'all 0.2s',
+            }}
+          >
+            <span>👤</span>
+            <span>Entrar</span>
+          </Link>
+
           {/* Botão de Ação em Destaque (Exclusivo Desktop — oculto no Mobile) */}
           <div className="gc-navbar__desktop-cta">
             <Button
@@ -293,6 +326,25 @@ export default function Navbar() {
                 <span>FAQ</span>
                 <span aria-hidden="true">→</span>
               </a>
+
+              {/* Link de Entrada no Mobile */}
+              <Link
+                to="/login"
+                onClick={() => setDrawerOpen(false)}
+                className="gc-navbar__mobile-link"
+                style={{
+                  color: '#3B7E48',
+                  fontWeight: 700,
+                  backgroundColor: '#EAE4D9',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
+                  marginTop: '0.5rem',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                <span>👤 Entrar no meu espaço seguro</span>
+                <span aria-hidden="true">→</span>
+              </Link>
 
               <hr className="gc-navbar__mobile-divider" />
 

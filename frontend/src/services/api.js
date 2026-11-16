@@ -32,4 +32,8 @@ export const agendamentosService = {
   criarAgendamento: (dados) => api.post('/agendamentos/index.php', dados),
 };
 
+export const authService = {
+  login: (dados) => api.post('/auth/login.php', dados),
+};
+
 export default api;

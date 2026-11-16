@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS `logs_auditoria` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único sequencial do log de auditoria',
   `usuario_id` INT UNSIGNED DEFAULT NULL COMMENT 'ID do usuário responsável (NULL se anônimo/sistema)',
   `usuario_nome` VARCHAR(150) NOT NULL COMMENT 'Nome ou identificação do responsável pela ação (RN-AUD-01)',
-  `acao` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO') NOT NULL COMMENT 'Tipo exato da mutação realizada',
+  `acao` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN') NOT NULL COMMENT 'Tipo exato da mutação ou evento realizado',
   `tabela_afetada` VARCHAR(100) NOT NULL COMMENT 'Entidade/tabela modificada no banco',
   `registro_id` VARCHAR(100) NOT NULL COMMENT 'ID ou chave primária do registro impactado',
   `pagina_impacto` VARCHAR(150) NOT NULL COMMENT 'Rota ou tela do front-end impactada',

@@ -17,6 +17,7 @@ import ArtigoDetalhe from './pages/ArtigoDetalhe';
 import Especialistas from './pages/Especialistas';
 import PerfilEspecialista from './pages/PerfilEspecialista';
 import Credenciamento from './pages/Credenciamento';
+import Login from './pages/Login';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL APP */
 export default function App() {
@@ -36,10 +37,12 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/biblioteca" element={<Biblioteca />} />
+          <Route path="/conteudos" element={<Biblioteca />} />
           <Route path="/artigo/:id" element={<ArtigoDetalhe />} />
           <Route path="/especialistas" element={<Especialistas />} />
           <Route path="/especialistas/:id" element={<PerfilEspecialista />} />
           <Route path="/credenciamento" element={<Credenciamento />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
       </main>
       {/* FIM DO MAPEAMENTO DE ROTAS DAS PÁGINAS */}
