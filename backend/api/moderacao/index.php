@@ -1,14 +1,19 @@
 <?php
 /**
- * GlicoCare — Endpoint de Moderação de Depoimentos (RN-MOD-01)
- * "Vozes que já passaram por aqui" exige aprovação manual prévia antes da exibição pública.
- * Métodos suportados:
- *  - GET: Lista depoimentos aprovados por artigo (?artigo_id=X) ou fila pendente para admin
- *  - POST: Envia novo depoimento com status inicial obrigatório "pendente"
- *  - PATCH: Aprova ou rejeita depoimento no painel administrativo
+ * =============================================================================
+ * ARQUIVO: index.php (Localização: /backend/api/moderacao/index.php)
+ * PROJETO: GlicoCare — Moderação de Conteúdo e Acolhimento Familiar (RN-MOD-01)
+ * OBJETIVO: Fila de moderação com auditoria imutável compulsória (RN-AUD-01).
+ * MÉTODOS SUPORTADOS:
+ *   - GET: Consulta relatos aprovados por artigo ou fila de moderação pendente.
+ *   - POST: Submissão de novo relato familiar com pré-avaliação e auditoria (CRIACAO).
+ *   - PATCH: Decisão da curadoria (aprovação/rejeição) com auditoria (EDICAO).
+ *   - DELETE: Exclusão de relato impróprio com snapshot prévio em auditoria (EXCLUSAO).
+ * =============================================================================
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../services/AuditLogger.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -16,11 +21,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 /**
  * Motor do Moderador Oficial de Conteúdo e Acolhimento GlicoCare (RN-MOD-01)
- * Analisa criticamente mensagens, depoimentos ou sugestões segundo:
- *  1. Tom e Empatia
- *  2. Segurança Emocional e Clínica (rejeita ofensas, spam, links maliciosos,
- *     autopromoção comercial desconexa ou informações médicas falsas perigosas no DM1)
- *  3. Formato de Saída estrito: [APROVADA] ou [REJEITADA] + justificativa interna.
  */
 function analisarMensagemModeradorGlicoCare(string $texto): array
 {
@@ -28,7 +28,7 @@ function analisarMensagemModeradorGlicoCare(string $texto): array
     $textoMinusculo = mb_strtolower($textoLimpo, 'UTF-8');
 
     // 1. Verificação de links maliciosos, spam ou autopromoção comercial desconexa
-    if (preg_match('/(https?:\/\/|www\.|\.com\.br|\.bet|pix|compre agora| ganhe dinheiro|promoção|desconto exclusivo|whatsapp\s*\d)/iu', $textoMinusculo)) {
+    if (preg_match('/(https?:\/\/|www\.|\.com\.br|\.bet|pix|compre agora|ganhe dinheiro|promoção|desconto exclusivo|whatsapp\s*\d)/iu', $textoMinusculo)) {
         return [
             'classificacao' => '[REJEITADA]',
             'status_banco'  => 'rejeitado',
@@ -54,14 +54,17 @@ function analisarMensagemModeradorGlicoCare(string $texto): array
         ];
     }
 
-    // Caso passe nos filtros críticos de segurança e mantenha tom respeitoso/construtivo
+    // Caso passe nos filtros críticos de segurança e mantenha tom acolhedor
     return [
         'classificacao' => '[APROVADA]',
-        'status_banco'  => 'pendente', // Segue para confirmação no painel conforme RN-MOD-01 com pré-parecer aprovado
+        'status_banco'  => 'pendente',
         'parecer'       => '[APROVADA]: Mensagem segura, respeitosa e alinhada ao tom de acolhimento, empatia e apoio mútuo da comunidade GlicoCare.'
     ];
 }
 
+/* =============================================================================
+   MÉTODO GET: Listagem de relatos aprovados ou fila de moderação
+   ============================================================================= */
 if ($method === 'GET') {
     $statusFiltro = $_GET['status'] ?? 'aprovado';
     $artigoId = isset($_GET['artigo_id']) ? (int) $_GET['artigo_id'] : null;
@@ -91,6 +94,9 @@ if ($method === 'GET') {
     exit;
 }
 
+/* =============================================================================
+   MÉTODO POST: Envio de relato com análise e auditoria (CRIACAO)
+   ============================================================================= */
 if ($method === 'POST') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -103,10 +109,10 @@ if ($method === 'POST') {
         exit;
     }
 
-    // Analisa criticamente a mensagem pelo Moderador Oficial de Conteúdo e Acolhimento
     $analise = analisarMensagemModeradorGlicoCare($payload['conteudo']);
+    $usuarioId = !empty($payload['usuario_id']) ? (int)$payload['usuario_id'] : null;
+    $nomeAutor = trim($payload['nome_autor']);
 
-    // RN-MOD-01: Armazena o relato junto ao parecer oficial da moderação ([APROVADA] ou [REJEITADA])
     $stmt = $db->prepare(
         'INSERT INTO depoimentos_moderacao
          (artigo_id, usuario_id, nome_exibicao_familiar, parentesco_contexto, relato, status_moderacao, motivo_moderacao)
@@ -114,13 +120,29 @@ if ($method === 'POST') {
     );
     $stmt->execute([
         ':aid'        => (int) $payload['artigo_id'],
-        ':uid'        => $payload['usuario_id'] ?? null,
-        ':nome'       => trim($payload['nome_autor']),
+        ':uid'        => $usuarioId,
+        ':nome'       => $nomeAutor,
         ':parentesco' => $payload['parentesco_contexto'] ?? 'Família DM1',
         ':relato'     => trim($payload['conteudo']),
         ':status_mod' => $analise['status_banco'],
         ':motivo'     => $analise['parecer'],
     ]);
+    $novoId = (int) $db->lastInsertId();
+
+    // Captura snapshot recém-criado para auditoria (RN-AUD-01)
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'depoimentos_moderacao', $novoId);
+
+    AuditLogger::registrar(
+        $db,
+        'CRIACAO',
+        'depoimentos_moderacao',
+        $novoId,
+        '/painel-moderacao',
+        null,
+        $snapshotNovo,
+        $usuarioId,
+        $nomeAutor
+    );
 
     http_response_code(201);
     echo json_encode([
@@ -128,11 +150,14 @@ if ($method === 'POST') {
         'classificacao' => $analise['classificacao'],
         'parecer'       => $analise['parecer'],
         'mensagem'      => $analise['parecer'],
-        'id'            => (int) $db->lastInsertId()
+        'id'            => $novoId
     ]);
     exit;
 }
 
+/* =============================================================================
+   MÉTODO PATCH: Moderação administrativa (aprovar/rejeitar) com auditoria (EDICAO)
+   ============================================================================= */
 if ($method === 'PATCH') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($payload['id']) ? (int) $payload['id'] : 0;
@@ -141,6 +166,14 @@ if ($method === 'PATCH') {
     if (!$id || !in_array($novoStatus, ['aprovado', 'rejeitado'], true)) {
         http_response_code(400);
         echo json_encode(['sucesso' => false, 'mensagem' => 'ID e status_moderacao válido (aprovado/rejeitado) são obrigatórios.']);
+        exit;
+    }
+
+    // 1. Snapshot ANTES da decisão de moderação (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'depoimentos_moderacao', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Depoimento não encontrado para moderação.']);
         exit;
     }
 
@@ -159,9 +192,75 @@ if ($method === 'PATCH') {
         ':id'       => $id,
     ]);
 
+    // 2. Snapshot DEPOIS da decisão
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'depoimentos_moderacao', $id);
+
+    // 3. Registro de auditoria compulsório (EDICAO)
+    $adminId = $payload['moderado_por_usuario_id'] ?? null;
+    $adminNome = $payload['moderador_nome'] ?? 'Curador de Moderação';
+
+    AuditLogger::registrar(
+        $db,
+        'EDICAO',
+        'depoimentos_moderacao',
+        $id,
+        '/painel-moderacao',
+        $snapshotAnterior,
+        $snapshotNovo,
+        $adminId,
+        $adminNome
+    );
+
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => "Depoimento #{$id} atualizado para '{$novoStatus}'."
+        'mensagem' => "Depoimento #{$id} moderado para '{$novoStatus}' com auditoria imutável registrada."
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO DELETE: Exclusão com snapshot prévio em auditoria (EXCLUSAO)
+   ============================================================================= */
+if ($method === 'DELETE') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do depoimento é obrigatório para exclusão.']);
+        exit;
+    }
+
+    // 1. Snapshot ANTES de excluir (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'depoimentos_moderacao', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Depoimento não encontrado para exclusão.']);
+        exit;
+    }
+
+    $stmt = $db->prepare('DELETE FROM depoimentos_moderacao WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // 2. Registro compulsório de auditoria (EXCLUSAO)
+    $adminId = $payload['usuario_id'] ?? null;
+    $adminNome = $payload['usuario_nome'] ?? 'Curador de Moderação';
+
+    AuditLogger::registrar(
+        $db,
+        'EXCLUSAO',
+        'depoimentos_moderacao',
+        $id,
+        '/painel-moderacao',
+        $snapshotAnterior,
+        null,
+        $adminId,
+        $adminNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Depoimento #{$id} excluído e preservado na trilha de auditoria."
     ]);
     exit;
 }

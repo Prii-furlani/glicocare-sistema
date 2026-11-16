@@ -1,17 +1,27 @@
 <?php
 /**
- * GlicoCare — Endpoint de Artigos e Sugestões da Biblioteca
- * Métodos suportados:
- *  - GET: Lista artigos publicados ou busca um artigo específico (?id=X)
- *  - POST: Cadastra novo artigo ou sugestão de tema enviada pelas famílias
+ * =============================================================================
+ * ARQUIVO: index.php (Localização: /backend/api/artigos/index.php)
+ * PROJETO: GlicoCare — Biblioteca de Conteúdos Pedagógicos e Guias Práticos
+ * OBJETIVO: Endpoints RESTful para gestão de artigos com auditoria imutável (RN-AUD-01).
+ * MÉTODOS SUPORTADOS:
+ *   - GET: Consulta pública de artigos publicados ou busca por ID.
+ *   - POST: Criação de novo artigo/sugestão com auditoria (CRIACAO).
+ *   - PATCH: Atualização editorial de artigo com auditoria (EDICAO).
+ *   - DELETE: Exclusão editorial com snapshot prévio em auditoria (EXCLUSAO).
+ * =============================================================================
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../services/AuditLogger.php';
 
 $database = new Database();
 $db = $database->getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
+/* =============================================================================
+   MÉTODO GET: Consulta pública e filtragem de artigos
+   ============================================================================= */
 if ($method === 'GET') {
     if (!empty($_GET['id'])) {
         $stmt = $db->prepare(
@@ -55,6 +65,9 @@ if ($method === 'GET') {
     exit;
 }
 
+/* =============================================================================
+   MÉTODO POST: Criação de novo artigo com registro de auditoria imutável (CRIACAO)
+   ============================================================================= */
 if ($method === 'POST') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -65,6 +78,8 @@ if ($method === 'POST') {
     }
 
     $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $payload['titulo'])));
+    $autorId = !empty($payload['autor_usuario_id']) ? (int)$payload['autor_usuario_id'] : 1;
+    $autorNome = $payload['autor_nome'] ?? 'Curadoria Editorial GlicoCare';
 
     $stmt = $db->prepare(
         'INSERT INTO artigos_conteudos
@@ -72,21 +87,172 @@ if ($method === 'POST') {
          VALUES (:autor_id, :titulo, :slug, :categoria, :resumo, :conteudo, :tempo, :status)'
     );
     $stmt->execute([
-        ':autor_id'  => $payload['autor_usuario_id'] ?? null,
+        ':autor_id'  => $autorId,
         ':titulo'    => trim($payload['titulo']),
         ':slug'      => $slug . '-' . time(),
         ':categoria' => $payload['categoria'] ?? 'Acolhimento Inicial',
         ':resumo'    => $payload['resumo'] ?? '',
         ':conteudo'  => $payload['conteudo'],
         ':tempo'     => (int) ($payload['tempo_leitura_min'] ?? 5),
-        ':status'    => 'rascunho',
+        ':status'    => $payload['status_publicacao'] ?? 'rascunho',
     ]);
+    $novoId = (int) $db->lastInsertId();
+
+    // Captura o snapshot recém-criado para auditoria (RN-AUD-01)
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'artigos_conteudos', $novoId);
+
+    // Registra compulsoriamente a ação CRIACAO no AuditLogger
+    AuditLogger::registrar(
+        $db,
+        'CRIACAO',
+        'artigos_conteudos',
+        $novoId,
+        '/conteudos',
+        null,
+        $snapshotNovo,
+        $autorId,
+        $autorNome
+    );
 
     http_response_code(201);
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => 'Sugestão/artigo registrado com sucesso para curadoria editorial.',
-        'id' => (int) $db->lastInsertId()
+        'mensagem' => 'Artigo registrado com sucesso e auditado.',
+        'id' => $novoId
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO PATCH: Edição de artigo com captura de valor_anterior e valor_novo (EDICAO)
+   ============================================================================= */
+if ($method === 'PATCH') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($payload['id']) ? (int)$payload['id'] : 0;
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do artigo é obrigatório para edição.']);
+        exit;
+    }
+
+    // 1. Captura snapshot ANTES da alteração (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'artigos_conteudos', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Artigo não encontrado para edição.']);
+        exit;
+    }
+
+    // 2. Aplica atualizações conforme campos enviados
+    $campos = [];
+    $params = [':id' => $id];
+
+    if (isset($payload['titulo'])) {
+        $campos[] = 'titulo = :titulo';
+        $params[':titulo'] = trim($payload['titulo']);
+    }
+    if (isset($payload['categoria'])) {
+        $campos[] = 'categoria = :categoria';
+        $params[':categoria'] = trim($payload['categoria']);
+    }
+    if (isset($payload['resumo'])) {
+        $campos[] = 'resumo = :resumo';
+        $params[':resumo'] = trim($payload['resumo']);
+    }
+    if (isset($payload['conteudo'])) {
+        $campos[] = 'conteudo = :conteudo';
+        $params[':conteudo'] = $payload['conteudo'];
+    }
+    if (isset($payload['tempo_leitura_min'])) {
+        $campos[] = 'tempo_leitura_min = :tempo';
+        $params[':tempo'] = (int)$payload['tempo_leitura_min'];
+    }
+    if (isset($payload['status_publicacao'])) {
+        $campos[] = 'status_publicacao = :status';
+        $params[':status'] = trim($payload['status_publicacao']);
+    }
+
+    if (empty($campos)) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Nenhum campo fornecido para atualização.']);
+        exit;
+    }
+
+    $sql = 'UPDATE artigos_conteudos SET ' . implode(', ', $campos) . ' WHERE id = :id';
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    // 3. Captura snapshot DEPOIS da alteração
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'artigos_conteudos', $id);
+
+    // 4. Registra auditoria compulsoriamente (RN-AUD-01)
+    $usuarioId = $payload['usuario_id'] ?? $snapshotAnterior['autor_usuario_id'];
+    $usuarioNome = $payload['usuario_nome'] ?? 'Equipe Editorial GlicoCare';
+
+    AuditLogger::registrar(
+        $db,
+        'EDICAO',
+        'artigos_conteudos',
+        $id,
+        '/conteudos/' . $id,
+        $snapshotAnterior,
+        $snapshotNovo,
+        $usuarioId,
+        $usuarioNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Artigo #{$id} atualizado com sucesso e auditado com conformidade imutável."
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO DELETE: Exclusão de artigo com preservação do histórico em auditoria (EXCLUSAO)
+   ============================================================================= */
+if ($method === 'DELETE') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do artigo é obrigatório para exclusão.']);
+        exit;
+    }
+
+    // 1. Captura snapshot do registro ANTES de excluir (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'artigos_conteudos', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Artigo não encontrado para exclusão.']);
+        exit;
+    }
+
+    // 2. Remove o registro
+    $stmt = $db->prepare('DELETE FROM artigos_conteudos WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // 3. Registra auditoria imutável com valor_novo = NULL
+    $usuarioId = $payload['usuario_id'] ?? null;
+    $usuarioNome = $payload['usuario_nome'] ?? 'Administrador';
+
+    AuditLogger::registrar(
+        $db,
+        'EXCLUSAO',
+        'artigos_conteudos',
+        $id,
+        '/conteudos',
+        $snapshotAnterior,
+        null,
+        $usuarioId,
+        $usuarioNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Artigo #{$id} excluído com sucesso e preservado na trilha de auditoria."
     ]);
     exit;
 }

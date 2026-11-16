@@ -1,21 +1,26 @@
 <?php
 /**
- * GlicoCare — Endpoint do Módulo de Credenciamento de Profissionais e Especialistas (RN-MOD-MKT)
- * Implementa as 4 etapas do Workflow de Credenciamento:
- *  - Etapa 1 (POST): Submissão do formulário "Seja um Especialista GlicoCare" com status "Pendente de Verificação".
- *  - Etapa 2 e 3 (PATCH): Moderação Administrativa no Back-Office -> valida conselho/comprovante,
- *    define "Registro Verificado = True", gera Slug/ID e publica na listagem pública.
- *  - Etapa 4 (GET / PATCH): Listagem pública com filtros e gestão de agenda em tempo real.
+ * =============================================================================
+ * ARQUIVO: index.php (Localização: /backend/api/especialistas/index.php)
+ * PROJETO: GlicoCare — Módulo de Credenciamento de Especialistas (RN-MOD-MKT)
+ * OBJETIVO: Workflow de credenciamento e vitrine com auditoria imutável (RN-AUD-01).
+ * MÉTODOS SUPORTADOS:
+ *   - GET: Vitrine pública de especialistas e busca individual por ID.
+ *   - POST: Submissão de credenciamento com auditoria (CRIACAO).
+ *   - PATCH: Moderação administrativa (aprovação/rejeição) com auditoria (EDICAO).
+ *   - DELETE: Exclusão/revogação de perfil profissional com auditoria (EXCLUSAO).
+ * =============================================================================
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../services/AuditLogger.php';
 
 $database = new Database();
 $db = $database->getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
 /**
- * Gera um slug amigável e único para a URL pública do especialista aprovado (Etapa 3)
+ * Gera um slug amigável e único para a URL pública do especialista aprovado
  */
 function gerarSlugEspecialista(string $nomeCompleto, int $id): string
 {
@@ -24,6 +29,9 @@ function gerarSlugEspecialista(string $nomeCompleto, int $id): string
     return trim($limpo, '-') . '-' . $id;
 }
 
+/* =============================================================================
+   MÉTODO GET: Listagem com filtros e detalhe individual
+   ============================================================================= */
 if ($method === 'GET') {
     $statusFiltro = $_GET['status'] ?? 'aprovado';
 
@@ -50,7 +58,8 @@ if ($method === 'GET') {
     $stmt = $db->prepare(
         'SELECT e.id, u.nome_completo, u.email, e.especialidade, e.tipo_conselho,
                 e.numero_conselho, e.uf_conselho, e.foco_atuacao, e.biografia_metodo,
-                e.valor_consulta, e.status_credenciamento
+                e.valor_consulta, e.duracao_consulta_min, e.status_credenciamento,
+                e.registro_verificado, e.slug
          FROM especialistas e
          INNER JOIN usuarios u ON e.usuario_id = u.id
          WHERE e.status_credenciamento = :status
@@ -62,7 +71,9 @@ if ($method === 'GET') {
     exit;
 }
 
-// ETAPA 1 (SUBMISSÃO): Recebe o formulário "Seja um Especialista GlicoCare" com status "pendente_validacao"
+/* =============================================================================
+   MÉTODO POST: Submissão de credenciamento (Etapa 1) com auditoria (CRIACAO)
+   ============================================================================= */
 if ($method === 'POST') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -79,7 +90,7 @@ if ($method === 'POST') {
         http_response_code(400);
         echo json_encode([
             'sucesso' => false,
-            'mensagem' => 'Dados incompletos. É obrigatório informar registro de conselho ativo (CRM, CRN, CRP, CREF) e UF.'
+            'mensagem' => 'Dados incompletos. É obrigatório informar conselho ativo válido (CRM, CRN, CRP, CREF, PEDAGOGIA) e UF.'
         ]);
         exit;
     }
@@ -106,23 +117,42 @@ if ($method === 'POST') {
         $stmtEsp = $db->prepare(
             'INSERT INTO especialistas
              (usuario_id, especialidade, tipo_conselho, numero_conselho, uf_conselho,
-              foco_atuacao, biografia_metodo, valor_consulta, aceite_exclusividade_financeira, status_credenciamento)
+              foco_atuacao, biografia_metodo, resumo_card, valor_consulta, duracao_consulta_min,
+              aceite_exclusividade_financeira, status_credenciamento)
              VALUES
-             (:uid, :esp, :tipo, :num, :uf, :foco, :bio, :valor, 1, "pendente_validacao")'
+             (:uid, :esp, :tipo, :num, :uf, :foco, :bio, :resumo, :valor, :duracao, 1, "pendente_validacao")'
         );
         $stmtEsp->execute([
-            ':uid'   => $usuarioId,
-            ':esp'   => $payload['especialidade'] ?? 'Endocrinologia',
-            ':tipo'  => $tipoConselho,
-            ':num'   => trim($payload['numero_conselho']),
-            ':uf'    => strtoupper(trim($payload['uf_conselho'])),
-            ':foco'  => $focosString,
-            ':bio'   => $payload['biografia_metodo'] ?? '',
-            ':valor' => (float) ($payload['valor_consulta'] ?? 240.00),
+            ':uid'     => $usuarioId,
+            ':esp'     => $payload['especialidade'] ?? 'Endocrinologia Pediátrica',
+            ':tipo'    => $tipoConselho,
+            ':num'     => trim($payload['numero_conselho']),
+            ':uf'      => strtoupper(trim($payload['uf_conselho'])),
+            ':foco'    => $focosString,
+            ':bio'     => $payload['biografia_metodo'] ?? '',
+            ':resumo'  => $payload['resumo_card'] ?? null,
+            ':valor'   => (float) ($payload['valor_consulta'] ?? 240.00),
+            ':duracao' => (int) ($payload['duracao_consulta_min'] ?? 60),
         ]);
         $especialistaId = (int) $db->lastInsertId();
 
         $db->commit();
+
+        // Captura o snapshot gerado para a trilha de auditoria (RN-AUD-01)
+        $snapshotNovo = AuditLogger::capturarSnapshot($db, 'especialistas', $especialistaId);
+
+        // Registro de auditoria compulsório
+        AuditLogger::registrar(
+            $db,
+            'CRIACAO',
+            'especialistas',
+            $especialistaId,
+            '/credenciamento',
+            null,
+            $snapshotNovo,
+            $usuarioId,
+            trim($payload['nome_completo'])
+        );
 
         http_response_code(201);
         echo json_encode([
@@ -131,18 +161,25 @@ if ($method === 'POST') {
             'status_credenciamento' => 'Pendente de Verificação',
             'registro_verificado' => false,
             'especialista_id' => $especialistaId,
-            'mensagem' => 'Submissão recebida! Seu cadastro entrou na Etapa 2 (Moderação Administrativa) com status "Pendente de Verificação".'
+            'mensagem' => 'Submissão recebida com auditoria registrada! Entrou na Etapa 2 (Moderação Administrativa).'
         ]);
     } catch (Exception $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         http_response_code(500);
-        echo json_encode(['sucesso' => false, 'mensagem' => 'Erro ao registrar credenciamento.', 'detalhe' => $e->getMessage()]);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao registrar credenciamento.',
+            'detalhe' => $e->getMessage()
+        ]);
     }
     exit;
 }
 
-// ETAPAS 2 e 3 (MODERAÇÃO ADMINISTRATIVA -> APROVAÇÃO E ATIVAÇÃO):
-// Valida o documento e o conselho ativo, define "Registro Verificado = True", gera Slug/ID e publica na vitrine
+/* =============================================================================
+   MÉTODO PATCH: Moderação administrativa com auditoria (EDICAO)
+   ============================================================================= */
 if ($method === 'PATCH') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($payload['id']) ? (int) $payload['id'] : 0;
@@ -155,31 +192,110 @@ if ($method === 'PATCH') {
         exit;
     }
 
+    // 1. Snapshot ANTES da alteração (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'especialistas', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Especialista não encontrado.']);
+        exit;
+    }
+
     $novoStatus = ($acao === 'rejeitar') ? 'rejeitado' : 'aprovado';
-    $registroVerificado = ($novoStatus === 'aprovado');
+    $registroVerificado = ($novoStatus === 'aprovado') ? 1 : 0;
     $slugGerado = gerarSlugEspecialista($nomeProfissional, $id);
 
     $stmt = $db->prepare(
         'UPDATE especialistas
-         SET status_credenciamento = :status
+         SET status_credenciamento = :status,
+             registro_verificado = :verificado,
+             slug = :slug,
+             validado_em = NOW()
          WHERE id = :id'
     );
     $stmt->execute([
-        ':status' => $novoStatus,
-        ':id'     => $id,
+        ':status'     => $novoStatus,
+        ':verificado' => $registroVerificado,
+        ':slug'       => $slugGerado,
+        ':id'         => $id,
     ]);
+
+    // 2. Snapshot DEPOIS da alteração
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'especialistas', $id);
+
+    // 3. Registro compulsório de auditoria
+    $adminId = $payload['admin_id'] ?? null;
+    $adminNome = $payload['admin_nome'] ?? 'Curadoria Administrativa';
+
+    AuditLogger::registrar(
+        $db,
+        'EDICAO',
+        'especialistas',
+        $id,
+        '/especialistas/' . $id,
+        $snapshotAnterior,
+        $snapshotNovo,
+        $adminId,
+        $adminNome
+    );
 
     echo json_encode([
         'sucesso' => true,
-        'etapa_workflow' => $registroVerificado
+        'etapa_workflow' => ($registroVerificado === 1)
             ? 'Etapa 3 e 4 Ativadas — Perfil Publicado e Agenda Liberada'
             : 'Credenciamento Rejeitado na Moderação',
-        'registro_verificado' => $registroVerificado,
+        'registro_verificado' => ($registroVerificado === 1),
         'slug' => $slugGerado,
         'url_perfil_publico' => '/especialistas/' . $id,
-        'mensagem' => $registroVerificado
-            ? "Registro Verificado = True! Perfil #{$id} ({$slugGerado}) publicado automaticamente na listagem pública."
-            : "Credenciamento #{$id} rejeitado pela moderação administrativa."
+        'mensagem' => ($registroVerificado === 1)
+            ? "Registro Verificado = True! Perfil #{$id} ({$slugGerado}) aprovado com log de auditoria imutável."
+            : "Credenciamento #{$id} rejeitado na moderação administrativa com log registrado."
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO DELETE: Exclusão com snapshot prévio em auditoria (EXCLUSAO)
+   ============================================================================= */
+if ($method === 'DELETE') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do especialista é obrigatório para exclusão.']);
+        exit;
+    }
+
+    // 1. Snapshot ANTES da exclusão (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'especialistas', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Especialista não encontrado.']);
+        exit;
+    }
+
+    $stmt = $db->prepare('DELETE FROM especialistas WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // 2. Registro de auditoria imutável (EXCLUSAO)
+    $adminId = $payload['admin_id'] ?? null;
+    $adminNome = $payload['admin_nome'] ?? 'Administrador';
+
+    AuditLogger::registrar(
+        $db,
+        'EXCLUSAO',
+        'especialistas',
+        $id,
+        '/especialistas',
+        $snapshotAnterior,
+        null,
+        $adminId,
+        $adminNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Perfil do especialista #{$id} excluído com sucesso e preservado na trilha de auditoria."
     ]);
     exit;
 }

@@ -1,18 +1,27 @@
 <?php
 /**
- * GlicoCare — Endpoint de Agendamentos, Financeiro Interno e Teleconsulta Nativa (RN-MOD-MKT)
- * Implementa rigorosamente os submódulos:
- *  - RN-AGD-02: Disponibilidade em tempo real, bloqueio imediato de slot contra conflitos e confirmação automatizada.
- *  - RN-FIN-03: Exclusividade financeira interna, cálculo de retenção de taxa GlicoCare + repasse ao especialista e emissão de comprovante/NF.
- *  - RN-ATD-04: Ambiente de videoconferência nativo GlicoCare (sem links externos) e integração ao Histórico Clínico Unificado.
+ * =============================================================================
+ * ARQUIVO: index.php (Localização: /backend/api/agendamentos/index.php)
+ * PROJETO: GlicoCare — Agendamentos, Financeiro Interno e Teleconsulta (RN-MOD-MKT)
+ * OBJETIVO: Gestão de consultas com auditoria imutável (RN-AUD-01).
+ * MÉTODOS SUPORTADOS:
+ *   - GET: Consulta de agendamentos e verificação de slots disponíveis.
+ *   - POST: Reserva com bloqueio imediato e auditoria (CRIACAO).
+ *   - PATCH: Alteração de status / anexação de laudos com auditoria (EDICAO).
+ *   - DELETE: Cancelamento / exclusão de agendamento com auditoria (EXCLUSAO).
+ * =============================================================================
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../services/AuditLogger.php';
 
 $database = new Database();
 $db = $database->getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 
+/* =============================================================================
+   MÉTODO GET: Listagem de consultas agendadas
+   ============================================================================= */
 if ($method === 'GET') {
     $especialistaId = isset($_GET['especialista_id']) ? (int) $_GET['especialista_id'] : null;
 
@@ -37,6 +46,9 @@ if ($method === 'GET') {
     exit;
 }
 
+/* =============================================================================
+   MÉTODO POST: Criação de consulta com bloqueio e auditoria (CRIACAO)
+   ============================================================================= */
 if ($method === 'POST') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -54,7 +66,7 @@ if ($method === 'POST') {
     $dataHora       = trim($payload['data_hora_consulta']);
     $valorBruto     = (float) ($payload['valor_transacao_interna'] ?? 250.00);
 
-    // 1. RN-AGD-02: Verifica se o slot já está bloqueado para evitar conflito de horário
+    // 1. RN-AGD-02: Verifica se o slot já está reservado
     $stmtCheck = $db->prepare(
         'SELECT id FROM agendamentos
          WHERE especialista_id = :eid
@@ -76,35 +88,59 @@ if ($method === 'POST') {
         exit;
     }
 
-    // 2. RN-FIN-03: Cálculo de retenção de taxa GlicoCare (12%) e repasse programado ao especialista (88%)
+    // 2. RN-FIN-03: Cálculo de taxas e comprovante NF
     $taxaPlataforma = round($valorBruto * 0.12, 2);
     $repasseLiquido = round($valorBruto - $taxaPlataforma, 2);
     $numeroReciboNF = 'NF-GC-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
+    $codTransacao   = 'GC-PAY-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
 
-    // 3. RN-ATD-04: Sala nativa de videoconferência GlicoCare (100% interna, sem links externos)
+    // 3. RN-ATD-04: Sala nativa de videoconferência
     $salaNativaId   = 'SALA-NATIVA-GC-' . strtoupper(bin2hex(random_bytes(4)));
     $rotaInternaVideo = '/atendimento-nativo/' . $salaNativaId;
 
     $stmt = $db->prepare(
         'INSERT INTO agendamentos
          (familiar_usuario_id, especialista_id, data_hora_consulta, valor_transacao_interna,
+          taxa_servico_glicocare, repasse_especialista, comprovante_nf, codigo_transacao_interna,
           status_pagamento_interno, status_agendamento, link_video_integrado, observacoes_familia)
-         VALUES (:fuid, :eid, :data_hora, :valor, "pago_retido_custodia", "confirmado", :link, :obs)'
+         VALUES
+         (:fuid, :eid, :data_hora, :valor, :taxa, :repasse, :nf, :cod_trans, "pago_retido_custodia", "confirmado", :link, :obs)'
     );
     $stmt->execute([
         ':fuid'      => $familiarId,
         ':eid'       => $especialistaId,
         ':data_hora' => $dataHora,
         ':valor'     => $valorBruto,
+        ':taxa'      => $taxaPlataforma,
+        ':repasse'   => $repasseLiquido,
+        ':nf'        => $numeroReciboNF,
+        ':cod_trans' => $codTransacao,
         ':link'      => $rotaInternaVideo,
         ':obs'       => $payload['observacoes_familia'] ?? null,
     ]);
+    $novoId = (int) $db->lastInsertId();
+
+    // 4. Captura snapshot recém-criado e audita (RN-AUD-01)
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'agendamentos', $novoId);
+    $pacienteNome = $payload['paciente_nome'] ?? "Familiar #{$familiarId}";
+
+    AuditLogger::registrar(
+        $db,
+        'CRIACAO',
+        'agendamentos',
+        $novoId,
+        '/agendamentos',
+        null,
+        $snapshotNovo,
+        $familiarId,
+        $pacienteNome
+    );
 
     http_response_code(201);
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => 'Agendamento confirmado com bloqueio imediato de slot (RN-AGD-02), pagamento interno (RN-FIN-03) e sala de vídeo nativa (RN-ATD-04).',
-        'id' => (int) $db->lastInsertId(),
+        'mensagem' => 'Agendamento confirmado com auditoria imutável registrada (RN-AUD-01).',
+        'id' => $novoId,
         'rn_agd_02' => [
             'slot_bloqueado' => $dataHora,
             'notificacao_paciente' => 'Enviada por e-mail e painel GlicoCare',
@@ -121,6 +157,130 @@ if ($method === 'POST') {
             'rota_interna_video' => $rotaInternaVideo,
             'historico_clinico_unificado' => true,
         ],
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO PATCH: Atualização de status ou laudo com auditoria (EDICAO)
+   ============================================================================= */
+if ($method === 'PATCH') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($payload['id']) ? (int)$payload['id'] : 0;
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do agendamento é obrigatório para atualização.']);
+        exit;
+    }
+
+    // 1. Snapshot ANTES da alteração (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'agendamentos', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Agendamento não encontrado.']);
+        exit;
+    }
+
+    $campos = [];
+    $params = [':id' => $id];
+
+    if (isset($payload['status_agendamento'])) {
+        $campos[] = 'status_agendamento = :status_agendamento';
+        $params[':status_agendamento'] = trim($payload['status_agendamento']);
+    }
+    if (isset($payload['status_pagamento_interno'])) {
+        $campos[] = 'status_pagamento_interno = :status_pagamento';
+        $params[':status_pagamento'] = trim($payload['status_pagamento_interno']);
+    }
+    if (isset($payload['url_laudo_receita_pdf'])) {
+        $campos[] = 'url_laudo_receita_pdf = :laudo_url';
+        $params[':laudo_url'] = trim($payload['url_laudo_receita_pdf']);
+    }
+    if (isset($payload['observacoes_familia'])) {
+        $campos[] = 'observacoes_familia = :obs';
+        $params[':obs'] = trim($payload['observacoes_familia']);
+    }
+
+    if (empty($campos)) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Nenhum campo informado para atualização.']);
+        exit;
+    }
+
+    $sql = 'UPDATE agendamentos SET ' . implode(', ', $campos) . ' WHERE id = :id';
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    // 2. Snapshot DEPOIS da alteração
+    $snapshotNovo = AuditLogger::capturarSnapshot($db, 'agendamentos', $id);
+
+    // 3. Registro compulsório de auditoria
+    $usuarioId = $payload['usuario_id'] ?? null;
+    $usuarioNome = $payload['usuario_nome'] ?? 'Especialista / Sistema';
+
+    AuditLogger::registrar(
+        $db,
+        'EDICAO',
+        'agendamentos',
+        $id,
+        '/agendamentos',
+        $snapshotAnterior,
+        $snapshotNovo,
+        $usuarioId,
+        $usuarioNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Agendamento #{$id} atualizado e registrado na auditoria imutável."
+    ]);
+    exit;
+}
+
+/* =============================================================================
+   MÉTODO DELETE: Cancelamento / exclusão com auditoria (EXCLUSAO)
+   ============================================================================= */
+if ($method === 'DELETE') {
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'ID do agendamento é obrigatório para exclusão.']);
+        exit;
+    }
+
+    // 1. Snapshot ANTES da exclusão (RN-AUD-01)
+    $snapshotAnterior = AuditLogger::capturarSnapshot($db, 'agendamentos', $id);
+    if (!$snapshotAnterior) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Agendamento não encontrado.']);
+        exit;
+    }
+
+    $stmt = $db->prepare('DELETE FROM agendamentos WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // 2. Registro de auditoria imutável (EXCLUSAO)
+    $usuarioId = $payload['usuario_id'] ?? null;
+    $usuarioNome = $payload['usuario_nome'] ?? 'Administrador / Familiar';
+
+    AuditLogger::registrar(
+        $db,
+        'EXCLUSAO',
+        'agendamentos',
+        $id,
+        '/agendamentos',
+        $snapshotAnterior,
+        null,
+        $usuarioId,
+        $usuarioNome
+    );
+
+    echo json_encode([
+        'sucesso' => true,
+        'mensagem' => "Agendamento #{$id} excluído com sucesso e preservado na trilha de auditoria."
     ]);
     exit;
 }

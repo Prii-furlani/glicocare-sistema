@@ -11,6 +11,7 @@
 --   * RN-AGD-02: Disponibilidade em tempo real com bloqueio imediato de slot.
 --   * RN-FIN-03: Exclusividade financeira com taxa de retenção da plataforma.
 --   * RN-ATD-04: Atendimento online por videoconferência nativa.
+--   * RN-AUD-01: Sistema completo de Auditoria e Logs Imutáveis (append-only).
 -- =============================================================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -124,12 +125,14 @@ CREATE TABLE IF NOT EXISTS `sugestoes_conteudo` (
 CREATE TABLE IF NOT EXISTS `depoimentos_moderacao` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `artigo_id` INT UNSIGNED NOT NULL,
-  `usuario_id` INT UNSIGNED NOT NULL,
+  `usuario_id` INT UNSIGNED DEFAULT NULL,
   `nome_exibicao_familiar` VARCHAR(120) NOT NULL,
   `parentesco_contexto` VARCHAR(120) DEFAULT 'Família DM1',
   `relato` TEXT NOT NULL,
   `status_moderacao` ENUM('pendente', 'aprovado', 'rejeitado') NOT NULL DEFAULT 'pendente' COMMENT 'RN-MOD-01',
   `observacao_moderador` VARCHAR(255) DEFAULT NULL,
+  `motivo_moderacao` VARCHAR(255) DEFAULT NULL,
+  `moderado_por_usuario_id` INT UNSIGNED DEFAULT NULL,
   `moderado_em` DATETIME DEFAULT NULL,
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -186,6 +189,28 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
     FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agendamentos por vídeo integrado e financeiro interno (RN-MOD-MKT)';
+
+-- =============================================================================
+-- TABELA 7: logs_auditoria
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `logs_auditoria` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único sequencial do log de auditoria',
+  `usuario_id` INT UNSIGNED DEFAULT NULL COMMENT 'ID do usuário responsável (NULL se anônimo/sistema)',
+  `usuario_nome` VARCHAR(150) NOT NULL COMMENT 'Nome ou identificação do responsável pela ação (RN-AUD-01)',
+  `acao` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO') NOT NULL COMMENT 'Tipo exato da mutação realizada',
+  `tabela_afetada` VARCHAR(100) NOT NULL COMMENT 'Entidade/tabela modificada no banco',
+  `registro_id` VARCHAR(100) NOT NULL COMMENT 'ID ou chave primária do registro impactado',
+  `pagina_impacto` VARCHAR(150) NOT NULL COMMENT 'Rota ou tela do front-end impactada',
+  `valor_anterior` JSON DEFAULT NULL COMMENT 'Snapshot dos dados antes da alteração (NULL em CRIACAO)',
+  `valor_novo` JSON DEFAULT NULL COMMENT 'Snapshot dos dados após a alteração (NULL em EXCLUSAO)',
+  `ip_origem` VARCHAR(45) DEFAULT NULL COMMENT 'Endereço IP de onde partiu a requisição',
+  `data_hora_local` DATETIME NOT NULL COMMENT 'Data e hora no fuso horário America/Sao_Paulo',
+  PRIMARY KEY (`id`),
+  KEY `idx_logs_tabela_reg` (`tabela_afetada`, `registro_id`),
+  KEY `idx_logs_data` (`data_hora_local`),
+  KEY `idx_logs_usuario` (`usuario_id`),
+  KEY `idx_logs_acao` (`acao`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Trilha de auditoria imutável (append-only) - RN-AUD-01';
 
 -- =============================================================================
 -- SEED DATA
@@ -279,3 +304,22 @@ INSERT INTO `agendamentos` (
   'Desejo analisar a estabilidade glicêmica noturna e revisar a carta de orientações escolares.'
 )
 ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`);
+
+INSERT INTO `logs_auditoria` (
+  `id`, `usuario_id`, `usuario_nome`, `acao`, `tabela_afetada`, `registro_id`,
+  `pagina_impacto`, `valor_anterior`, `valor_novo`, `ip_origem`, `data_hora_local`
+) VALUES
+(
+  1, 1, 'Curadoria GlicoCare', 'CRIACAO', 'artigos_conteudos', '1',
+  '/conteudos', NULL,
+  '{"id": 1, "titulo": "O primeiro mês após o diagnóstico: respirando um dia de cada vez", "status": "publicado"}',
+  '127.0.0.1', NOW()
+),
+(
+  2, 1, 'Curadoria GlicoCare', 'EDICAO', 'especialistas', '1',
+  '/especialistas/1',
+  '{"id": 1, "status_credenciamento": "pendente_validacao", "registro_verificado": 0}',
+  '{"id": 1, "status_credenciamento": "aprovado", "registro_verificado": 1}',
+  '127.0.0.1', NOW()
+)
+ON DUPLICATE KEY UPDATE `usuario_nome` = VALUES(`usuario_nome`);
