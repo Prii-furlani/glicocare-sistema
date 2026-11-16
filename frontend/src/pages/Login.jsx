@@ -15,8 +15,9 @@
    ========================================================================== */
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import lufyMascote from '../assets/lufy-mascote.jpg';
 import Button from '../components/Button';
@@ -24,6 +25,8 @@ import Button from '../components/Button';
 /* INÍCIO DO COMPONENTE DA PÁGINA DE LOGIN */
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
 
   /* INÍCIO DOS ESTADOS DO FORMULÁRIO */
   // E-mail inserido pelo usuário
@@ -41,8 +44,8 @@ export default function Login() {
   // Estado de envio / carregamento
   const [carregando, setCarregando] = useState(false);
 
-  // Mensagem de erro amigável
-  const [mensagemErro, setMensagemErro] = useState('');
+  // Mensagem de erro ou aviso acolhedor de rota protegida
+  const [mensagemErro, setMensagemErro] = useState(location.state?.mensagem || '');
 
   // Mensagem de sucesso antes do redirecionamento
   const [mensagemSucesso, setMensagemSucesso] = useState('');
@@ -154,16 +157,10 @@ export default function Login() {
       if (respostaDados && respostaDados.sucesso) {
         const { dados, mensagem } = respostaDados;
 
-        // Armazena a sessão localmente
-        if (lembrarMe) {
-          localStorage.setItem('glicocare_token', dados.token);
-          localStorage.setItem('glicocare_usuario', JSON.stringify(dados.usuario));
-        } else {
-          sessionStorage.setItem('glicocare_token', dados.token);
-          sessionStorage.setItem('glicocare_usuario', JSON.stringify(dados.usuario));
-        }
+        // Persiste a sessão no contexto global (AuthContext - RN-ACC-01)
+        login(respostaDados, lembrarMe);
 
-        // Verifica aviso para especialistas em análise
+        // Verifica aviso para especialistas em análise (RN-ESP-01)
         if (dados.aviso_credenciamento) {
           setAvisoEspecialistaPendente(dados.aviso_credenciamento);
           setCarregando(false);
@@ -172,10 +169,11 @@ export default function Login() {
 
         setMensagemSucesso(mensagem || 'Login realizado com sucesso!');
 
-        // Redirecionamento suave após breve intervalo
+        // Redireciona para a rota de origem (se houver) ou para o painel do perfil
+        const destino = location.state?.from?.pathname || dados.redirecionar_para || '/biblioteca';
         setTimeout(() => {
-          navigate(dados.redirecionar_para || '/biblioteca');
-        }, 800);
+          navigate(destino);
+        }, 750);
       }
     } catch (err) {
       setMensagemErro('Não foi possível conectar ao servidor de login no momento. Tente novamente em instantes.');
@@ -283,85 +281,87 @@ export default function Login() {
         {/* FIM DO CABEÇALHO DO LOGIN */}
 
         {/* ==================================================================
-            SELETOR RÁPIDO DE CONTAS DE TESTE (FACILITADOR)
+            SELETOR RÁPIDO DE CONTAS DE TESTE (EXIBIDO APENAS EM AMBIENTE DEV)
             ================================================================== */}
-        <div
-          style={{
-            backgroundColor: '#EAE4D9',
-            borderRadius: '10px',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.5rem',
-            border: '1px solid rgba(124, 83, 63, 0.15)',
-          }}
-        >
+        {import.meta.env.DEV && (
           <div
             style={{
-              fontSize: '0.74rem',
-              fontWeight: 600,
-              color: '#7C533F',
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
+              backgroundColor: '#EAE4D9',
+              borderRadius: '10px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1.5rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
             }}
           >
-            <span>💡</span>
-            <span>Preenchimento rápido de demonstração (1 clique):</span>
+            <div
+              style={{
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                color: '#7C533F',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <span>💡</span>
+              <span>Preenchimento rápido de demonstração (Ambiente de Desenvolvimento):</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => handlePreencherContaTeste('paciente')}
+                style={{
+                  background: '#F6F3EE',
+                  border: '1px solid #3B7E48',
+                  borderRadius: '20px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  color: '#2E2824',
+                  fontWeight: 500,
+                }}
+              >
+                🌱 Família DM1
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePreencherContaTeste('especialista')}
+                style={{
+                  background: '#F6F3EE',
+                  border: '1px solid #7C533F',
+                  borderRadius: '20px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  color: '#2E2824',
+                  fontWeight: 500,
+                }}
+              >
+                🩺 Especialista
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePreencherContaTeste('admin')}
+                style={{
+                  background: '#F6F3EE',
+                  border: '1px solid #2E2824',
+                  borderRadius: '20px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  color: '#2E2824',
+                  fontWeight: 500,
+                }}
+              >
+                🛡️ Curadoria / Admin
+              </button>
+            </div>
           </div>
-
-          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => handlePreencherContaTeste('paciente')}
-              style={{
-                background: '#F6F3EE',
-                border: '1px solid #3B7E48',
-                borderRadius: '20px',
-                padding: '0.3rem 0.65rem',
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                color: '#2E2824',
-                fontWeight: 500,
-              }}
-            >
-              🌱 Família DM1
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handlePreencherContaTeste('especialista')}
-              style={{
-                background: '#F6F3EE',
-                border: '1px solid #7C533F',
-                borderRadius: '20px',
-                padding: '0.3rem 0.65rem',
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                color: '#2E2824',
-                fontWeight: 500,
-              }}
-            >
-              🩺 Especialista
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handlePreencherContaTeste('admin')}
-              style={{
-                background: '#F6F3EE',
-                border: '1px solid #2E2824',
-                borderRadius: '20px',
-                padding: '0.3rem 0.65rem',
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                color: '#2E2824',
-                fontWeight: 500,
-              }}
-            >
-              🛡️ Curadoria / Admin
-            </button>
-          </div>
-        </div>
+        )}
         {/* FIM DO SELETOR DE CONTAS */}
 
         {/* ==================================================================

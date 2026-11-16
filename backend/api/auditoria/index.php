@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../services/AuditLogger.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -27,6 +28,11 @@ if ($method !== 'GET') {
     exit;
 }
 /* FIM DO BLOQUEIO ESTREITO DE MUTAÇÃO */
+
+/* INÍCIO DA VALIDAÇÃO DE AUTORIZAÇÃO RBAC (RN-ACC-01) */
+// Acesso restrito a administradores e curadores
+$adminAuth = AuthMiddleware::autorizar($db, ['admin_moderador', 'admin'], '/painel-auditoria');
+/* FIM DA VALIDAÇÃO DE AUTORIZAÇÃO RBAC */
 
 /* INÍCIO DA CONSULTA SOMENTE-LEITURA */
 try {

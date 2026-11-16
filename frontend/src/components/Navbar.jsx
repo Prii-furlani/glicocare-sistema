@@ -23,9 +23,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import Button from './Button';
+import { useAuth } from '../context/AuthContext';
 
 /* INÍCIO DO COMPONENTE NAVBAR */
 export default function Navbar() {
+  // Contexto de autenticação e controle de perfis (RN-ACC-01)
+  const { usuario, estaAutenticado, logout } = useAuth();
+
   // Controla a abertura e fechamento da gaveta (overlay) no Mobile
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -34,6 +38,21 @@ export default function Navbar() {
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Rota e rótulo do painel de acordo com o perfil logado
+  const obterDadosPerfil = () => {
+    if (!usuario) return { rota: '/login', badge: '', icone: '👤', rotulo: 'Entrar' };
+    const p = usuario.papel || usuario.tipo;
+    if (p === 'admin' || p === 'admin_moderador') {
+      return { rota: '/painel-admin', badge: 'Curadoria', icone: '🛡️', rotulo: 'Painel Curadoria' };
+    }
+    if (p === 'especialista') {
+      return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel' };
+    }
+    return { rota: '/minha-conta', badge: 'Família DM1', icone: '🏠', rotulo: 'Minha Área' };
+  };
+
+  const perfilInfo = obterDadosPerfil();
 
   // Verifica se o usuário está em uma página interna de leitura de artigo (/artigo/:id)
   const isArticlePage = location.pathname.startsWith('/artigo/');
@@ -185,41 +204,114 @@ export default function Navbar() {
             FAQ
           </a>
 
-          {/* Link para Tela de Login / Espaço Seguro */}
-          <Link
-            to="/login"
-            className={`gc-navbar__link ${
-              location.pathname === '/login' ? 'gc-navbar__link--ativo' : ''
-            }`}
-            style={{ fontWeight: 600, color: '#3B7E48' }}
-          >
-            Entrar
-          </Link>
+          {/* Link para Tela de Login ou Painel do Perfil Logado (RN-ACC-01) */}
+          {estaAutenticado ? (
+            <Link
+              to={perfilInfo.rota}
+              className={`gc-navbar__link ${
+                location.pathname === perfilInfo.rota ? 'gc-navbar__link--ativo' : ''
+              }`}
+              style={{ fontWeight: 600, color: '#3B7E48' }}
+            >
+              {perfilInfo.icone} {perfilInfo.rotulo}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className={`gc-navbar__link ${
+                location.pathname === '/login' ? 'gc-navbar__link--ativo' : ''
+              }`}
+              style={{ fontWeight: 600, color: '#3B7E48' }}
+            >
+              Entrar
+            </Link>
+          )}
         </nav>
 
         {/* Extrema Direita (Desktop CTA / Mobile Botão Hambúrguer) */}
         <div className="gc-navbar__actions">
-          {/* Botão de Entrar compacto (Desktop) */}
-          <Link
-            to="/login"
-            className="gc-navbar__btn-entrar-desktop"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.86rem',
-              fontWeight: 600,
-              color: '#3B7E48',
-              backgroundColor: 'transparent',
-              border: '1px solid rgba(59, 126, 72, 0.45)',
-              borderRadius: '20px',
-              padding: '0.5rem 1rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            <span>👤</span>
-            <span>Entrar</span>
-          </Link>
+          {/* Autenticação Desktop: Exibe perfil + logout quando autenticado, ou botão entrar */}
+          {estaAutenticado ? (
+            <div
+              className="gc-navbar__user-desktop"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <Link
+                to={perfilInfo.rota}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  color: '#2E2824',
+                  backgroundColor: '#F6F3EE',
+                  border: '1px solid rgba(124, 83, 63, 0.25)',
+                  borderRadius: '20px',
+                  padding: '0.45rem 0.85rem',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                }}
+                title={`Acessar ${perfilInfo.rotulo}`}
+              >
+                <span>{perfilInfo.icone}</span>
+                <span>{usuario.nome?.split(' ')[0] || 'Usuário'}</span>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    backgroundColor: '#EAE4D9',
+                    color: '#7C533F',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {perfilInfo.badge}
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#A23B2A',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  padding: '0.4rem 0.6rem',
+                }}
+                title="Encerrar sessão segura"
+              >
+                Sair
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="gc-navbar__btn-entrar-desktop"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontSize: '0.86rem',
+                fontWeight: 600,
+                color: '#3B7E48',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(59, 126, 72, 0.45)',
+                borderRadius: '20px',
+                padding: '0.5rem 1rem',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>👤</span>
+              <span>Entrar</span>
+            </Link>
+          )}
 
           {/* Botão de Ação em Destaque (Exclusivo Desktop — oculto no Mobile) */}
           <div className="gc-navbar__desktop-cta">
@@ -327,24 +419,100 @@ export default function Navbar() {
                 <span aria-hidden="true">→</span>
               </a>
 
-              {/* Link de Entrada no Mobile */}
-              <Link
-                to="/login"
-                onClick={() => setDrawerOpen(false)}
-                className="gc-navbar__mobile-link"
-                style={{
-                  color: '#3B7E48',
-                  fontWeight: 700,
-                  backgroundColor: '#EAE4D9',
-                  borderRadius: '8px',
-                  padding: '0.75rem 1rem',
-                  marginTop: '0.5rem',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                <span>👤 Entrar no meu espaço seguro</span>
-                <span aria-hidden="true">→</span>
-              </Link>
+              {/* Autenticação Mobile: Usuário logado ou botão de login */}
+              {estaAutenticado ? (
+                <div
+                  style={{
+                    backgroundColor: '#EAE4D9',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    marginTop: '0.75rem',
+                    marginBottom: '0.75rem',
+                    border: '1px solid rgba(124, 83, 63, 0.2)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.45rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2E2824' }}>
+                      {perfilInfo.icone} Olá, {usuario.nome?.split(' ')[0]}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        backgroundColor: '#F6F3EE',
+                        color: '#7C533F',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {perfilInfo.badge}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
+                    <Link
+                      to={perfilInfo.rota}
+                      onClick={() => setDrawerOpen(false)}
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        padding: '0.55rem 0.75rem',
+                        backgroundColor: '#3B7E48',
+                        color: '#FFF',
+                        borderRadius: '8px',
+                        fontSize: '0.84rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {perfilInfo.rotulo} →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerOpen(false);
+                        logout();
+                      }}
+                      style={{
+                        padding: '0.55rem 0.85rem',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #A23B2A',
+                        color: '#A23B2A',
+                        borderRadius: '8px',
+                        fontSize: '0.84rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Sair
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setDrawerOpen(false)}
+                  className="gc-navbar__mobile-link"
+                  style={{
+                    color: '#3B7E48',
+                    fontWeight: 700,
+                    backgroundColor: '#EAE4D9',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1rem',
+                    marginTop: '0.5rem',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  <span>👤 Entrar no meu espaço seguro</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              )}
 
               <hr className="gc-navbar__mobile-divider" />
 

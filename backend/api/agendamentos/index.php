@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../services/AuditLogger.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -50,6 +51,9 @@ if ($method === 'GET') {
    MÉTODO POST: Criação de consulta com bloqueio e auditoria (CRIACAO)
    ============================================================================= */
 if ($method === 'POST') {
+    // Autenticação obrigatória para agendar consulta (RN-ACC-01)
+    $usuarioAuth = AuthMiddleware::autenticar($db, '/agendamentos');
+
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
 
     if (empty($payload['especialista_id']) || empty($payload['data_hora_consulta'])) {
@@ -62,7 +66,8 @@ if ($method === 'POST') {
     }
 
     $especialistaId = (int) $payload['especialista_id'];
-    $familiarId     = isset($payload['familiar_usuario_id']) ? (int) $payload['familiar_usuario_id'] : 1;
+    $familiarId     = (int) $usuarioAuth['id'];
+    $pacienteNome   = $usuarioAuth['nome_completo'];
     $dataHora       = trim($payload['data_hora_consulta']);
     $valorBruto     = (float) ($payload['valor_transacao_interna'] ?? 250.00);
 

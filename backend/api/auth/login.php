@@ -133,13 +133,29 @@ try {
     /* INÍCIO DA GERAÇÃO DO TOKEN E SESSÃO */
     $tokenSessao = bin2hex(random_bytes(32));
 
-    // Determina a rota recomendada de redirecionamento no front-end conforme o perfil
-    $rotaRedirecionamento = '/biblioteca';
+    // Salva o token de sessão ativo na tabela usuarios
+    try {
+        $stmtToken = $db->prepare(
+            'UPDATE usuarios
+             SET token_sessao = :token,
+                 token_expira_em = DATE_ADD(NOW(), INTERVAL 30 DAY)
+             WHERE id = :id'
+        );
+        $stmtToken->execute([
+            ':token' => $tokenSessao,
+            ':id'    => (int)$usuario['id'],
+        ]);
+    } catch (Exception $eToken) {
+        // Prossegue com o token gerado mesmo se a coluna estiver em transição
+    }
+
+    // Determina a rota recomendada de redirecionamento no front-end conforme o perfil (RN-ACC-01)
+    $rotaRedirecionamento = '/minha-conta';
     if ($usuario['tipo_perfil'] === 'admin_moderador') {
-        $rotaRedirecionamento = '/painel-moderacao';
+        $rotaRedirecionamento = '/painel-admin';
     } elseif ($usuario['tipo_perfil'] === 'especialista') {
         $rotaRedirecionamento = ($dadosEspecialista && (int)$dadosEspecialista['registro_verificado'] === 1)
-            ? '/especialistas'
+            ? '/painel-especialista'
             : '/credenciamento';
     }
 

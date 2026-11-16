@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../services/AuditLogger.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -181,6 +182,9 @@ if ($method === 'POST') {
    MÉTODO PATCH: Moderação administrativa com auditoria (EDICAO)
    ============================================================================= */
 if ($method === 'PATCH') {
+    // Validação estrita de autorização RBAC (RN-ACC-01: Exclusivo Admin/Curadoria)
+    $adminAuth = AuthMiddleware::autorizar($db, ['admin_moderador', 'admin'], '/painel-admin');
+
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($payload['id']) ? (int) $payload['id'] : 0;
     $acao = $payload['acao'] ?? 'aprovar';
@@ -223,9 +227,6 @@ if ($method === 'PATCH') {
     $snapshotNovo = AuditLogger::capturarSnapshot($db, 'especialistas', $id);
 
     // 3. Registro compulsório de auditoria
-    $adminId = $payload['admin_id'] ?? null;
-    $adminNome = $payload['admin_nome'] ?? 'Curadoria Administrativa';
-
     AuditLogger::registrar(
         $db,
         'EDICAO',
@@ -234,8 +235,8 @@ if ($method === 'PATCH') {
         '/especialistas/' . $id,
         $snapshotAnterior,
         $snapshotNovo,
-        $adminId,
-        $adminNome
+        $adminAuth['id'],
+        $adminAuth['nome_completo']
     );
 
     echo json_encode([
@@ -257,6 +258,9 @@ if ($method === 'PATCH') {
    MÉTODO DELETE: Exclusão com snapshot prévio em auditoria (EXCLUSAO)
    ============================================================================= */
 if ($method === 'DELETE') {
+    // Validação estrita de autorização RBAC (RN-ACC-01: Exclusivo Admin/Curadoria)
+    $adminAuth = AuthMiddleware::autorizar($db, ['admin_moderador', 'admin'], '/painel-admin');
+
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
 
@@ -278,9 +282,6 @@ if ($method === 'DELETE') {
     $stmt->execute([':id' => $id]);
 
     // 2. Registro de auditoria imutável (EXCLUSAO)
-    $adminId = $payload['admin_id'] ?? null;
-    $adminNome = $payload['admin_nome'] ?? 'Administrador';
-
     AuditLogger::registrar(
         $db,
         'EXCLUSAO',
@@ -289,8 +290,8 @@ if ($method === 'DELETE') {
         '/especialistas',
         $snapshotAnterior,
         null,
-        $adminId,
-        $adminNome
+        $adminAuth['id'],
+        $adminAuth['nome_completo']
     );
 
     echo json_encode([

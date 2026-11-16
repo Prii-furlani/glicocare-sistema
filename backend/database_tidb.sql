@@ -27,12 +27,15 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `telefone_whatsapp` VARCHAR(30) DEFAULT NULL COMMENT 'WhatsApp para lembretes de consultas e avisos',
   `tipo_perfil` ENUM('familiar_paciente', 'especialista', 'admin_moderador') NOT NULL DEFAULT 'familiar_paciente' COMMENT 'Papel do usuário no sistema',
   `contexto_dm1` VARCHAR(200) DEFAULT NULL COMMENT 'Vínculo com DM1 (ex: Mãe do Theo, 6 anos)',
+  `token_sessao` VARCHAR(128) DEFAULT NULL COMMENT 'Token ativo de autenticação Bearer',
+  `token_expira_em` DATETIME DEFAULT NULL COMMENT 'Data e hora de expiração da sessão',
   `ativo` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = conta ativa, 0 = inativa',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_usuarios_email` (`email`),
-  KEY `idx_usuarios_tipo_perfil` (`tipo_perfil`)
+  KEY `idx_usuarios_tipo_perfil` (`tipo_perfil`),
+  KEY `idx_usuarios_token` (`token_sessao`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Base unificada de usuários GlicoCare';
 
 -- =============================================================================

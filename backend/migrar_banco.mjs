@@ -38,16 +38,29 @@ async function main() {
 
   console.log('✅ Conexão estabelecida com sucesso!');
 
-  // Garante que o ENUM de logs_auditoria suporte LOGIN e FALHA_LOGIN
+  await connection.query('USE `glicocare_db`;');
+
+  // 1. Atualiza enum acao em logs_auditoria para suportar ACESSO_NEGADO (RN-ACC-01)
   try {
-    await connection.query('USE `glicocare_db`;');
     await connection.query(`
       ALTER TABLE \`logs_auditoria\`
-      MODIFY COLUMN \`acao\` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN') NOT NULL;
+      MODIFY COLUMN \`acao\` ENUM('CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN', 'ACESSO_NEGADO') NOT NULL;
     `);
-    console.log('✅ ENUM acao em logs_auditoria atualizado para suportar LOGIN e FALHA_LOGIN.');
+    console.log('✅ ENUM acao atualizado com ACESSO_NEGADO (RN-ACC-01).');
   } catch (err) {
-    console.log('ℹ️ Verificação de enum logs_auditoria:', err.message);
+    console.log('ℹ️ Enum logs_auditoria:', err.message);
+  }
+
+  // 2. Adiciona colunas de token_sessao e token_expira_em na tabela usuarios se não existirem
+  try {
+    await connection.query(`
+      ALTER TABLE \`usuarios\`
+      ADD COLUMN IF NOT EXISTS \`token_sessao\` VARCHAR(128) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`token_expira_em\` DATETIME DEFAULT NULL;
+    `);
+    console.log('✅ Colunas de token_sessao e token_expira_em verificadas na tabela usuarios.');
+  } catch (err) {
+    console.log('ℹ️ Colunas de token em usuarios:', err.message);
   }
 
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
@@ -58,7 +71,6 @@ async function main() {
 
   console.log('✅ Script executado com sucesso!');
 
-  await connection.query('USE `glicocare_db`;');
   const [tables] = await connection.query('SHOW TABLES;');
   console.log('\n📋 Tabelas ativas no banco:');
   console.table(tables);

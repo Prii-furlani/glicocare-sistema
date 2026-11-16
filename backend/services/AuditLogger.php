@@ -21,7 +21,7 @@ class AuditLogger
     private const TABELA_LOGS = 'logs_auditoria';
 
     /** Ações permitidas pelo enum da tabela logs_auditoria */
-    private const ACOES_PERMITIDAS = ['CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN'];
+    private const ACOES_PERMITIDAS = ['CRIACAO', 'EDICAO', 'EXCLUSAO', 'LOGIN', 'FALHA_LOGIN', 'ACESSO_NEGADO'];
 
     /** Fuso horário oficial para conformidade temporal no Brasil */
     private const TIMEZONE_OFICIAL = 'America/Sao_Paulo';

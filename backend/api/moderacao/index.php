@@ -14,6 +14,7 @@
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../services/AuditLogger.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -159,6 +160,9 @@ if ($method === 'POST') {
    MÉTODO PATCH: Moderação administrativa (aprovar/rejeitar) com auditoria (EDICAO)
    ============================================================================= */
 if ($method === 'PATCH') {
+    // Validação estrita de autorização RBAC (RN-ACC-01: Exclusivo Admin/Curadoria)
+    $adminAuth = AuthMiddleware::autorizar($db, ['admin_moderador', 'admin'], '/painel-moderacao');
+
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($payload['id']) ? (int) $payload['id'] : 0;
     $novoStatus = $payload['status_moderacao'] ?? '';
@@ -187,7 +191,7 @@ if ($method === 'PATCH') {
     );
     $stmt->execute([
         ':status'   => $novoStatus,
-        ':admin_id' => $payload['moderado_por_usuario_id'] ?? null,
+        ':admin_id' => $adminAuth['id'],
         ':motivo'   => $payload['motivo_moderacao'] ?? null,
         ':id'       => $id,
     ]);
@@ -196,9 +200,6 @@ if ($method === 'PATCH') {
     $snapshotNovo = AuditLogger::capturarSnapshot($db, 'depoimentos_moderacao', $id);
 
     // 3. Registro de auditoria compulsório (EDICAO)
-    $adminId = $payload['moderado_por_usuario_id'] ?? null;
-    $adminNome = $payload['moderador_nome'] ?? 'Curador de Moderação';
-
     AuditLogger::registrar(
         $db,
         'EDICAO',
@@ -207,8 +208,8 @@ if ($method === 'PATCH') {
         '/painel-moderacao',
         $snapshotAnterior,
         $snapshotNovo,
-        $adminId,
-        $adminNome
+        $adminAuth['id'],
+        $adminAuth['nome_completo']
     );
 
     echo json_encode([
@@ -222,6 +223,9 @@ if ($method === 'PATCH') {
    MÉTODO DELETE: Exclusão com snapshot prévio em auditoria (EXCLUSAO)
    ============================================================================= */
 if ($method === 'DELETE') {
+    // Validação estrita de autorização RBAC (RN-ACC-01: Exclusivo Admin/Curadoria)
+    $adminAuth = AuthMiddleware::autorizar($db, ['admin_moderador', 'admin'], '/painel-moderacao');
+
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $id = isset($_GET['id']) ? (int)$_GET['id'] : ($payload['id'] ?? 0);
 
@@ -243,9 +247,6 @@ if ($method === 'DELETE') {
     $stmt->execute([':id' => $id]);
 
     // 2. Registro compulsório de auditoria (EXCLUSAO)
-    $adminId = $payload['usuario_id'] ?? null;
-    $adminNome = $payload['usuario_nome'] ?? 'Curador de Moderação';
-
     AuditLogger::registrar(
         $db,
         'EXCLUSAO',
@@ -254,8 +255,8 @@ if ($method === 'DELETE') {
         '/painel-moderacao',
         $snapshotAnterior,
         null,
-        $adminId,
-        $adminNome
+        $adminAuth['id'],
+        $adminAuth['nome_completo']
     );
 
     echo json_encode([
