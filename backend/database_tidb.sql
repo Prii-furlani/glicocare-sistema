@@ -294,6 +294,8 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
     'CANCELADO'
   ) NOT NULL DEFAULT 'AGENDADO' COMMENT 'Estado clínico e teleconsulta integrada',
   `sala_token_unico` VARCHAR(120) DEFAULT NULL COMMENT 'Token criptográfico único da sala de teleconsulta nativa',
+  `iniciado_em` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de início da videochamada',
+  `encerrado_em` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de encerramento da videochamada',
   `lembrete_enviado` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Notificação/lembrete de teleconsulta disparado',
   `link_video_integrado` VARCHAR(255) NOT NULL COMMENT 'Rota interna de teleconsulta nativa (RN-ATD-04)',
   `url_laudo_receita_pdf` VARCHAR(255) DEFAULT NULL COMMENT 'Laudo ou receita emitidos na consulta',
@@ -482,6 +484,28 @@ CREATE TABLE IF NOT EXISTS `solicitacoes_exames` (
     FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Guias de exames emitidas pelos especialistas';
+
+-- =============================================================================
+-- TABELA 8B: mensagens_teleconsulta
+-- Chat em tempo real e compartilhamento de arquivos durante a teleconsulta
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `mensagens_teleconsulta` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da mensagem',
+  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+  `remetente_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+  `remetente_nome` VARCHAR(150) NOT NULL COMMENT 'Nome de quem enviou',
+  `papel_remetente` ENUM('especialista', 'paciente') NOT NULL COMMENT 'Papel do remetente',
+  `conteudo` TEXT DEFAULT NULL COMMENT 'Texto da mensagem',
+  `arquivo_url` VARCHAR(255) DEFAULT NULL COMMENT 'URL ou caminho do anexo/PDF/imagem',
+  `arquivo_nome` VARCHAR(255) DEFAULT NULL COMMENT 'Nome original do arquivo',
+  `arquivo_tipo` VARCHAR(60) DEFAULT NULL COMMENT 'MIME type ou extensão',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_mensagens_agendamento` (`agendamento_id`),
+  CONSTRAINT `fk_mensagens_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Chat e arquivos enviados durante a teleconsulta';
 
 -- =============================================================================
 -- TABELA 9: exames_paciente

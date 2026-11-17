@@ -28,7 +28,7 @@ import MeuPerfil from './pages/MeuPerfil';
 import MinhaConta from './pages/MinhaConta';
 import PainelEspecialista from './pages/PainelEspecialista';
 import PainelAdmin from './pages/PainelAdmin';
-import SalaConsulta from './pages/SalaConsulta';
+import SalaTeleconsulta from './pages/SalaTeleconsulta';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL APP */
 export default function App() {
@@ -59,8 +59,8 @@ export default function App() {
             <Route path="/credenciamento" element={<Credenciamento />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/sala-consulta/:token" element={<SalaConsulta />} />
-            <Route path="/atendimento-nativo/:token" element={<SalaConsulta />} />
+            <Route path="/sala-consulta/:token" element={<SalaTeleconsulta />} />
+            <Route path="/atendimento-nativo/:token" element={<SalaTeleconsulta />} />
 
             {/* 2. Rotas Protegidas por Perfil (RBAC - RN-ACC-01) */}
             {/* Boas-Vindas Pós-Cadastro (Etapa 2: Configurar Agora vs Depois) */}

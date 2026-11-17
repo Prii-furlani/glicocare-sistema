@@ -497,6 +497,54 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
 - `SalaConsulta.jsx`:
   * Botão de entrada rápida integrado: orienta confirmação em 1 clique quando o termo anual está ativo ou formalização direta.
 
+## 13. Sala de Teleconsulta Nativa (SDK de Vídeo Embarcado Daily.co / Fallback Simulação Segura & Prontuário Integrado)
+
+### A. Arquitetura de Vídeo Efêmero e Segurança (CFM 2.314/2022 & LGPD)
+- **Provedor Primário (Daily.co REST API & Web Embed):**
+  * Quando a variável de ambiente `DAILY_API_KEY` estiver configurada no `backend/.env`, o endpoint `/backend/api/teleconsulta/iniciar_sala.php` conecta-se à API REST do Daily.co (`POST https://api.daily.co/v1/rooms`) gerando uma sala privada efêmera (`privacy: 'private'`).
+  * Propriedades de segurança: expiração automática (`exp`) de 2 horas após o horário agendado, gravação desativada por padrão (`enable_recording: false` em respeito ao sigilo médico e LGPD) e chat nativo independente (`enable_chat: false`).
+  * Geração de `meeting_token` individual (`POST https://api.daily.co/v1/meeting-tokens`) para cada participante (com privilégio de proprietário `is_owner: true` para o médico).
+  * No front-end, a sala é renderizada com um container `iframe` otimizado e seguro com permissões explícitas: `allow="camera; microphone; fullscreen; display-capture; autoplay"`.
+- **Modo Simulação Segura (Preview Local):**
+  * Se `DAILY_API_KEY` não estiver preenchida no `.env`, a sala opera de forma resiliente e autônoma em Modo Simulação Segura.
+  * O front-end captura a câmera e microfone reais do usuário via `navigator.mediaDevices.getUserMedia`, permitindo testar toda a experiência visual, áudio, compartilhamento de tela e transições sem depender de provedor externo.
+
+### B. Controle de Acesso, Auditoria e Registro de Horários
+- `/backend/api/teleconsulta/iniciar_sala.php`:
+  * Protegido por `AuthMiddleware.php`: verifica se o usuário autenticado é estritamente o paciente/cuidador dono do agendamento ou o especialista responsável.
+  * Valida se o TCLE anual ou por agendamento está ativo e confirmado. Bloqueia o acesso caso pendente de assinatura.
+  * Registra a entrada na sala no `AuditLogger::registrar()` com a ação `LOGIN`.
+- `/backend/api/teleconsulta/registrar_evento_sala.php`:
+  * Registra o timestamp exato de início (`iniciado_em`) e de término (`encerrado_em`) na tabela `agendamentos`.
+  * Registra trilha imutável no `AuditLogger` no fuso de Brasília (`America/Sao_Paulo`).
+- `/backend/api/teleconsulta/mensagens.php` e Tabela `mensagens_teleconsulta`:
+  * Armazena mensagens trocadas no chat paralelo e compartilhamento de anexos/fotos durante a teleconsulta.
+
+### C. Experiência de Interface ("Porto Seguro" - 70% Vídeo / 30% Painel Clínico)
+- **Arquivo Principal:** `frontend/src/pages/SalaTeleconsulta.jsx` (acessível via `/sala-consulta/:token` e `/atendimento-nativo/:token`).
+- **Sala de Espera Virtual Acolhedora:**
+  * Box de pré-visualização de câmera e microfone com controles de teste (mutar/ligar vídeo).
+  * Identificação do profissional verificado (`CRM-SP 148290`) e status "Pronto na Sala".
+  * Card do Lufy com mensagem serena: *"Respire fundo. Suas dúvidas do pré-atendimento já estão separadas aqui ao lado."*
+  * Botão de ingresso: *"Conectar e Entrar na Consulta →"*.
+- **Palco de Vídeo Ativo (70% no Desktop):**
+  * Container cinematográfico suave `#1E1B18` com cantos arredondados de `20px`.
+  * Barra de status superior com badge "HD • TLS 1.3" e timer regressivo de 60 minutos.
+  * Controles minimalistas inferiores: Microfone, Câmera, Compartilhar Tela (`getDisplayMedia`), Chat/Anexos e Encerrar Chamada (`#C94A38`).
+- **Painel Lateral Clínico Integrado (30% no Desktop):**
+  * **Visão do Especialista:**
+    1. *Pré-Atendimento & Resumo:* Exibe motivo da consulta, dores, dúvidas prioritárias, tempo de diagnóstico, **alergias em destaque** (card em tom terracota de alerta) e últimas glicemias/IOB.
+    2. *Exames:* Linha do tempo dos exames laboratoriais do paciente e botão destacado **"+ Solicitar Exames"** (modal que grava diretamente na tabela `solicitacoes_exames` via `/backend/api/exames/solicitar_exames.php`).
+    3. *Prontuário:* Queixa Principal, Evolução Clínica, Conduta/Orientações e checkbox obrigatório CFM 2.314/2022 sobre orientações presenciais. Botão de salvar conclui o atendimento e libera o repasse financeiro (`RN-FIN-03`).
+    4. *Chat & Anexos:* Troca de mensagens em tempo real e envio rápido de fotos/relatórios.
+  * **Visão do Paciente / Cuidador:**
+    1. *Meu Roteiro:* Checklist com as dúvidas pré-cadastradas no pré-atendimento para marcar à medida que forem respondidas.
+    2. *Chat & Enviar Exame:* Canal direto para enviar fotos ou documentos na hora para o médico.
+- **Encerramento e Avaliação:**
+  * Modal de confirmação antes de desligar.
+  * Pós-atendimento abre o modal de avaliação humanizada (1 a 5 estrelas e depoimento) gravando na tabela `avaliacoes_especialistas`.
+
+
 
 
 

@@ -402,6 +402,44 @@ async function main() {
     console.log('ℹ️ Tabela avaliacoes_especialistas:', err.message);
   }
 
+  // 13. Adiciona iniciado_em e encerrado_em em agendamentos
+  try {
+    await connection.query(`
+      ALTER TABLE \`agendamentos\`
+      ADD COLUMN IF NOT EXISTS \`iniciado_em\` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de início da videochamada',
+      ADD COLUMN IF NOT EXISTS \`encerrado_em\` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de encerramento da videochamada';
+    `);
+    console.log('✅ Colunas iniciado_em e encerrado_em verificadas em agendamentos.');
+  } catch (err) {
+    console.log('ℹ️ Colunas iniciado_em / encerrado_em:', err.message);
+  }
+
+  // 14. Cria tabela mensagens_teleconsulta para chat e envio de exames/anexos na sala
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`mensagens_teleconsulta\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da mensagem',
+        \`agendamento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+        \`remetente_id\` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+        \`remetente_nome\` VARCHAR(150) NOT NULL COMMENT 'Nome de quem enviou',
+        \`papel_remetente\` ENUM('especialista', 'paciente') NOT NULL COMMENT 'Papel do remetente',
+        \`conteudo\` TEXT DEFAULT NULL COMMENT 'Texto da mensagem',
+        \`arquivo_url\` VARCHAR(255) DEFAULT NULL COMMENT 'URL ou caminho do anexo/PDF/imagem',
+        \`arquivo_nome\` VARCHAR(255) DEFAULT NULL COMMENT 'Nome original do arquivo',
+        \`arquivo_tipo\` VARCHAR(60) DEFAULT NULL COMMENT 'MIME type ou extensão',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_mensagens_agendamento\` (\`agendamento_id\`),
+        CONSTRAINT \`fk_mensagens_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Chat e arquivos enviados durante a teleconsulta';
+    `);
+    console.log('✅ Tabela mensagens_teleconsulta verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela mensagens_teleconsulta:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 
