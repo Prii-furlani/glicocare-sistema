@@ -27,15 +27,19 @@ export function AuthProvider({ children }) {
   const [carregando, setCarregando] = useState(true);
 
   /**
-   * Normaliza o tipo de perfil para uma nomenclatura amigável:
-   * 'familiar_paciente' -> 'paciente'
-   * 'admin_moderador'   -> 'admin'
-   * 'especialista'      -> 'especialista'
+   * Normaliza o tipo de perfil para os 4 perfis oficiais da plataforma GlicoCare:
+   * 'diabetico'   -> 'diabetico'
+   * 'cuidador'    -> 'cuidador'
+   * 'especialista'-> 'especialista'
+   * 'admin'       -> 'admin'
+   * (Compatibilidade: 'familiar_paciente' -> 'diabetico', 'admin_moderador' -> 'admin')
    */
   const obterPerfilNormalizado = (tipoOriginal) => {
     if (!tipoOriginal) return 'visitante';
-    if (tipoOriginal === 'familiar_paciente' || tipoOriginal === 'paciente') return 'paciente';
     if (tipoOriginal === 'admin_moderador' || tipoOriginal === 'admin') return 'admin';
+    if (tipoOriginal === 'especialista') return 'especialista';
+    if (tipoOriginal === 'cuidador') return 'cuidador';
+    if (tipoOriginal === 'diabetico' || tipoOriginal === 'familiar_paciente' || tipoOriginal === 'paciente') return 'diabetico';
     return tipoOriginal;
   };
 
@@ -108,6 +112,21 @@ export function AuthProvider({ children }) {
   };
 
   /**
+   * Atualiza dados do usuário logado (ex: após configurar perfil ou salvar alterações)
+   */
+  const atualizarUsuario = (dadosAtualizados) => {
+    setUsuario((prev) => {
+      const merged = { ...prev, ...dadosAtualizados };
+      if (localStorage.getItem('glicocare_token')) {
+        localStorage.setItem('glicocare_usuario', JSON.stringify(merged));
+      } else {
+        sessionStorage.setItem('glicocare_usuario', JSON.stringify(merged));
+      }
+      return merged;
+    });
+  };
+
+  /**
    * Atualiza os dados de especialista (ex: após aprovação ou edição de agenda)
    */
   const atualizarEspecialista = (dadosAtualizados) => {
@@ -123,16 +142,24 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Verifica se o usuário atual possui um dos papéis requeridos
+   * Verifica se o usuário atual possui um dos papéis requeridos (RBAC - RN-ACC-01)
    */
   const temPermissao = (rolesPermitidos = []) => {
     if (!rolesPermitidos || rolesPermitidos.length === 0) return true;
     if (!usuario) return false;
-    const perfilAtual = obterPerfilNormalizado(usuario.tipo_perfil);
-    return rolesPermitidos.some((role) => obterPerfilNormalizado(role) === perfilAtual);
+    const perfilAtual = obterPerfilNormalizado(usuario.tipo_usuario || usuario.tipo_perfil);
+
+    return rolesPermitidos.some((role) => {
+      const normalizado = obterPerfilNormalizado(role);
+      // 'paciente' abrange tanto diabéticos quanto seus cuidadores
+      if (role === 'paciente' && (perfilAtual === 'diabetico' || perfilAtual === 'cuidador')) {
+        return true;
+      }
+      return normalizado === perfilAtual;
+    });
   };
 
-  const perfilNormalizado = usuario ? obterPerfilNormalizado(usuario.tipo_perfil) : 'visitante';
+  const perfilNormalizado = usuario ? obterPerfilNormalizado(usuario.tipo_usuario || usuario.tipo_perfil) : 'visitante';
   const estaAutenticado = Boolean(token && usuario);
 
   return (
@@ -146,6 +173,7 @@ export function AuthProvider({ children }) {
         carregando,
         login,
         logout,
+        atualizarUsuario,
         atualizarEspecialista,
         temPermissao,
       }}

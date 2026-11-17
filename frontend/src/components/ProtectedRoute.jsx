@@ -125,7 +125,7 @@ export default function ProtectedRoute({
             <Link to="/">
               <Button variante="secundario">← Voltar à página inicial</Button>
             </Link>
-            <Link to={perfil === 'paciente' ? '/minha-conta' : (perfil === 'especialista' ? '/painel-especialista' : '/painel-admin')}>
+            <Link to={(perfil === 'paciente' || perfil === 'diabetico' || perfil === 'cuidador') ? '/meu-perfil' : (perfil === 'especialista' ? '/painel-especialista' : '/painel-admin')}>
               <Button variante="primario">Ir para o meu painel →</Button>
             </Link>
           </div>

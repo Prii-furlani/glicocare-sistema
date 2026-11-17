@@ -63,15 +63,26 @@ $db = $database->getConnection();
 
 /* INÍCIO DA BUSCA E VERIFICAÇÃO DO USUÁRIO */
 try {
-    // Busca o usuário na tabela usuarios pelo e-mail
+    // Busca o usuário na tabela usuarios pelo e-mail com os 4 perfis e status de configuração
     $stmt = $db->prepare(
-        'SELECT id, nome_completo, email, senha_hash, tipo_perfil, contexto_dm1, ativo
+        'SELECT id, nome_completo, email, senha_hash, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo
          FROM usuarios
          WHERE email = :email
          LIMIT 1'
     );
     $stmt->execute([':email' => $email]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Mapeamento defensivo de tipo_usuario se for nulo
+    if ($usuario && empty($usuario['tipo_usuario'])) {
+        if ($usuario['tipo_perfil'] === 'admin_moderador') {
+            $usuario['tipo_usuario'] = 'admin';
+        } elseif ($usuario['tipo_perfil'] === 'especialista') {
+            $usuario['tipo_usuario'] = 'especialista';
+        } else {
+            $usuario['tipo_usuario'] = 'diabetico';
+        }
+    }
 
     // Validação de senha: usa password_verify para checar o hash criptográfico
     // Permite também o fallback da senha padrão 'glicocare123' em contas de teste do seed caso o hash coincida
@@ -150,10 +161,13 @@ try {
     }
 
     // Determina a rota recomendada de redirecionamento no front-end conforme o perfil (RN-ACC-01)
-    $rotaRedirecionamento = '/minha-conta';
-    if ($usuario['tipo_perfil'] === 'admin_moderador') {
+    $tipoUsuario = $usuario['tipo_usuario'] ?? $usuario['tipo_perfil'];
+    $perfilConfigurado = (int)($usuario['perfil_configurado'] ?? 0) === 1;
+
+    $rotaRedirecionamento = $perfilConfigurado ? '/meu-perfil' : '/boas-vindas';
+    if ($tipoUsuario === 'admin' || $usuario['tipo_perfil'] === 'admin_moderador') {
         $rotaRedirecionamento = '/painel-admin';
-    } elseif ($usuario['tipo_perfil'] === 'especialista') {
+    } elseif ($tipoUsuario === 'especialista' || $usuario['tipo_perfil'] === 'especialista') {
         $rotaRedirecionamento = ($dadosEspecialista && (int)$dadosEspecialista['registro_verificado'] === 1)
             ? '/painel-especialista'
             : '/credenciamento';
@@ -168,10 +182,12 @@ try {
         '/login',
         null,
         [
-            'usuario_id'   => $usuario['id'],
-            'email'        => $usuario['email'],
-            'tipo_perfil'  => $usuario['tipo_perfil'],
-            'login_sucesso'=> true,
+            'usuario_id'         => $usuario['id'],
+            'email'              => $usuario['email'],
+            'tipo_perfil'        => $usuario['tipo_perfil'],
+            'tipo_usuario'       => $tipoUsuario,
+            'perfil_configurado' => $perfilConfigurado,
+            'login_sucesso'      => true,
         ],
         $usuario['id'],
         $usuario['nome_completo']
@@ -186,11 +202,13 @@ try {
         'dados'    => [
             'token'                => $tokenSessao,
             'usuario'              => [
-                'id'            => (int)$usuario['id'],
-                'nome_completo' => $usuario['nome_completo'],
-                'email'         => $usuario['email'],
-                'tipo_perfil'   => $usuario['tipo_perfil'],
-                'contexto_dm1'  => $usuario['contexto_dm1'],
+                'id'                 => (int)$usuario['id'],
+                'nome_completo'      => $usuario['nome_completo'],
+                'email'              => $usuario['email'],
+                'tipo_perfil'        => $usuario['tipo_perfil'],
+                'tipo_usuario'       => $tipoUsuario,
+                'perfil_configurado' => $perfilConfigurado,
+                'contexto_dm1'       => $usuario['contexto_dm1'],
             ],
             'especialista'         => $dadosEspecialista,
             'aviso_credenciamento' => $avisoCredenciamento,

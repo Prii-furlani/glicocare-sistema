@@ -56,11 +56,27 @@ async function main() {
     await connection.query(`
       ALTER TABLE \`usuarios\`
       ADD COLUMN IF NOT EXISTS \`token_sessao\` VARCHAR(128) DEFAULT NULL,
-      ADD COLUMN IF NOT EXISTS \`token_expira_em\` DATETIME DEFAULT NULL;
+      ADD COLUMN IF NOT EXISTS \`token_expira_em\` DATETIME DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`tipo_usuario\` ENUM('diabetico', 'cuidador', 'especialista', 'admin') NOT NULL DEFAULT 'diabetico',
+      ADD COLUMN IF NOT EXISTS \`perfil_configurado\` TINYINT(1) NOT NULL DEFAULT 0;
     `);
-    console.log('✅ Colunas de token_sessao e token_expira_em verificadas na tabela usuarios.');
+    console.log('✅ Colunas tipo_usuario e perfil_configurado adicionadas/verificadas em usuarios.');
+
+    // Sincroniza tipo_usuario para registros já existentes
+    await connection.query(`
+      UPDATE \`usuarios\`
+      SET \`tipo_usuario\` = CASE
+        WHEN \`tipo_perfil\` = 'admin_moderador' THEN 'admin'
+        WHEN \`tipo_perfil\` = 'especialista' THEN 'especialista'
+        WHEN \`tipo_perfil\` = 'familiar_paciente' AND \`id\` = 4 THEN 'cuidador'
+        ELSE 'diabetico'
+      END,
+      \`perfil_configurado\` = 1
+      WHERE \`tipo_usuario\` IS NULL OR \`tipo_usuario\` = 'diabetico';
+    `);
+    console.log('✅ Mapeamento de perfis existentes concluído com sucesso.');
   } catch (err) {
-    console.log('ℹ️ Colunas de token em usuarios:', err.message);
+    console.log('ℹ️ Colunas de perfil em usuarios:', err.message);
   }
 
   const sqlPath = path.resolve('backend', 'database_tidb.sql');

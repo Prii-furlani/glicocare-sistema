@@ -35,7 +35,9 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `senha_hash` VARCHAR(255) NOT NULL COMMENT 'Hash seguro da senha (Bcrypt/Argon2)',
   `telefone` VARCHAR(30) DEFAULT NULL COMMENT 'Telefone fixo ou alternativo',
   `telefone_whatsapp` VARCHAR(30) DEFAULT NULL COMMENT 'WhatsApp para lembretes de consultas',
-  `tipo_perfil` ENUM('familiar_paciente', 'especialista', 'admin_moderador') NOT NULL DEFAULT 'familiar_paciente' COMMENT 'Papel do usuário no sistema',
+  `tipo_perfil` ENUM('familiar_paciente', 'especialista', 'admin_moderador') NOT NULL DEFAULT 'familiar_paciente' COMMENT 'Papel do usuário no sistema legado',
+  `tipo_usuario` ENUM('diabetico', 'cuidador', 'especialista', 'admin') NOT NULL DEFAULT 'diabetico' COMMENT '4 Perfis Oficiais GlicoCare',
+  `perfil_configurado` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0 = pendente/configurar depois, 1 = perfil completo',
   `contexto_dm1` VARCHAR(200) DEFAULT NULL COMMENT 'Vínculo empático com DM1 (ex: Mãe do Theo, 6 anos)',
   `token_sessao` VARCHAR(128) DEFAULT NULL COMMENT 'Token ativo de autenticação Bearer',
   `token_expira_em` DATETIME DEFAULT NULL COMMENT 'Data e hora de expiração da sessão',
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_usuarios_email` (`email`),
+  KEY `idx_usuarios_tipo_usuario` (`tipo_usuario`),
   KEY `idx_usuarios_tipo_perfil` (`tipo_perfil`),
   KEY `idx_usuarios_token` (`token_sessao`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabela base de usuários da plataforma';
@@ -82,6 +85,81 @@ CREATE TABLE IF NOT EXISTS `especialistas` (
     FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Perfis profissionais com validação de conselho (RN-MOD-MKT)';
+
+-- =============================================================================
+-- TABELA 2B: perfis_saude
+-- Perfil detalhado de saúde e conduta clínica (vinculado 1:1 a usuarios ou ao dependente)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `perfis_saude` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do perfil de saúde',
+  `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+  `nome_completo` VARCHAR(150) NOT NULL COMMENT 'Nome completo da pessoa com DM1',
+  `data_nascimento` DATE NOT NULL COMMENT 'Data de nascimento para cálculo da idade',
+  `sexo` ENUM('masculino', 'feminino', 'outro') NOT NULL COMMENT 'Sexo biológico para fluxo condicional',
+  `altura_cm` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Altura em centímetros (opcional)',
+  `peso_kg` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Peso em quilos (opcional)',
+  `tipo_diabetes` ENUM('Tipo 1A', 'Tipo 1B', 'Tipo 2', 'LADA', 'MODY', 'Gestacional', 'Pre-diabetes', 'Nao tenho') NOT NULL DEFAULT 'Tipo 1A' COMMENT 'Classificação do diabetes',
+  `data_diagnostico` DATE DEFAULT NULL COMMENT 'Data estimada do diagnóstico',
+  `terapia_insulina` ENUM('Caneta', 'Seringa', 'Bomba com fio', 'Bomba sem fio / Adesivo', 'Nao uso insulina') NOT NULL DEFAULT 'Caneta' COMMENT 'Modalidade de aplicação de insulina',
+  `fatores_glicemia` JSON DEFAULT NULL COMMENT 'JSON com sensibilidade a estresse, calor, infecções, exercício, etc.',
+  `config_sexo_especifica` JSON DEFAULT NULL COMMENT 'JSON com respostas condicionais específicas de saúde feminina ou masculina',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_perfis_saude_usuario` (`usuario_id`),
+  CONSTRAINT `fk_perfis_saude_usuario`
+    FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Perfis clínicos personalizados de saúde DM1';
+
+-- =============================================================================
+-- TABELA 2C: medicamentos_usuario
+-- Medicamentos, insulinas e suplementos ativos vinculados a perfis_saude (1:N)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `medicamentos_usuario` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do medicamento',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `nome_medicamento` VARCHAR(150) NOT NULL COMMENT 'Nome comercial ou princípio ativo (ex: Tresiba, Novorapid)',
+  `tipo` ENUM('Insulina', 'Comprimido', 'Dragea', 'Suplemento', 'Outro') NOT NULL DEFAULT 'Insulina' COMMENT 'Forma farmacêutica',
+  `dose` VARCHAR(50) NOT NULL COMMENT 'Quantidade (ex: 12, 1, 500)',
+  `unidade_medida` VARCHAR(30) NOT NULL DEFAULT 'UI' COMMENT 'Unidade (UI, mg, ml, etc.)',
+  `horario` TIME DEFAULT NULL COMMENT 'Horário padrão de uso',
+  `uso_continuo` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = uso contínuo, 0 = tratamento com prazo',
+  `numero_dias` INT DEFAULT NULL COMMENT 'Duração em dias caso não seja contínuo',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_medicamentos_perfil` (`perfil_saude_id`),
+  CONSTRAINT `fk_medicamentos_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Medicamentos e insulinas em uso no perfil de saúde';
+
+-- =============================================================================
+-- TABELA 2D: registros_glicemia
+-- Diário glicêmico e histórico de medições, doses e fatores contextuais
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `registros_glicemia` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do registro de glicemia',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `valor_mg_dl` INT NOT NULL COMMENT 'Valor medido em mg/dL',
+  `momento_medicao` ENUM('Jejum', 'Antes da Refeicao', '1h/2h Apos Refeicao', 'Antes de Dormir', 'Padrao') NOT NULL DEFAULT 'Padrao' COMMENT 'Momento do dia em que a leitura ocorreu',
+  `tipo_leitura` ENUM('Manual', 'Sensor/CGM') NOT NULL DEFAULT 'Manual' COMMENT 'Glicosímetro de ponta de dedo ou sensor contínuo',
+  `acao_realizada` ENUM('Bolus de Correcao', 'Bolus para Refeicao', 'Bolus Correcao + Refeicao', 'Ajuste na Basal', 'Nenhuma Acao') NOT NULL DEFAULT 'Nenhuma Acao' COMMENT 'Conduta adotada na medição',
+  `dose_insulina` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Dose aplicada (se houver)',
+  `carboidratos_g` INT DEFAULT NULL COMMENT 'Carboidratos ingeridos em gramas',
+  `fator_contexto` VARCHAR(100) DEFAULT NULL COMMENT 'Contexto (Estresse, Calor Extremo, Exercício, TPM/Ciclo, Doença)',
+  `sintomas` JSON DEFAULT NULL COMMENT 'Sintomas relatados (tontura, suor frio, tremores, etc.)',
+  `observacoes` TEXT DEFAULT NULL COMMENT 'Notas complementares do usuário',
+  `data_hora_medicao` DATETIME NOT NULL COMMENT 'Data e hora da medição (permite retroativa)',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_glicemia_perfil_data` (`perfil_saude_id`, `data_hora_medicao`),
+  CONSTRAINT `fk_glicemia_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Histórico e diário de medições glicêmicas';
 
 -- =============================================================================
 -- TABELA 3: artigos_conteudos

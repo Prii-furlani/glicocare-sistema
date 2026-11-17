@@ -20,6 +20,10 @@ import Especialistas from './pages/Especialistas';
 import PerfilEspecialista from './pages/PerfilEspecialista';
 import Credenciamento from './pages/Credenciamento';
 import Login from './pages/Login';
+import Cadastro from './pages/Cadastro';
+import BoasVindas from './pages/BoasVindas';
+import ConfigurarPerfil from './pages/ConfigurarPerfil';
+import MeuPerfil from './pages/MeuPerfil';
 import MinhaConta from './pages/MinhaConta';
 import PainelEspecialista from './pages/PainelEspecialista';
 import PainelAdmin from './pages/PainelAdmin';
@@ -50,14 +54,53 @@ export default function App() {
             <Route path="/especialistas/:id" element={<PerfilEspecialista />} />
             <Route path="/credenciamento" element={<Credenciamento />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
 
             {/* 2. Rotas Protegidas por Perfil (RBAC - RN-ACC-01) */}
-            {/* Área da Família DM1 (Perfil 'paciente') */}
+            {/* Boas-Vindas Pós-Cadastro (Etapa 2: Configurar Agora vs Depois) */}
+            <Route
+              path="/boas-vindas"
+              element={
+                <ProtectedRoute>
+                  <BoasVindas />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Stepper de Configuração Personalizada do Perfil de Cuidados */}
+            <Route
+              path="/configurar-perfil"
+              element={
+                <ProtectedRoute allowedRoles={['diabetico', 'cuidador', 'paciente']}>
+                  <ConfigurarPerfil />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Página Pessoal do Usuário: Meu Espaço & Histórico Glicêmico */}
+            <Route
+              path="/meu-perfil"
+              element={
+                <ProtectedRoute allowedRoles={['diabetico', 'cuidador', 'paciente']}>
+                  <MeuPerfil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/minha-jornada"
+              element={
+                <ProtectedRoute allowedRoles={['diabetico', 'cuidador', 'paciente']}>
+                  <MeuPerfil />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Área da Família DM1 (Perfil 'paciente' legado / atalhos) */}
             <Route
               path="/minha-conta"
               element={
-                <ProtectedRoute allowedRoles={['paciente']}>
-                  <MinhaConta />
+                <ProtectedRoute allowedRoles={['paciente', 'diabetico', 'cuidador']}>
+                  <MeuPerfil />
                 </ProtectedRoute>
               }
             />

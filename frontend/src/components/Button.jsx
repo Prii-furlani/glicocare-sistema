@@ -16,12 +16,14 @@ export default function Button({
   variante = 'primario',      // Define o estilo visual: 'primario' | 'secundario' | 'pilula-seta'
   to = null,                  // Se informado, renderiza como um Link de rota em vez de tag <button>
   type = 'button',            // Tipo nativo do botão HTML ('button', 'submit', 'reset')
+  tipo = null,                // Suporte a sinonímia em português ('submit', 'button')
   onClick,                    // Função disparada ao clicar no botão
   disabled = false,           // Desabilita interações quando verdadeiro
   exibirSeta = false,         // Força a exibição da seta direcional (automático na variante 'pilula-seta')
   className = '',             // Permite injetar classes CSS adicionais se necessário
   style = {},                 // Permite ajustes pontuais de posicionamento via inline style
 }) {
+  const tipoBotaoFinal = tipo || type || 'button';
   // Mapeia a prop 'variante' para a classe CSS correspondente definida em index.css
   const mapaVariantes = {
     primario: 'gc-btn--primario',
@@ -57,7 +59,7 @@ export default function Button({
   /* INÍCIO DA RENDERIZAÇÃO COMO BOTÃO NATIVO HTML */
   return (
     <button
-      type={type}
+      type={tipoBotaoFinal}
       onClick={onClick}
       disabled={disabled}
       className={classesFinais}

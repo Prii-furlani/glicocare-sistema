@@ -17,13 +17,15 @@ require_once __DIR__ . '/../services/AuditLogger.php';
 /* INÍCIO DA CLASSE AUTHMIDDLEWARE */
 class AuthMiddleware
 {
-    /** Mapeamento de sinonímias de perfis para facilitar compatibilidade */
+    /** Mapeamento de sinonímias de perfis para compatibilidade entre os 4 perfis oficiais e legados */
     private const MAPA_PERFIS = [
-        'paciente'          => 'familiar_paciente',
-        'familiar_paciente' => 'familiar_paciente',
-        'especialista'      => 'especialista',
-        'admin'             => 'admin_moderador',
-        'admin_moderador'   => 'admin_moderador',
+        'diabetico'         => ['diabetico', 'familiar_paciente', 'paciente'],
+        'cuidador'          => ['cuidador', 'familiar_paciente', 'paciente'],
+        'paciente'          => ['diabetico', 'cuidador', 'familiar_paciente', 'paciente'],
+        'familiar_paciente' => ['diabetico', 'cuidador', 'familiar_paciente', 'paciente'],
+        'especialista'      => ['especialista'],
+        'admin'             => ['admin', 'admin_moderador'],
+        'admin_moderador'   => ['admin', 'admin_moderador'],
     ];
 
     /**
@@ -80,7 +82,7 @@ class AuthMiddleware
 
         // Busca o usuário associado ao token na tabela usuarios
         $stmt = $db->prepare(
-            'SELECT id, nome_completo, email, tipo_perfil, contexto_dm1, ativo, token_sessao, token_expira_em
+            'SELECT id, nome_completo, email, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo, token_sessao, token_expira_em
              FROM usuarios
              WHERE token_sessao = :token
                AND ativo = 1
@@ -93,13 +95,13 @@ class AuthMiddleware
         if (!$usuario && (str_starts_with($token, 'mock-token-') || strlen($token) >= 32)) {
             // Tenta localizar um usuário de seed para manter fluidez no desenvolvimento
             if (str_contains($token, 'admin')) {
-                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, contexto_dm1, ativo FROM usuarios WHERE tipo_perfil = "admin_moderador" LIMIT 1');
+                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo FROM usuarios WHERE tipo_usuario = "admin" OR tipo_perfil = "admin_moderador" LIMIT 1');
                 $usuario = $stmtFallback->fetch(PDO::FETCH_ASSOC);
             } elseif (str_contains($token, 'esp')) {
-                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, contexto_dm1, ativo FROM usuarios WHERE tipo_perfil = "especialista" LIMIT 1');
+                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo FROM usuarios WHERE tipo_usuario = "especialista" OR tipo_perfil = "especialista" LIMIT 1');
                 $usuario = $stmtFallback->fetch(PDO::FETCH_ASSOC);
             } else {
-                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, contexto_dm1, ativo FROM usuarios WHERE tipo_perfil = "familiar_paciente" LIMIT 1');
+                $stmtFallback = $db->query('SELECT id, nome_completo, email, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo FROM usuarios WHERE tipo_usuario IN ("diabetico", "cuidador") OR tipo_perfil = "familiar_paciente" LIMIT 1');
                 $usuario = $stmtFallback->fetch(PDO::FETCH_ASSOC);
             }
         }
@@ -142,15 +144,26 @@ class AuthMiddleware
     public static function autorizar(PDO $db, array $rolesPermitidos, string $paginaImpacto = '/'): array
     {
         $usuario = self::autenticar($db, $paginaImpacto);
-        $perfilUsuario = $usuario['tipo_perfil'];
+        $perfilUsuario = $usuario['tipo_usuario'] ?? $usuario['tipo_perfil'];
 
-        // Normaliza a lista de perfis permitidos
-        $rolesNormalizados = [];
+        // Expande e normaliza a lista de perfis permitidos
+        $rolesPermitidosExpandidos = [];
         foreach ($rolesPermitidos as $role) {
-            $rolesNormalizados[] = self::MAPA_PERFIS[$role] ?? $role;
+            $mapeados = self::MAPA_PERFIS[$role] ?? [$role];
+            if (is_array($mapeados)) {
+                foreach ($mapeados as $m) $rolesPermitidosExpandidos[] = $m;
+            } else {
+                $rolesPermitidosExpandidos[] = $mapeados;
+            }
         }
+        $rolesPermitidosExpandidos = array_unique($rolesPermitidosExpandidos);
 
-        if (!in_array($perfilUsuario, $rolesNormalizados, true)) {
+        // Verifica também se o tipo_perfil legado atende
+        $perfilLegado = $usuario['tipo_perfil'] ?? '';
+        $temAcesso = in_array($perfilUsuario, $rolesPermitidosExpandidos, true) ||
+                     in_array($perfilLegado, $rolesPermitidosExpandidos, true);
+
+        if (!$temAcesso) {
             // Registra violação de acesso na trilha de auditoria imutável (RN-AUD-01 / RN-ACC-01)
             AuditLogger::registrar(
                 $db,

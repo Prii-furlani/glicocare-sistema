@@ -39,17 +39,23 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Rota e rótulo do painel de acordo com o perfil logado
+  // Rota e rótulo do painel de acordo com o perfil logado (4 Perfis GlicoCare)
   const obterDadosPerfil = () => {
     if (!usuario) return { rota: '/login', badge: '', icone: '👤', rotulo: 'Entrar' };
-    const p = usuario.papel || usuario.tipo;
+    const p = usuario.tipo_usuario || usuario.papel || usuario.tipo_perfil || usuario.tipo;
     if (p === 'admin' || p === 'admin_moderador') {
       return { rota: '/painel-admin', badge: 'Curadoria', icone: '🛡️', rotulo: 'Painel Curadoria' };
     }
     if (p === 'especialista') {
       return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel' };
     }
-    return { rota: '/minha-conta', badge: 'Família DM1', icone: '🏠', rotulo: 'Minha Área' };
+    if (p === 'cuidador') {
+      return { rota: '/meu-perfil', badge: 'Cuidador', icone: '🤝', rotulo: 'Meu Espaço' };
+    }
+    if (p === 'diabetico') {
+      return { rota: '/meu-perfil', badge: 'Diabético', icone: '🌱', rotulo: 'Meu Espaço' };
+    }
+    return { rota: '/meu-perfil', badge: 'Família DM1', icone: '🏠', rotulo: 'Meu Espaço' };
   };
 
   const perfilInfo = obterDadosPerfil();
@@ -259,7 +265,7 @@ export default function Navbar() {
                 title={`Acessar ${perfilInfo.rotulo}`}
               >
                 <span>{perfilInfo.icone}</span>
-                <span>{usuario.nome?.split(' ')[0] || 'Usuário'}</span>
+                <span>{usuario.nome_completo?.split(' ')[0] || usuario.nome?.split(' ')[0] || 'Usuário'}</span>
                 <span
                   style={{
                     fontSize: '0.7rem',
@@ -440,7 +446,7 @@ export default function Navbar() {
                     }}
                   >
                     <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2E2824' }}>
-                      {perfilInfo.icone} Olá, {usuario.nome?.split(' ')[0]}
+                      {perfilInfo.icone} Olá, {usuario.nome_completo?.split(' ')[0] || usuario.nome?.split(' ')[0] || 'Usuário'}
                     </span>
                     <span
                       style={{
@@ -495,23 +501,39 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setDrawerOpen(false)}
-                  className="gc-navbar__mobile-link"
-                  style={{
-                    color: '#3B7E48',
-                    fontWeight: 700,
-                    backgroundColor: '#EAE4D9',
-                    borderRadius: '8px',
-                    padding: '0.75rem 1rem',
-                    marginTop: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span>👤 Entrar no meu espaço seguro</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                  <Link
+                    to="/login"
+                    onClick={() => setDrawerOpen(false)}
+                    className="gc-navbar__mobile-link"
+                    style={{
+                      color: '#3B7E48',
+                      fontWeight: 700,
+                      backgroundColor: '#EAE4D9',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                    }}
+                  >
+                    <span>👤 Entrar no meu espaço seguro</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                  <Link
+                    to="/cadastro"
+                    onClick={() => setDrawerOpen(false)}
+                    className="gc-navbar__mobile-link"
+                    style={{
+                      color: '#7C533F',
+                      fontWeight: 700,
+                      backgroundColor: '#F6F3EE',
+                      border: '1px solid rgba(124, 83, 63, 0.25)',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                    }}
+                  >
+                    <span>🌱 Criar conta gratuita</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                </div>
               )}
 
               <hr className="gc-navbar__mobile-divider" />

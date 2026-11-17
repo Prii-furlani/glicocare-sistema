@@ -60,13 +60,16 @@ export default function Login() {
   /* FIM DOS ESTADOS DO FORMULÁRIO */
 
   /**
-   * Preenchimento rápido para demonstração e testes dos 3 perfis do sistema
+   * Preenchimento rápido para demonstração e testes dos 4 perfis do sistema
    */
   const handlePreencherContaTeste = (tipo) => {
     setMensagemErro('');
     setAvisoEspecialistaPendente(null);
 
-    if (tipo === 'paciente') {
+    if (tipo === 'diabetico') {
+      setEmail('carlos.pai@exemplo.com.br');
+      setSenha('glicocare123');
+    } else if (tipo === 'cuidador' || tipo === 'paciente') {
       setEmail('mariana.mae@exemplo.com.br');
       setSenha('glicocare123');
     } else if (tipo === 'especialista') {
@@ -311,7 +314,7 @@ export default function Login() {
             <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => handlePreencherContaTeste('paciente')}
+                onClick={() => handlePreencherContaTeste('diabetico')}
                 style={{
                   background: '#F6F3EE',
                   border: '1px solid #3B7E48',
@@ -323,7 +326,24 @@ export default function Login() {
                   fontWeight: 500,
                 }}
               >
-                🌱 Família DM1
+                🌱 Diabético
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePreencherContaTeste('cuidador')}
+                style={{
+                  background: '#F6F3EE',
+                  border: '1px solid #3B7E48',
+                  borderRadius: '20px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  color: '#2E2824',
+                  fontWeight: 500,
+                }}
+              >
+                🤝 Cuidador
               </button>
 
               <button
@@ -357,7 +377,7 @@ export default function Login() {
                   fontWeight: 500,
                 }}
               >
-                🛡️ Curadoria / Admin
+                🛡️ Curadoria
               </button>
             </div>
           </div>
@@ -622,16 +642,16 @@ export default function Login() {
           }}
         >
           <div>
-            <span>Ainda não tem conta? </span>
+            <span>Ainda não faz parte? </span>
             <Link
-              to="/biblioteca"
+              to="/cadastro"
               style={{
                 color: '#3B7E48',
-                fontWeight: 600,
+                fontWeight: 700,
                 textDecoration: 'underline',
               }}
             >
-              Explorar a biblioteca gratuitamente
+              Criar conta gratuita agora →
             </Link>
           </div>
 
