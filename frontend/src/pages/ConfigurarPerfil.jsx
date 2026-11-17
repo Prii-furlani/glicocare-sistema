@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
 /* INÍCIO DO COMPONENTE CONFIGURARPERFIL */
 export default function ConfigurarPerfil() {
@@ -400,7 +401,7 @@ export default function ConfigurarPerfil() {
               </div>
             </div>
 
-            {/* Tipo de Diabetes & Data do Diagnóstico */}
+            {/* Tipo de Diabetes & Data do Diagnóstico com Feedback em Tempo Real */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '0.35rem' }}>
@@ -431,7 +432,7 @@ export default function ConfigurarPerfil() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                  Data do diagnóstico <span style={{ color: '#7C533F', fontWeight: 400 }}>(Aproximada)</span>
+                  Data da descoberta / diagnóstico *
                 </label>
                 <input
                   type="date"
@@ -445,8 +446,40 @@ export default function ConfigurarPerfil() {
                     fontSize: '0.92rem',
                   }}
                 />
+                <span style={{ fontSize: '0.76rem', color: '#6A5E57', marginTop: '0.2rem', display: 'block' }}>
+                  Caso não recorde o dia exato, informe o dia 01 do mês correspondente.
+                </span>
               </div>
             </div>
+
+            {/* Feedback Acolhedor em Tempo Real do Tempo de Jornada */}
+            {dataDiagnostico && calcularTempoDiagnostico(dataDiagnostico) && (() => {
+              const infoTempo = calcularTempoDiagnostico(dataDiagnostico);
+              return (
+                <div
+                  style={{
+                    backgroundColor: '#EFF7F1',
+                    border: '1px solid #3B7E48',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1.15rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginTop: '-0.25rem',
+                  }}
+                >
+                  <span style={{ fontSize: '1.4rem' }}>{infoTempo.badgeIcone}</span>
+                  <div>
+                    <strong style={{ fontSize: '0.92rem', color: '#285832', display: 'block' }}>
+                      {infoTempo.rotuloFase} ({infoTempo.textoJornada})
+                    </strong>
+                    <span style={{ fontSize: '0.86rem', color: '#3A6B42' }}>
+                      {infoTempo.mensagemAcolhedora}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Terapia de Insulina */}
             <div>

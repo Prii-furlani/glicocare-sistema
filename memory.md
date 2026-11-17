@@ -41,6 +41,16 @@
       * *Feminino*: Método contraceptivo hormonal, duração do ciclo/menstruação, planejamento gestacional, hiperglicemia na TPM/menstruação, condições inflamatórias (Endometriose, SOP, Miomas) e comorbidades de alerta.
       * *Masculino*: Fadiga persistente, alteração/queda de libido / disfunção erétil, objetivo físico principal e suplementos.
     - **Bloco D**: Lista dinâmica de medicamentos e insulinas ativas (nome, tipo, dose, unidade, horário e frequência).
+  * **Tempo de Descoberta / Diagnóstico e Cálculo Automático da Jornada:**
+    - Campo `data_diagnostico` (DATE) posicionado logo após a classificação do diabetes, aceitando data completa ou mês/ano (com dia 01 padrão).
+    - Função utilitária pura `calcularTempoDiagnostico(dataDiagnostico)` em `frontend/src/utils/dateUtils.js`.
+    - Retorna anos e meses naturais em português (ex: *"3 anos e 5 meses"*, *"1 ano"*, *"Menos de 1 mês"*).
+    - Classificação empática de fases:
+      * `recem_diagnosticado` (< 6 meses): *"Primeiros passos: estamos com você em cada descoberta!"*
+      * `adaptacao` (6 meses a 2 anos): *"Fase de adaptação: construindo uma rotina serena e segura."*
+      * `experiente` (> 2 anos): *"Sua jornada já soma X anos e Y meses de aprendizado, força e superação."*
+    - Feedback em tempo real exibido imediatamente abaixo do campo de data em `/configurar-perfil`.
+    - Badge elegante com ícone no cabeçalho do Meu Espaço (`/meu-perfil`) e resumo clínico formatado para anamnese de especialistas em teleconsultas.
   * **Página Pessoal e Diário Glicêmico (`/meu-perfil`)**:
     - Cabeçalho com idade calculada, badges de diagnóstico e terapia, e aviso de cuidador quando aplicável.
     - Resumo dos fatores de sensibilidade e medicamentos ativos.

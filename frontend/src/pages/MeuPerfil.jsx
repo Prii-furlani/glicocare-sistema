@@ -10,6 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
 /* INÍCIO DO COMPONENTE MEUPERFIL */
 export default function MeuPerfil() {
@@ -392,6 +393,32 @@ export default function MeuPerfil() {
                 >
                   💉 Terapia: {perfilSaude?.terapia_insulina || 'Caneta'}
                 </span>
+
+                {/* Badge Elegante de Tempo de Diagnóstico / Jornada (Cálculo Automático) */}
+                {perfilSaude?.data_diagnostico && calcularTempoDiagnostico(perfilSaude.data_diagnostico) && (() => {
+                  const tempoJornada = calcularTempoDiagnostico(perfilSaude.data_diagnostico);
+                  return (
+                    <span
+                      style={{
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        backgroundColor: '#EFF7F1',
+                        color: '#285832',
+                        border: '1px solid rgba(59, 126, 72, 0.35)',
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                      title={tempoJornada.mensagemAcolhedora}
+                    >
+                      <span>{tempoJornada.badgeIcone}</span>
+                      <span>{tempoJornada.textoJornada}</span>
+                    </span>
+                  );
+                })()}
+
                 {usuario?.tipo_usuario === 'cuidador' && (
                   <span style={{ fontSize: '0.82rem', color: '#7C533F', fontWeight: 600 }}>
                     • Acompanhado por {usuario.nome_completo} (Cuidador)
@@ -433,8 +460,31 @@ export default function MeuPerfil() {
                 <strong>Peso:</strong> {perfilSaude?.peso_kg ? `${perfilSaude.peso_kg} kg` : 'Não informado (opcional)'}
               </div>
               <div>
-                <strong>Diagnóstico:</strong> {perfilSaude?.data_diagnostico || 'Data não registrada'}
+                <strong>Data de Diagnóstico:</strong>{' '}
+                {perfilSaude?.data_diagnostico || 'Data não registrada'}
               </div>
+              {/* Resumo da Jornada e Fase do Diagnóstico para Anamnese Clínica */}
+              {perfilSaude?.data_diagnostico && calcularTempoDiagnostico(perfilSaude.data_diagnostico) && (() => {
+                const tempoInfo = calcularTempoDiagnostico(perfilSaude.data_diagnostico);
+                return (
+                  <div
+                    style={{
+                      marginTop: '0.35rem',
+                      backgroundColor: '#EFF7F1',
+                      padding: '0.45rem 0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(59, 126, 72, 0.25)',
+                    }}
+                  >
+                    <div style={{ color: '#285832', fontWeight: 700, fontSize: '0.82rem' }}>
+                      {tempoInfo.badgeIcone} {tempoInfo.rotuloFase}: {tempoInfo.textoJornada}
+                    </div>
+                    <div style={{ color: '#3A6B42', fontSize: '0.78rem', marginTop: '0.15rem' }}>
+                      {tempoInfo.mensagemAcolhedora}
+                    </div>
+                  </div>
+                );
+              })()}
               <div>
                 <strong>Sexo Biológico:</strong> {perfilSaude?.sexo === 'feminino' ? 'Feminino' : (perfilSaude?.sexo === 'masculino' ? 'Masculino' : 'Geral')}
               </div>
