@@ -2351,27 +2351,27 @@ export default function PainelAdmin() {
                   </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                <div style={{ overflowX: 'auto', WebKitOverflowScrolling: 'touch' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', minWidth: '760px' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#EAE4D9', borderBottom: '1px solid rgba(124, 83, 63, 0.2)', textAlign: 'left' }}>
-                        <th style={{ padding: '10px 12px' }}>ID</th>
-                        <th style={{ padding: '10px 12px' }}>Nome Completo</th>
-                        <th style={{ padding: '10px 12px' }}>E-mail</th>
-                        <th style={{ padding: '10px 12px' }}>Telefone</th>
-                        <th style={{ padding: '10px 12px' }}>Perfil</th>
-                        <th style={{ padding: '10px 12px' }}>Status</th>
-                        <th style={{ padding: '10px 12px' }}>Ações</th>
+                        <th style={{ padding: '10px 10px', width: '55px' }}>ID</th>
+                        <th style={{ padding: '10px 10px' }}>Nome Completo</th>
+                        <th style={{ padding: '10px 10px' }}>E-mail</th>
+                        <th style={{ padding: '10px 10px', width: '130px' }}>Telefone</th>
+                        <th style={{ padding: '10px 10px', width: '100px' }}>Perfil</th>
+                        <th style={{ padding: '10px 10px', width: '80px' }}>Status</th>
+                        <th style={{ padding: '10px 10px', width: '100px', textAlign: 'center' }}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {usuariosFiltrados.map((u) => (
                         <tr key={u.id} style={{ borderBottom: '1px solid rgba(124, 83, 63, 0.08)', backgroundColor: '#FFFFFF' }}>
-                          <td style={{ padding: '10px 12px', fontWeight: 700, color: '#7C533F' }}>#{u.id}</td>
-                          <td style={{ padding: '10px 12px', fontWeight: 600 }}>{u.nome_completo}</td>
-                          <td style={{ padding: '10px 12px', color: '#5A5049' }}>{u.email}</td>
-                          <td style={{ padding: '10px 12px', color: '#5A5049' }}>{u.telefone || '—'}</td>
-                          <td style={{ padding: '10px 12px' }}>
+                          <td style={{ padding: '10px 10px', fontWeight: 700, color: '#7C533F', whiteSpace: 'nowrap' }}>#{u.id}</td>
+                          <td style={{ padding: '10px 10px', fontWeight: 600 }}>{u.nome_completo}</td>
+                          <td style={{ padding: '10px 10px', color: '#5A5049', wordBreak: 'break-word' }}>{u.email}</td>
+                          <td style={{ padding: '10px 10px', color: '#5A5049', whiteSpace: 'nowrap' }}>{u.telefone || '—'}</td>
+                          <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
                             <span
                               style={{
                                 fontSize: '0.74rem',
@@ -2385,7 +2385,7 @@ export default function PainelAdmin() {
                               {u.tipo_usuario || u.tipo_perfil}
                             </span>
                           </td>
-                          <td style={{ padding: '10px 12px' }}>
+                          <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
                             <span
                               style={{
                                 fontSize: '0.74rem',
@@ -2399,12 +2399,12 @@ export default function PainelAdmin() {
                               {u.ativo ? 'Ativo' : 'Inativo'}
                             </span>
                           </td>
-                          <td style={{ padding: '10px 12px' }}>
+                          <td style={{ padding: '10px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <button
                               type="button"
                               onClick={() => handleAlternarStatusUsuario(u.id, u.ativo)}
                               style={{
-                                padding: '4px 10px',
+                                padding: '5px 12px',
                                 borderRadius: '6px',
                                 border: '1px solid rgba(124, 83, 63, 0.25)',
                                 backgroundColor: 'transparent',
