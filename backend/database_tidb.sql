@@ -294,7 +294,86 @@ CREATE TABLE IF NOT EXISTS `pre_atendimentos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Módulo de Pré-Atendimento Acolhedor';
 
 -- =============================================================================
--- TABELA 8: logs_auditoria
+-- TABELA 8: solicitacoes_exames
+-- Guias e pedidos de exames laboratoriais emitidos pelos especialistas
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `solicitacoes_exames` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da solicitação de exame',
+  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+  `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `titulo_pedido` VARCHAR(180) NOT NULL COMMENT 'Título do pedido médico ex: Rotina Trimestral DM1',
+  `lista_exames_solicitados` JSON NOT NULL COMMENT 'Array JSON com os nomes dos exames pedidos',
+  `guia_pdf_path` VARCHAR(255) DEFAULT NULL COMMENT 'Caminho do PDF gerado da guia',
+  `status` ENUM('PENDENTE', 'REALIZADO') NOT NULL DEFAULT 'PENDENTE' COMMENT 'Status da solicitação',
+  `data_solicitacao` DATETIME NOT NULL COMMENT 'Data e hora da emissão da guia',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_solic_agendamento` (`agendamento_id`),
+  KEY `idx_solic_perfil` (`perfil_saude_id`),
+  KEY `idx_solic_especialista` (`especialista_id`),
+  CONSTRAINT `fk_solic_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_solic_especialista`
+    FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_solic_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Guias de exames emitidas pelos especialistas';
+
+-- =============================================================================
+-- TABELA 9: exames_paciente
+-- Cabeçalho de cada coleta ou bateria de exames laboratoriais
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `exames_paciente` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da coleta/bateria de exames',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `solicitacao_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK opcional para solicitacoes_exames(id)',
+  `laboratorio` VARCHAR(150) NOT NULL COMMENT 'Nome do laboratório ou UBS',
+  `data_realizacao` DATE NOT NULL COMMENT 'Data de realização do exame',
+  `data_registro_app` DATETIME NOT NULL COMMENT 'Data e hora de registro no app (America/Sao_Paulo)',
+  `arquivo_anexo_path` VARCHAR(255) DEFAULT NULL COMMENT 'Caminho relativo do laudo digital anexado',
+  `arquivo_nome_original` VARCHAR(255) DEFAULT NULL COMMENT 'Nome original do arquivo submetido',
+  `observacoes_paciente` TEXT DEFAULT NULL COMMENT 'Notas da família sobre o exame',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_exames_perfil` (`perfil_saude_id`),
+  KEY `idx_exames_solicitacao` (`solicitacao_id`),
+  KEY `idx_exames_data` (`data_realizacao`),
+  CONSTRAINT `fk_exames_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_exames_solicitacao`
+    FOREIGN KEY (`solicitacao_id`) REFERENCES `solicitacoes_exames` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Cabeçalho de cada coleta ou bateria de exames laboratoriais';
+
+-- =============================================================================
+-- TABELA 10: exames_resultados_itens
+-- Marcadores individuais e resultados de cada exame laboratorial (1:N com exames_paciente)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `exames_resultados_itens` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do item de resultado',
+  `exame_id` INT UNSIGNED NOT NULL COMMENT 'FK para exames_paciente(id)',
+  `nome_marcador` VARCHAR(120) NOT NULL COMMENT 'Nome do marcador ex: Hemoglobina Glicada',
+  `valor_resultado` VARCHAR(50) NOT NULL COMMENT 'Valor do resultado obtido',
+  `unidade` VARCHAR(30) NOT NULL COMMENT 'Unidade de medida ex: % ou mg/dL',
+  `valor_referencia` VARCHAR(100) DEFAULT NULL COMMENT 'Faixa ou valor de referência do laboratório',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_itens_exame` (`exame_id`),
+  KEY `idx_itens_marcador` (`nome_marcador`),
+  CONSTRAINT `fk_itens_exame`
+    FOREIGN KEY (`exame_id`) REFERENCES `exames_paciente` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Marcadores individuais e resultados de cada exame laboratorial';
+
+-- =============================================================================
+-- TABELA 11: logs_auditoria
 -- Trilha de auditoria imutável (append-only) para conformidade LGPD e rastreabilidade (RN-AUD-01)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `logs_auditoria` (
@@ -476,6 +555,60 @@ INSERT INTO `pre_atendimentos` (
   '2026-11-18 10:30:00'
 )
 ON DUPLICATE KEY UPDATE `motivo_principal` = VALUES(`motivo_principal`);
+
+-- 5C. Guias de solicitação de exames emitidas pelos especialistas
+INSERT INTO `solicitacoes_exames` (
+  `id`, `agendamento_id`, `especialista_id`, `perfil_saude_id`, `titulo_pedido`,
+  `lista_exames_solicitados`, `guia_pdf_path`, `status`, `data_solicitacao`
+) VALUES
+(
+  1, 1, 1, 1,
+  'Rotina Trimestral DM1 + Vitaminas e Função Renal',
+  '["Hemoglobina Glicada (HbA1c)", "Glicemia em Jejum", "Vitamina D (25-OH)", "Microalbuminúria em Amostra Isolada", "TSH", "Creatinina"]',
+  '/backend/uploads/guias/guia_solic_1_dra_helena_theo.pdf',
+  'REALIZADO',
+  '2026-10-15 14:30:00'
+),
+(
+  2, 1, 1, 1,
+  'Controle Semestral: HbA1c + Perfil Lipídico e Função Tireoidiana',
+  '["Hemoglobina Glicada (HbA1c)", "Colesterol Total e Frações", "Triglicerídeos", "T4 Livre", "TSH"]',
+  '/backend/uploads/guias/guia_solic_2_dra_helena_theo.pdf',
+  'PENDENTE',
+  '2026-11-15 10:00:00'
+)
+ON DUPLICATE KEY UPDATE `titulo_pedido` = VALUES(`titulo_pedido`), `status` = VALUES(`status`);
+
+-- 5D. Baterias de exames colhidos pelo paciente e laudos arquivados
+INSERT INTO `exames_paciente` (
+  `id`, `perfil_saude_id`, `solicitacao_id`, `laboratorio`, `data_realizacao`,
+  `data_registro_app`, `arquivo_anexo_path`, `arquivo_nome_original`, `observacoes_paciente`
+) VALUES
+(
+  1, 1, 1, 'Delboni Auriemo', '2026-10-25', '2026-10-26 09:15:00',
+  '/backend/uploads/exames/delboni_laudo_outubro_theo.pdf', 'Laudo_Completo_Theo_Outubro_2026.pdf',
+  'Coleta feita em jejum de 8h sem choro na punção. Dra. Helena já visualizou na consulta.'
+),
+(
+  2, 1, NULL, 'Lavoisier', '2026-07-20', '2026-07-22 16:00:00',
+  '/backend/uploads/exames/lavoisier_laudo_julho_theo.pdf', 'Exames_Theo_Julho_2026.pdf',
+  'Exame de rotina de 3 meses após ajuste de insulina basal.'
+)
+ON DUPLICATE KEY UPDATE `laboratorio` = VALUES(`laboratorio`), `data_realizacao` = VALUES(`data_realizacao`);
+
+-- 5E. Marcadores individuais e resultados de cada exame
+INSERT INTO `exames_resultados_itens` (
+  `id`, `exame_id`, `nome_marcador`, `valor_resultado`, `unidade`, `valor_referencia`
+) VALUES
+(1, 1, 'Hemoglobina Glicada (HbA1c)', '6.8', '%', 'Menor que 7,0% para DM1 pediátrico'),
+(2, 1, 'Glicemia em Jejum', '104', 'mg/dL', '70 a 99 mg/dL'),
+(3, 1, 'Vitamina D (25-OH)', '36.5', 'ng/mL', 'Desejável acima de 30 ng/mL'),
+(4, 1, 'Creatinina', '0.52', 'mg/dL', '0,30 a 0,70 mg/dL'),
+(5, 1, 'TSH', '2.1', 'mUI/L', '0,4 a 4,5 mUI/L'),
+(6, 2, 'Hemoglobina Glicada (HbA1c)', '7.4', '%', 'Menor que 7,0% para DM1 pediátrico'),
+(7, 2, 'Glicemia em Jejum', '118', 'mg/dL', '70 a 99 mg/dL'),
+(8, 2, 'Vitamina D (25-OH)', '24.0', 'ng/mL', 'Desejável acima de 30 ng/mL')
+ON DUPLICATE KEY UPDATE `valor_resultado` = VALUES(`valor_resultado`);
 
 -- 6. Logs de auditoria iniciais demonstrando conformidade com a RN-AUD-01
 INSERT INTO `logs_auditoria` (

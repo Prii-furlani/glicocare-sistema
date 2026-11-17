@@ -235,4 +235,63 @@
 - **Diferenciais e Biblioteca de Conteúdos:**
   * Grid responsivo: **3 colunas no desktop (>= 1024px)**, **2 colunas no tablet (640px-1023px)** e **1 coluna / feed vertical no mobile**.
 
+## 10. Central de Exames, Upload de Laudos e Guias Médicas (RN-EXA-01)
+
+### A. Estrutura do Banco de Dados Relacional (TiDB Cloud MySQL)
+- **Tabela `solicitacoes_exames` (Guias médicas emitidas pelos especialistas):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `agendamento_id`: INT UNSIGNED NOT NULL (FK -> `agendamentos(id)` ON DELETE CASCADE).
+  * `especialista_id`: INT UNSIGNED NOT NULL (FK -> `especialistas(id)` ON DELETE CASCADE).
+  * `perfil_saude_id`: INT UNSIGNED NOT NULL (FK -> `perfis_saude(id)` ON DELETE CASCADE).
+  * `titulo_pedido`: VARCHAR(180) NOT NULL (ex: "Rotina Trimestral DM1 + Vitaminas e Função Renal").
+  * `lista_exames_solicitados`: JSON NOT NULL (array com procedimentos solicitados).
+  * `guia_pdf_path`: VARCHAR(255) DEFAULT NULL (rota/caminho para emissão e impressão do PDF).
+  * `status`: ENUM('PENDENTE', 'REALIZADO') NOT NULL DEFAULT 'PENDENTE'.
+  * `data_solicitacao`: DATETIME NOT NULL.
+- **Tabela `exames_paciente` (Cabeçalho de cada coleta/bateria laboratorial):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `perfil_saude_id`: INT UNSIGNED NOT NULL (FK -> `perfis_saude(id)` ON DELETE CASCADE).
+  * `solicitacao_id`: INT UNSIGNED DEFAULT NULL (FK -> `solicitacoes_exames(id)` ON DELETE SET NULL).
+  * `laboratorio`: VARCHAR(150) NOT NULL (ex: "Delboni", "Lavoisier", "Fleury", "SUS / UBS").
+  * `data_realizacao`: DATE NOT NULL (data da coleta).
+  * `data_registro_app`: DATETIME NOT NULL (registro no app em `America/Sao_Paulo`).
+  * `arquivo_anexo_path`: VARCHAR(255) DEFAULT NULL (hash único em `/backend/uploads/exames/`).
+  * `arquivo_nome_original`: VARCHAR(255) DEFAULT NULL.
+  * `observacoes_paciente`: TEXT DEFAULT NULL (notas da família).
+- **Tabela `exames_resultados_itens` (Marcadores clínicos individuais 1:N):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `exame_id`: INT UNSIGNED NOT NULL (FK -> `exames_paciente(id)` ON DELETE CASCADE).
+  * `nome_marcador`: VARCHAR(120) NOT NULL (ex: "Hemoglobina Glicada (HbA1c)", "Glicemia em Jejum").
+  * `valor_resultado`: VARCHAR(50) NOT NULL (ex: "6.8", "104").
+  * `unidade`: VARCHAR(30) NOT NULL (ex: "%", "mg/dL", "ng/mL").
+  * `valor_referencia`: VARCHAR(100) DEFAULT NULL (ex: "< 7,0% para DM1 pediátrico").
+
+### B. Endpoints da API PHP (`/backend/api/exames/`)
+- `cadastrar_exame.php` (POST `multipart/form-data`):
+  * Valida extensões permitidas (`PDF`, `JPG`, `JPEG`, `PNG`) e tamanho limite de 10 MB.
+  * Gera hash aleatório criptográfico de arquivo e salva em `/backend/uploads/exames/`.
+  * Transação atômica PDO gravando cabeçalho (`exames_paciente`) e itens de marcadores (`exames_resultados_itens`).
+  * Atualiza automaticamente `solicitacoes_exames.status = 'REALIZADO'` quando vinculado a uma guia.
+  * Registra trilha de auditoria imutável via `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
+- `listar_exames.php` (GET):
+  * Retorna histórico cronológico de coletas, marcadores aninhados, anexos e guias solicitadas.
+  * Controle de acesso por RBAC: familiar/paciente acessa o próprio perfil; especialista consulta os pacientes de suas teleconsultas.
+- `solicitar_exames.php` (POST):
+  * Especialista credenciado emite guia médica oficial com array de exames e justificativa clínica.
+  * Registra auditoria imutável com fuso de São Paulo.
+- `gerar_guia_pdf.php` (GET):
+  * Renderiza documento oficial timbrado, estilizado no design system "Porto Seguro", pronto para impressão direta ou exportação em PDF (`window.print()`).
+  * Exibe CRM/CRN, especialidade, identificação do paciente, lista de procedimentos com caixas de checagem, orientações acolhedoras de preparo e hash de autenticidade digital.
+
+### C. Interface Front-End e Experiência do Usuário
+- **Página Pessoal (`MeuPerfil.jsx` + `CentralExames.jsx`):**
+  * Seletor de abas limpo e responsivo: `🩸 Diário Inteligente & IOB` e `📑 Meus Exames & Guias`.
+  * **Bloco 1 (Guias Solicitadas)**: Cards com badges de status (`Aguardando Coleta / Laudo` vs `Exame Realizado & Anexado`), botão *"Baixar Guia (PDF)"* e botão *"Anexar Resultado"* que pré-carrega os dados no modal.
+  * **Bloco 2 (Modal "+ Registrar Novo Exame")**: Laboratório, data, seleção de guia, upload de arquivo com validação até 10MB, e construtor dinâmico de marcadores com chips de inclusão rápida em 1 clique (HbA1c, Glicemia em Jejum, Vitamina D, B12, Creatinina, Microalbuminúria, TSH e Colesterol).
+  * **Bloco 3 (Linha do Tempo Histórica)**: Filtro interativo por marcador para acompanhamento evolutivo, cards de exames com chips coloridos de resultado (classificação clínica de HbA1c: meta atingida, ajuste suave ou atenção clínica) e link direto para o laudo digital.
+- **Painel do Especialista (`PainelEspecialista.jsx`):**
+  * Botão *"📑 Ver Exames do Paciente"* no card de atendimento: abre modal com histórico detalhado e laudos anexados.
+  * Botão *"🩺 Solicitar Novos Exames"*: abre modal para seleção rápida de dosagens frequentes em DM1 ou adição de itens personalizados, emitindo a guia oficial assinada e gerando link para o PDF timbrado.
+
+
 

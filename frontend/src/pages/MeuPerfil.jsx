@@ -11,8 +11,9 @@
    ========================================================================== */
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/Button';
+import CentralExames from '../components/CentralExames';
 import { useAuth } from '../context/AuthContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import {
@@ -79,7 +80,19 @@ const REGISTROS_DEMO_INICIAIS = [
 /* INÍCIO DO COMPONENTE MEUPERFIL */
 export default function MeuPerfil() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
   const { usuario, token } = useAuth();
+
+  // Controle de abas principais (Diário de Glicemia vs Central de Exames)
+  const [abaAtiva, setAbaAtiva] = useState(queryParams.get('aba') === 'exames' ? 'exames' : 'diario');
+
+  useEffect(() => {
+    const param = new URLSearchParams(location.search).get('aba');
+    if (param === 'exames' || param === 'diario') {
+      setAbaAtiva(param);
+    }
+  }, [location.search]);
 
   // Estados de dados do perfil e medicamentos
   const [perfilSaude, setPerfilSaude] = useState(null);
@@ -625,6 +638,72 @@ export default function MeuPerfil() {
           </div>
         </div>
 
+        {/* ==================================================================
+            SELETOR DE ABAS: DIÁRIO INTELIGENTE VS CENTRAL DE EXAMES (RN-EXA-01)
+            ================================================================== */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.85rem',
+            borderBottom: '2px solid rgba(124, 83, 63, 0.15)',
+            paddingBottom: '0.1rem',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setAbaAtiva('diario')}
+            style={{
+              padding: '0.85rem 1.6rem',
+              borderRadius: '14px 14px 0 0',
+              border: 'none',
+              borderBottom: abaAtiva === 'diario' ? '3.5px solid #3B7E48' : '3.5px solid transparent',
+              backgroundColor: abaAtiva === 'diario' ? 'var(--cor-superficie)' : 'transparent',
+              color: abaAtiva === 'diario' ? '#2E2824' : '#6A5E57',
+              fontWeight: 700,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>🩸</span>
+            <span>Diário Inteligente & IOB</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaAtiva('exames')}
+            style={{
+              padding: '0.85rem 1.6rem',
+              borderRadius: '14px 14px 0 0',
+              border: 'none',
+              borderBottom: abaAtiva === 'exames' ? '3.5px solid #3B7E48' : '3.5px solid transparent',
+              backgroundColor: abaAtiva === 'exames' ? 'var(--cor-superficie)' : 'transparent',
+              color: abaAtiva === 'exames' ? '#2E2824' : '#6A5E57',
+              fontWeight: 700,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>📑</span>
+            <span>Meus Exames & Guias</span>
+          </button>
+        </div>
+
+        {/* ABA: CENTRAL DE EXAMES */}
+        {abaAtiva === 'exames' && (
+          <CentralExames perfilSaude={perfilSaude} token={token} usuario={usuario} />
+        )}
+
+        {/* ABA: DIÁRIO INTELIGENTE */}
+        {abaAtiva === 'diario' && (
+          <>
         {/* ==================================================================
             2. PAINEL RESUMO INTELIGENTE DO DIÁRIO (IOB, TENDÊNCIA E FSI)
             ================================================================== */}
@@ -1441,6 +1520,8 @@ export default function MeuPerfil() {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );
