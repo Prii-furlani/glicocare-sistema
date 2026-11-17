@@ -127,41 +127,38 @@ if (empty($textoIntegral)) {
 }
 $textoHash = hash('sha256', $textoIntegral);
 
-// 5. Metadados do dispositivo e fuso horário oficial
+// 5. Metadados do dispositivo e fuso horário oficial com validade anual (12 meses)
 $ipOrigem = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 if (str_contains($ipOrigem, ',')) {
     $ipOrigem = trim(explode(',', $ipOrigem)[0]);
 }
 $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'GlicoCare-Client/1.0', 0, 255);
 $dataHoraLocal = (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d H:i:s');
+$validoAteLocal = (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->modify('+1 year')->format('Y-m-d H:i:s');
 $usuarioId = (int) ($usuarioAuth['id'] ?? $agendamento['familiar_usuario_id']);
 
-// 6. Grava na tabela consentimentos_teleconsulta
+// Identifica ou obtém perfil_saude_id
+$perfilSaudeId = (int) ($payload['perfil_saude_id'] ?? 0);
+if (!$perfilSaudeId) {
+    $stmtP = $db->prepare('SELECT id FROM perfis_saude WHERE usuario_id = :uid ORDER BY id ASC LIMIT 1');
+    $stmtP->execute([':uid' => $usuarioId]);
+    $perfilSaudeId = (int) ($stmtP->fetchColumn() ?: 1);
+}
+
+// 6. Grava na tabela consentimentos_teleconsulta com vigência de 1 ano
 $stmtCons = $db->prepare(
     'INSERT INTO consentimentos_teleconsulta
-     (usuario_id, agendamento_id, modalidade, nome_declarante, cpf_declarante,
+     (usuario_id, perfil_saude_id, agendamento_id, modalidade, nome_declarante, cpf_declarante,
       data_nascimento_paciente, nome_paciente_dependente, cidade_aceite, versao_termo,
-      texto_integral_hash, aceito, ip_aceite, user_agent, data_hora_aceite)
+      texto_integral_hash, aceito, ip_aceite, user_agent, data_hora_aceite, valido_ate, status_termo)
      VALUES
-     (:uid, :aid, :modalidade, :nome, :cpf, :data_nasc, :dependente, :cidade, :versao,
-      :hash, 1, :ip, :ua, :data_hora)
-     ON DUPLICATE KEY UPDATE
-      modalidade = VALUES(modalidade),
-      nome_declarante = VALUES(nome_declarante),
-      cpf_declarante = VALUES(cpf_declarante),
-      data_nascimento_paciente = VALUES(data_nascimento_paciente),
-      nome_paciente_dependente = VALUES(nome_paciente_dependente),
-      cidade_aceite = VALUES(cidade_aceite),
-      versao_termo = VALUES(versao_termo),
-      texto_integral_hash = VALUES(texto_integral_hash),
-      aceito = 1,
-      ip_aceite = VALUES(ip_aceite),
-      user_agent = VALUES(user_agent),
-      data_hora_aceite = VALUES(data_hora_aceite)'
+     (:uid, :pid, :aid, :modalidade, :nome, :cpf, :data_nasc, :dependente, :cidade, :versao,
+      :hash, 1, :ip, :ua, :data_hora, :valido_ate, "ATIVO")'
 );
 
 $stmtCons->execute([
     ':uid'        => $usuarioId,
+    ':pid'        => $perfilSaudeId,
     ':aid'        => $agendamentoId,
     ':modalidade' => $modalidade,
     ':nome'       => $nomeDeclarante,
@@ -174,10 +171,27 @@ $stmtCons->execute([
     ':ip'         => $ipOrigem,
     ':ua'         => $userAgent,
     ':data_hora'  => $dataHoraLocal,
+    ':valido_ate' => $validoAteLocal,
 ]);
 $consentimentoId = (int) $db->lastInsertId() ?: $agendamentoId;
 
-// 7. Registro em trilha de auditoria imutável (RN-AUD-01)
+// 6B. Registra o uso da consulta atual em consentimentos_agendamentos_uso
+$especialistaId = (int) ($agendamento['especialista_id'] ?? 1);
+$stmtUso = $db->prepare(
+    'INSERT INTO consentimentos_agendamentos_uso
+     (consentimento_id, agendamento_id, especialista_id, confirmado_em, ip_confirmacao)
+     VALUES (:cid, :aid, :eid, :data_hora, :ip)
+     ON DUPLICATE KEY UPDATE confirmado_em = VALUES(confirmado_em), ip_confirmacao = VALUES(ip_confirmacao)'
+);
+$stmtUso->execute([
+    ':cid'       => $consentimentoId,
+    ':aid'       => $agendamentoId,
+    ':eid'       => $especialistaId,
+    ':data_hora' => $dataHoraLocal,
+    ':ip'        => $ipOrigem,
+]);
+
+// 7. Registro em trilha de auditoria imutável (RN-AUD-01 & CFM 2.314/2022)
 AuditLogger::registrar(
     $db,
     'CRIACAO',
@@ -187,13 +201,17 @@ AuditLogger::registrar(
     null,
     [
         'agendamento_id' => $agendamentoId,
+        'perfil_saude_id' => $perfilSaudeId,
         'modalidade' => $modalidade,
         'nome_declarante' => $nomeDeclarante,
         'cpf_declarante' => $cpfDeclarante,
         'versao_termo' => $versaoTermo,
         'texto_integral_hash' => $textoHash,
         'ip_aceite' => $ipOrigem,
-        'data_hora_aceite' => $dataHoraLocal
+        'data_hora_aceite' => $dataHoraLocal,
+        'valido_ate' => $validoAteLocal,
+        'status_termo' => 'ATIVO',
+        'modelo_vigencia' => 'ANUAL_12_MESES',
     ],
     $usuarioId,
     $nomeDeclarante
@@ -201,13 +219,16 @@ AuditLogger::registrar(
 
 echo json_encode([
     'sucesso' => true,
-    'mensagem' => 'Termo de Consentimento Livre e Esclarecido (TCLE) assinado digitalmente com sucesso.',
+    'mensagem' => 'Termo de Consentimento Livre e Esclarecido (TCLE) assinado digitalmente com validade anual (12 meses).',
     'dados' => [
         'consentimento_id' => $consentimentoId,
         'agendamento_id'   => $agendamentoId,
+        'perfil_saude_id'  => $perfilSaudeId,
         'sala_token_unico' => $tokenSala,
         'link_sala'        => "/sala-consulta/{$tokenSala}",
         'data_hora_aceite' => $dataHoraLocal,
+        'valido_ate'       => $validoAteLocal,
+        'status_termo'     => 'ATIVO',
         'fuso_horario'     => 'America/Sao_Paulo (BRT)',
         'hash_validacao'   => $textoHash,
         'ip_aceite'        => $ipOrigem,

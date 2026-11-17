@@ -333,12 +333,14 @@ CREATE TABLE IF NOT EXISTS `pre_atendimentos` (
 
 -- =============================================================================
 -- TABELA 7B: consentimentos_teleconsulta
--- Termo de Consentimento Livre e Esclarecido (TCLE) Formalizado (CFM 2.314/2022 & LGPD)
+-- Termo de Consentimento Livre e Esclarecido (TCLE) com Validade Anual (12 Meses)
+-- Embasamento Legal: CFM nº 2.314/2022, CFN, CFP, CONFEF & LGPD (Lei 13.709/2018)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `consentimentos_teleconsulta` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
   `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
-  `agendamento_id` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id) - 1:1',
+  `perfil_saude_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK para perfis_saude(id)',
+  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id) - consulta de origem',
   `modalidade` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA' COMMENT 'Modalidade da teleassistência',
   `nome_declarante` VARCHAR(150) NOT NULL COMMENT 'Nome completo do declarante / paciente / responsável',
   `cpf_declarante` VARCHAR(14) NOT NULL COMMENT 'CPF do declarante (formato 000.000.000-00)',
@@ -350,18 +352,48 @@ CREATE TABLE IF NOT EXISTS `consentimentos_teleconsulta` (
   `aceito` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite eletrônico confirmado',
   `ip_aceite` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do declarante',
   `user_agent` VARCHAR(255) DEFAULT NULL COMMENT 'Navegador/dispositivo no momento do aceite',
-  `data_hora_aceite` DATETIME NOT NULL COMMENT 'Timestamp no fuso America/Sao_Paulo',
+  `data_hora_aceite` DATETIME NOT NULL COMMENT 'Timestamp de aceite no fuso America/Sao_Paulo',
+  `valido_ate` DATETIME NOT NULL COMMENT 'Data e hora limite da validade anual (12 meses)',
+  `status_termo` ENUM('ATIVO', 'EXPIRADO', 'REVOGADO') NOT NULL DEFAULT 'ATIVO' COMMENT 'Status de vigência do consentimento',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_consentimento_agendamento` (`agendamento_id`),
+  KEY `idx_consentimento_agendamento` (`agendamento_id`),
   KEY `idx_consentimento_usuario` (`usuario_id`),
+  KEY `idx_consentimento_perfil` (`perfil_saude_id`),
   CONSTRAINT `fk_consentimento_usuario`
     FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_consentimento_agendamento`
     FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) formalizados';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) com validade anual';
+
+-- =============================================================================
+-- TABELA 7B_USO: consentimentos_agendamentos_uso
+-- Confirmações Rápidas de TCLE Vigente em Consultas Subsequentes (CFM 2.314/2022)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `consentimentos_agendamentos_uso` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da confirmação de uso de TCLE vigente',
+  `consentimento_id` INT UNSIGNED NOT NULL COMMENT 'FK para consentimentos_teleconsulta(id)',
+  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+  `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+  `confirmado_em` DATETIME NOT NULL COMMENT 'Data e hora da confirmação no fuso America/Sao_Paulo',
+  `ip_confirmacao` VARCHAR(45) DEFAULT NULL COMMENT 'IP do declarante na confirmação rápida',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_tcle_uso_consentimento` (`consentimento_id`),
+  KEY `idx_tcle_uso_agendamento` (`agendamento_id`),
+  KEY `idx_tcle_uso_especialista` (`especialista_id`),
+  CONSTRAINT `fk_tcle_uso_consentimento`
+    FOREIGN KEY (`consentimento_id`) REFERENCES `consentimentos_teleconsulta` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tcle_uso_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tcle_uso_especialista`
+    FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Registro de uso de TCLE vigente por consulta';
 
 -- =============================================================================
 -- TABELA 7C: prontuarios_atendimentos
@@ -679,19 +711,29 @@ INSERT INTO `agendamentos` (
 )
 ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`), `sala_token_unico` = VALUES(`sala_token_unico`), `status_atendimento` = VALUES(`status_atendimento`);
 
--- 5A_CONSENTIMENTO. Consentimento Livre e Esclarecido (TCLE) do agendamento 1
+-- 5A_CONSENTIMENTO. Consentimento Livre e Esclarecido (TCLE) com validade anual de 12 meses
 INSERT INTO `consentimentos_teleconsulta` (
-  `id`, `usuario_id`, `agendamento_id`, `modalidade`, `nome_declarante`, `cpf_declarante`,
+  `id`, `usuario_id`, `perfil_saude_id`, `agendamento_id`, `modalidade`, `nome_declarante`, `cpf_declarante`,
   `data_nascimento_paciente`, `nome_paciente_dependente`, `cidade_aceite`, `versao_termo`,
-  `texto_integral_hash`, `aceito`, `ip_aceite`, `user_agent`, `data_hora_aceite`
+  `texto_integral_hash`, `aceito`, `ip_aceite`, `user_agent`, `data_hora_aceite`,
+  `valido_ate`, `status_termo`
 ) VALUES
 (
-  1, 4, 1, 'TELECONSULTA', 'Mariana Silva', '123.456.789-00',
+  1, 4, 1, 1, 'TELECONSULTA', 'Mariana Silva', '123.456.789-00',
   '2019-05-14', 'Theo Silva', 'São Paulo', 'TCLE-GC-2026.1',
   'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b', 1, '127.0.0.1',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GlicoCare/1.0', '2026-11-18 10:25:00'
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GlicoCare/1.0', '2026-11-18 10:25:00',
+  '2027-11-18 10:25:00', 'ATIVO'
 )
-ON DUPLICATE KEY UPDATE `cpf_declarante` = VALUES(`cpf_declarante`), `versao_termo` = VALUES(`versao_termo`);
+ON DUPLICATE KEY UPDATE `cpf_declarante` = VALUES(`cpf_declarante`), `valido_ate` = VALUES(`valido_ate`), `status_termo` = VALUES(`status_termo`);
+
+-- 5A_USO. Registro de confirmação de uso de TCLE vigente na consulta 1
+INSERT INTO `consentimentos_agendamentos_uso` (
+  `id`, `consentimento_id`, `agendamento_id`, `especialista_id`, `confirmado_em`, `ip_confirmacao`
+) VALUES (
+  1, 1, 1, 1, '2026-11-18 10:25:00', '127.0.0.1'
+)
+ON DUPLICATE KEY UPDATE `confirmado_em` = VALUES(`confirmado_em`);
 
 -- 5A_AVALIACOES. Avaliações moderadas da rede de especialistas
 INSERT INTO `avaliacoes_especialistas` (

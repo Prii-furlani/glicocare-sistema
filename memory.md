@@ -430,7 +430,8 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
 - **Tabela `consentimentos_teleconsulta` (TiDB Cloud MySQL):**
   * `id`: INT AUTO_INCREMENT PRIMARY KEY.
   * `usuario_id`: INT NOT NULL (FK -> `usuarios(id)`).
-  * `agendamento_id`: INT NOT NULL UNIQUE (FK 1:1 -> `agendamentos(id)`).
+  * `perfil_saude_id`: INT UNSIGNED DEFAULT NULL (FK -> `perfis_saude(id)`).
+  * `agendamento_id`: INT NOT NULL (FK -> `agendamentos(id)` — referência da consulta de formalização inicial).
   * `modalidade`: ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA'.
   * `nome_declarante`: VARCHAR(150) NOT NULL.
   * `cpf_declarante`: VARCHAR(20) NOT NULL (máscara `000.000.000-00` e validação).
@@ -443,21 +444,40 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   * `ip_aceite`: VARCHAR(45) NOT NULL.
   * `user_agent`: TEXT DEFAULT NULL.
   * `data_hora_aceite`: DATETIME NOT NULL (`America/Sao_Paulo`).
+  * `valido_ate`: DATETIME NOT NULL (validade anual de 12 meses calculada a partir de `data_hora_aceite`).
+  * `status_termo`: ENUM('ATIVO', 'EXPIRADO', 'REVOGADO') NOT NULL DEFAULT 'ATIVO'.
 
-### C. Endpoints e Comprovante Oficial
+- **Tabela `consentimentos_agendamentos_uso` (TiDB Cloud MySQL):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `consentimento_id`: INT UNSIGNED NOT NULL (FK -> `consentimentos_teleconsulta(id)`).
+  * `agendamento_id`: INT UNSIGNED NOT NULL (FK -> `agendamentos(id)`).
+  * `especialista_id`: INT UNSIGNED NOT NULL (FK -> `especialistas(id)`).
+  * `confirmado_em`: DATETIME NOT NULL (`America/Sao_Paulo`).
+  * `ip_confirmacao`: VARCHAR(45) DEFAULT NULL.
+
+### C. Endpoints e Fluxo de Verificação Inteligente
+- `/backend/api/agendamentos/verificar_tcle.php`:
+  * `GET`: Avalia a vigência anual (< 12 meses) do TCLE para o paciente/dependente (`perfil_saude_id` ou `usuario_id`). Retorna `tcle_vigente` (`true`/`false`), o cenário recomendado (`CENARIO_B` de 1 clique ou `CENARIO_A` formulário completo) e metadados contratuais.
+  * `POST (acao = 'confirmar_uso')`: Registra com 1 clique a utilização do TCLE anual vigente para a teleconsulta atual na tabela `consentimentos_agendamentos_uso` e gera evento auditável `CONFIRMACAO_USO_TCLE` no `AuditLogger`.
+  * `POST (acao = 'revogar')`: Atualiza o status do termo para `'REVOGADO'`, gerando trilha auditável `REVOGACAO_TCLE` no `AuditLogger`.
 - `/backend/api/agendamentos/assinar_tcle.php`:
   * Validação formal de CPF, dados do declarante e integridade via SHA-256.
-  * Gravação transacional com geração/confirmação do `sala_token_unico`.
+  * Gravação do TCLE com validade anual de 12 meses (`valido_ate = NOW() + 1 ano`), vinculando ao perfil de saúde e inserindo o primeiro uso na tabela auxiliar.
   * Auditoria imutável via `AuditLogger::registrar()` no fuso de Brasília.
 - `/backend/api/agendamentos/comprovante_tcle.php`:
-  * Certificado digital de consentimento informado pronto para download/impressão contendo o Carimbo Digital de Aceite (Data/Hora de Brasília, IP do declarante, CPF mascarado, Hash SHA-256 e selo de conformidade CFM/LGPD).
+  * Certificado digital timbrado pronto para impressão/PDF com selo de validade anual (12 meses), status de vigência (`🟢 ATIVO`, `🔴 REVOGADO`, `🟠 EXPIRADO`), tabela de consultas vinculadas e carimbo com hash SHA-256.
 - `/backend/api/teleconsulta/sala.php`:
-  * Valida o status do TCLE vinculado ao agendamento, expondo `tcle_assinado`, `tcle` e `comprovante_tcle_url`.
+  * Validação combinada: verifica se a consulta possui confirmação em `consentimentos_agendamentos_uso` ou termo direto, e se o paciente dispõe de TCLE anual vigente.
 
-### D. Componentes de Interface
-- `ModalTCLE.jsx`: Modal acolhedor com leitura das 4 cláusulas, dados do declarante, cálculo de hash SHA-256 em tempo real via Web Crypto API e botão *"Li, compreendi e assino digitalmente este Termo →"*.
-- `SalaConsulta.jsx`: Verificação automática de TCLE assinado. Exibe badge oficial `📜 TCLE Assinado` com link direto ao comprovante ou bloqueia a liberação do vídeo com card de aviso até a formalização.
-- `PerfilEspecialista.jsx`: Integração na etapa 5 do agendamento/checkout seguro com link para abertura da `ModalTCLE`.
+### D. Componentes de Interface e Visão no Perfil
+- `ModalTCLE.jsx`:
+  * **Cenário B (1 clique):** Exibe banner *"Termo de Consentimento Válido Encontrado"*, data de validade anual, profissional atendente e botão de ação rápida *"✓ Confirmar e Iniciar Consulta (1 clique)"*, além de links para visualizar o comprovante em PDF ou alternar para o formulário completo.
+  * **Cenário A (Completo):** Exibe os 4 campos declaratórios, as 4 cláusulas legais oficiais (CFM 2.314/2022 e LGPD), checkbox de concordância e botão de assinatura com vigência de 1 ano.
+- `MeuPerfil.jsx`:
+  * Selo discreto *"📜 TCLE Teleassistência Ativo • Válido até DD/MM/AAAA"* posicionado entre o cabeçalho pessoal e a faixa de alergias.
+  * Ações integradas: *"📄 Ver Comprovante (PDF)"*, *"🔄 Renovar"* (abre modal no modo formulário) e *"⚠️ Revogar"* (com confirmação e chamada de revogação na API).
+- `SalaConsulta.jsx`:
+  * Botão de entrada rápida integrado: orienta confirmação em 1 clique quando o termo anual está ativo ou formalização direta.
 
 
 

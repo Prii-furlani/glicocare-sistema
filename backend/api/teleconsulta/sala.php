@@ -159,10 +159,43 @@ $stmtAv->execute([':aid' => $agendamento['id']]);
 $avaliacao = $stmtAv->fetch() ?: null;
 
 // 6B. Valida Termo de Consentimento Livre e Esclarecido (TCLE - CFM 2.314/2022)
+// Modelo de validade anual (12 meses) com confirmações rápidas por consulta
 $stmtTCLE = $db->prepare('SELECT * FROM consentimentos_teleconsulta WHERE agendamento_id = :aid AND aceito = 1 LIMIT 1');
 $stmtTCLE->execute([':aid' => $agendamento['id']]);
 $tcle = $stmtTCLE->fetch();
-$tcleAssinado = (bool) $tcle;
+
+// Se não assinado diretamente nesta consulta, verifica se foi confirmado em consentimentos_agendamentos_uso
+$tcleUsoConfirmado = false;
+$stmtUso = $db->prepare(
+    'SELECT cau.*, c.*
+     FROM consentimentos_agendamentos_uso cau
+     INNER JOIN consentimentos_teleconsulta c ON cau.consentimento_id = c.id
+     WHERE cau.agendamento_id = :aid
+     LIMIT 1'
+);
+$stmtUso->execute([':aid' => $agendamento['id']]);
+$uso = $stmtUso->fetch();
+if ($uso) {
+    $tcle = $uso;
+    $tcleUsoConfirmado = true;
+}
+
+// Verifica também se o paciente possui TCLE anual vigente para facilitar confirmação rápida em 1 clique
+$stmtTCLEAnual = $db->prepare(
+    'SELECT * FROM consentimentos_teleconsulta
+     WHERE (perfil_saude_id = :pid OR usuario_id = :uid)
+       AND status_termo = "ATIVO"
+       AND valido_ate > NOW()
+     ORDER BY data_hora_aceite DESC
+     LIMIT 1'
+);
+$stmtTCLEAnual->execute([
+    ':pid' => $perfilSaude ? (int)$perfilSaude['id'] : 1,
+    ':uid' => (int)$agendamento['familiar_usuario_id'],
+]);
+$tcleAnualVigente = $stmtTCLEAnual->fetch();
+
+$tcleAssinado = (bool) $tcle && ($tcle['status_termo'] ?? 'ATIVO') === 'ATIVO';
 
 // 7. Resposta formatada
 echo json_encode([
@@ -198,6 +231,8 @@ echo json_encode([
         ],
         'papel_sessao' => $papel,
         'tcle_assinado' => $tcleAssinado,
+        'tcle_uso_confirmado' => $tcleUsoConfirmado,
+        'tcle_anual_vigente' => $tcleAnualVigente ?: null,
         'tcle' => $tcle ?: null,
         'comprovante_tcle_url' => "/backend/api/agendamentos/comprovante_tcle.php?agendamento_id={$agendamento['id']}",
         'pre_atendimento' => $preAtendimento,

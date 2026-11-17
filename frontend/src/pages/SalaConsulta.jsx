@@ -614,7 +614,9 @@ export default function SalaConsulta() {
                     borderRadius: 'var(--raio-pilula)',
                   }}
                 >
-                  📄 Ler e Assinar Digitalmente o TCLE (1 minuto) →
+                  {dadosSala?.tcle_anual_vigente
+                    ? '⚡ Confirmar TCLE Vigente (1 clique) →'
+                    : '📄 Formalizar Termo de Consentimento (TCLE) →'}
                 </Button>
               </div>
             ) : (

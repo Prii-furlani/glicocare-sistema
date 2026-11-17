@@ -232,7 +232,8 @@ async function main() {
       CREATE TABLE IF NOT EXISTS \`consentimentos_teleconsulta\` (
         \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
         \`usuario_id\` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
-        \`agendamento_id\` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id)',
+        \`perfil_saude_id\` INT UNSIGNED DEFAULT NULL COMMENT 'FK para perfis_saude(id)',
+        \`agendamento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id) - consulta de origem',
         \`modalidade\` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA',
         \`nome_declarante\` VARCHAR(150) NOT NULL DEFAULT 'Paciente GlicoCare',
         \`cpf_declarante\` VARCHAR(14) NOT NULL DEFAULT '000.000.000-00',
@@ -245,19 +246,23 @@ async function main() {
         \`ip_aceite\` VARCHAR(45) NOT NULL,
         \`user_agent\` VARCHAR(255) DEFAULT NULL,
         \`data_hora_aceite\` DATETIME NOT NULL,
+        \`valido_ate\` DATETIME NOT NULL COMMENT 'Timestamp de validade anual (12 meses)',
+        \`status_termo\` ENUM('ATIVO', 'EXPIRADO', 'REVOGADO') NOT NULL DEFAULT 'ATIVO',
         \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (\`id\`),
-        UNIQUE KEY \`uk_consentimento_agendamento\` (\`agendamento_id\`),
+        KEY \`idx_consentimento_agendamento\` (\`agendamento_id\`),
         KEY \`idx_consentimento_usuario\` (\`usuario_id\`),
+        KEY \`idx_consentimento_perfil\` (\`perfil_saude_id\`),
         CONSTRAINT \`fk_consentimento_usuario\`
           FOREIGN KEY (\`usuario_id\` ) REFERENCES \`usuarios\` (\`id\`)
           ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT \`fk_consentimento_agendamento\`
           FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
           ON DELETE CASCADE ON UPDATE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) formalizados';
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) formalizados com validade anual';
 
       ALTER TABLE \`consentimentos_teleconsulta\`
+      ADD COLUMN IF NOT EXISTS \`perfil_saude_id\` INT UNSIGNED DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS \`modalidade\` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA',
       ADD COLUMN IF NOT EXISTS \`nome_declarante\` VARCHAR(150) NOT NULL DEFAULT 'Paciente GlicoCare',
       ADD COLUMN IF NOT EXISTS \`cpf_declarante\` VARCHAR(14) NOT NULL DEFAULT '000.000.000-00',
@@ -265,18 +270,73 @@ async function main() {
       ADD COLUMN IF NOT EXISTS \`nome_paciente_dependente\` VARCHAR(150) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS \`cidade_aceite\` VARCHAR(100) NOT NULL DEFAULT 'São Paulo',
       ADD COLUMN IF NOT EXISTS \`texto_integral_hash\` VARCHAR(64) NOT NULL DEFAULT 'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
-      ADD COLUMN IF NOT EXISTS \`user_agent\` VARCHAR(255) DEFAULT NULL;
+      ADD COLUMN IF NOT EXISTS \`user_agent\` VARCHAR(255) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`valido_ate\` DATETIME DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`status_termo\` ENUM('ATIVO', 'EXPIRADO', 'REVOGADO') NOT NULL DEFAULT 'ATIVO';
+
+      UPDATE \`consentimentos_teleconsulta\` c
+      LEFT JOIN \`perfis_saude\` p ON c.usuario_id = p.usuario_id
+      SET c.perfil_saude_id = COALESCE(c.perfil_saude_id, p.id, 1),
+          c.valido_ate = COALESCE(c.valido_ate, DATE_ADD(c.data_hora_aceite, INTERVAL 1 YEAR)),
+          c.status_termo = 'ATIVO'
+      WHERE c.valido_ate IS NULL OR c.perfil_saude_id IS NULL;
 
       UPDATE \`consentimentos_teleconsulta\`
       SET \`nome_declarante\` = 'Mariana Silva',
           \`cpf_declarante\` = '123.456.789-00',
           \`nome_paciente_dependente\` = 'Theo Silva',
-          \`versao_termo\` = 'TCLE-GC-2026.1'
+          \`versao_termo\` = 'TCLE-GC-2026.1',
+          \`perfil_saude_id\` = 1,
+          \`valido_ate\` = '2027-11-18 10:25:00',
+          \`status_termo\` = 'ATIVO'
       WHERE \`id\` = 1;
     `);
-    console.log('✅ Tabela consentimentos_teleconsulta verificada/atualizada com colunas formais do TCLE.');
+
+    // Remove restrição UNIQUE de agendamento_id caso exista
+    try {
+      await connection.query(`ALTER TABLE \`consentimentos_teleconsulta\` DROP INDEX \`uk_consentimento_agendamento\`;`);
+    } catch (ignoreUniqueErr) {}
+
+    console.log('✅ Tabela consentimentos_teleconsulta verificada/atualizada com validade anual (12 meses).');
   } catch (err) {
     console.log('ℹ️ Tabela consentimentos_teleconsulta:', err.message);
+  }
+
+  // Tabela auxiliar de confirmações rápidas por agendamento
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`consentimentos_agendamentos_uso\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do registro de uso de TCLE vigente',
+        \`consentimento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para consentimentos_teleconsulta(id)',
+        \`agendamento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+        \`especialista_id\` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+        \`confirmado_em\` DATETIME NOT NULL COMMENT 'Timestamp da confirmação rápida no fuso America/Sao_Paulo',
+        \`ip_confirmacao\` VARCHAR(45) DEFAULT NULL COMMENT 'IP do declarante na confirmação rápida',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_tcle_uso_consentimento\` (\`consentimento_id\`),
+        KEY \`idx_tcle_uso_agendamento\` (\`agendamento_id\`),
+        KEY \`idx_tcle_uso_especialista\` (\`especialista_id\`),
+        CONSTRAINT \`fk_tcle_uso_consentimento\`
+          FOREIGN KEY (\`consentimento_id\`) REFERENCES \`consentimentos_teleconsulta\` (\`id\` )
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_tcle_uso_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\` )
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_tcle_uso_especialista\`
+          FOREIGN KEY (\`especialista_id\`) REFERENCES \`especialistas\` (\`id\` )
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Registro de uso de TCLE vigente por consulta';
+
+      INSERT INTO \`consentimentos_agendamentos_uso\`
+        (\`id\`, \`consentimento_id\`, \`agendamento_id\`, \`especialista_id\`, \`confirmado_em\`, \`ip_confirmacao\`)
+      VALUES
+        (1, 1, 1, 1, '2026-11-18 10:25:00', '127.0.0.1')
+      ON DUPLICATE KEY UPDATE \`confirmado_em\` = VALUES(\`confirmado_em\`);
+    `);
+    console.log('✅ Tabela consentimentos_agendamentos_uso criada/verificada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela consentimentos_agendamentos_uso:', err.message);
   }
 
   try {

@@ -19,11 +19,31 @@ require_once __DIR__ . '/../../services/AuditLogger.php';
 $database = new Database();
 $db = $database->getConnection();
 
-$agendamentoId = (int) ($_GET['agendamento_id'] ?? 0);
-$token = trim($_GET['token'] ?? '');
+$agendamentoId   = (int) ($_GET['agendamento_id'] ?? 0);
+$consentimentoId = (int) ($_GET['consentimento_id'] ?? 0);
+$perfilSaudeId   = (int) ($_GET['perfil_saude_id'] ?? 0);
+$token           = trim($_GET['token'] ?? '');
 
 $stmt = null;
-if ($agendamentoId > 0) {
+
+if ($consentimentoId > 0) {
+    $stmt = $db->prepare(
+        'SELECT c.*, a.data_hora_consulta, a.sala_token_unico, a.comprovante_nf,
+                u_esp.nome_completo AS especialista_nome,
+                e.especialidade,
+                COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf
+         FROM consentimentos_teleconsulta c
+         LEFT JOIN agendamentos a ON c.agendamento_id = a.id
+         LEFT JOIN especialistas e ON a.especialista_id = e.id
+         LEFT JOIN usuarios u_esp ON e.usuario_id = u_esp.id
+         WHERE c.id = :cid
+         LIMIT 1'
+    );
+    $stmt->execute([':cid' => $consentimentoId]);
+} elseif ($agendamentoId > 0) {
+    // 1. Tenta buscar direto por agendamento_id
     $stmt = $db->prepare(
         'SELECT c.*, a.data_hora_consulta, a.sala_token_unico, a.comprovante_nf,
                 u_esp.nome_completo AS especialista_nome,
@@ -39,6 +59,46 @@ if ($agendamentoId > 0) {
          LIMIT 1'
     );
     $stmt->execute([':id' => $agendamentoId]);
+
+    // 2. Se não encontrou direto, busca se foi confirmado em consentimentos_agendamentos_uso
+    if (!$stmt->rowCount()) {
+        $stmtUso = $db->prepare(
+            'SELECT c.*, a.data_hora_consulta, a.sala_token_unico, a.comprovante_nf,
+                    u_esp.nome_completo AS especialista_nome,
+                    e.especialidade,
+                    COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                    COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                    COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf
+             FROM consentimentos_agendamentos_uso cau
+             INNER JOIN consentimentos_teleconsulta c ON cau.consentimento_id = c.id
+             INNER JOIN agendamentos a ON cau.agendamento_id = a.id
+             INNER JOIN especialistas e ON a.especialista_id = e.id
+             INNER JOIN usuarios u_esp ON e.usuario_id = u_esp.id
+             WHERE cau.agendamento_id = :id
+             LIMIT 1'
+        );
+        $stmtUso->execute([':id' => $agendamentoId]);
+        if ($stmtUso->rowCount()) {
+            $stmt = $stmtUso;
+        }
+    }
+} elseif ($perfilSaudeId > 0) {
+    $stmt = $db->prepare(
+        'SELECT c.*, a.data_hora_consulta, a.sala_token_unico, a.comprovante_nf,
+                u_esp.nome_completo AS especialista_nome,
+                e.especialidade,
+                COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf
+         FROM consentimentos_teleconsulta c
+         LEFT JOIN agendamentos a ON c.agendamento_id = a.id
+         LEFT JOIN especialistas e ON a.especialista_id = e.id
+         LEFT JOIN usuarios u_esp ON e.usuario_id = u_esp.id
+         WHERE c.perfil_saude_id = :pid
+         ORDER BY c.data_hora_aceite DESC
+         LIMIT 1'
+    );
+    $stmt->execute([':pid' => $perfilSaudeId]);
 } elseif (!empty($token)) {
     $stmt = $db->prepare(
         'SELECT c.*, a.data_hora_consulta, a.sala_token_unico, a.comprovante_nf,
@@ -74,6 +134,8 @@ if (!$tcle) {
         'texto_integral_hash' => 'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
         'ip_aceite' => '127.0.0.1',
         'data_hora_aceite' => '2026-11-18 10:25:00',
+        'valido_ate' => '2027-11-18 10:25:00',
+        'status_termo' => 'ATIVO',
         'especialista_nome' => 'Dra. Helena Vasconcelos',
         'especialidade' => 'Endocrinologia Pediátrica',
         'conselho_sigla' => 'CRM',
@@ -81,6 +143,30 @@ if (!$tcle) {
         'conselho_uf' => 'SP',
         'comprovante_nf' => 'NF-GC-20261120-A1B2',
     ];
+}
+
+// Busca histórico de confirmações sob este TCLE
+$usosHistorico = [];
+if (!empty($tcle['id'])) {
+    try {
+        $stmtUsos = $db->prepare(
+            'SELECT cau.*,
+                    u_esp.nome_completo AS especialista_nome,
+                    e.especialidade,
+                    COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                    COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                    COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf,
+                    a.data_hora_consulta
+             FROM consentimentos_agendamentos_uso cau
+             INNER JOIN agendamentos a ON cau.agendamento_id = a.id
+             INNER JOIN especialistas e ON cau.especialista_id = e.id
+             INNER JOIN usuarios u_esp ON e.usuario_id = u_esp.id
+             WHERE cau.consentimento_id = :cid
+             ORDER BY cau.confirmado_em ASC'
+        );
+        $stmtUsos->execute([':cid' => (int) $tcle['id']]);
+        $usosHistorico = $stmtUsos->fetchAll();
+    } catch (Exception $e) {}
 }
 ?>
 <!DOCTYPE html>
@@ -210,8 +296,36 @@ if (!$tcle) {
       </div>
     </div>
 
-    <!-- IDENTIFICAÇÃO DAS PARTES -->
-    <div style="background-color: var(--cor-superficie); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.5rem; font-size: 0.9rem;">
+    <!-- IDENTIFICAÇÃO DAS PARTES E STATUS DE VIGÊNCIA ANUAL -->
+    <div style="background-color: var(--cor-superficie); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.5rem; font-size: 0.9rem; border: 1px solid rgba(124, 83, 63, 0.15);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(124, 83, 63, 0.2); padding-bottom: 0.65rem; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <span style="font-weight: 700; color: var(--cor-primaria);">Vigência Anual (12 Meses):</span>
+          <span style="color: #2E2824; margin-left: 0.35rem;">
+            <?= htmlspecialchars(date('d/m/Y', strtotime($tcle['data_hora_aceite']))) ?> até <strong><?= htmlspecialchars(date('d/m/Y', strtotime($tcle['valido_ate'] ?? date('Y-m-d', strtotime('+1 year', strtotime($tcle['data_hora_aceite'])))))) ?></strong>
+          </span>
+        </div>
+        <div>
+          <?php
+            $isRevogado = ($tcle['status_termo'] ?? '') === 'REVOGADO';
+            $isExpirado = strtotime($tcle['valido_ate'] ?? '+1 year') < time();
+            if ($isRevogado):
+          ?>
+            <span style="background-color: #FDF2F0; color: #A23B2A; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 700; font-size: 0.8rem; border: 1px solid #F5C2BC;">
+              🔴 TERMO REVOGADO
+            </span>
+          <?php elseif ($isExpirado): ?>
+            <span style="background-color: #FFF7ED; color: #C2410C; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 700; font-size: 0.8rem; border: 1px solid #FED7AA;">
+              🟠 TERMO EXPIRADO (RENOVAÇÃO NECESSÁRIA)
+            </span>
+          <?php else: ?>
+            <span style="background-color: #EFF7F1; color: #285832; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 700; font-size: 0.8rem; border: 1px solid #B8E2BE;">
+              🟢 TCLE ATIVO & VIGENTE
+            </span>
+          <?php endif; ?>
+        </div>
+      </div>
+
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <div>
           <strong>Declarante / Titular:</strong> <?= htmlspecialchars($tcle['nome_declarante']) ?>
@@ -226,7 +340,7 @@ if (!$tcle) {
           <strong>Nascimento do Paciente:</strong> <?= htmlspecialchars(date('d/m/Y', strtotime($tcle['data_nascimento_paciente']))) ?>
         </div>
         <div>
-          <strong>Profissional Atendente:</strong> <?= htmlspecialchars($tcle['especialista_nome']) ?>
+          <strong>Profissional da Formalização:</strong> <?= htmlspecialchars($tcle['especialista_nome']) ?>
         </div>
         <div>
           <strong>Registro Profissional:</strong> <?= htmlspecialchars("{$tcle['conselho_sigla']}-{$tcle['conselho_uf']} {$tcle['conselho_numero']}") ?>
@@ -250,6 +364,37 @@ if (!$tcle) {
     <div class="clausula">
       <strong>4. LIMITES DA TELESSAÚDE E ENCAMINHAMENTO PRESENCIAL:</strong> O declarante compreende que o teleatendimento possui limitações inerentes à ausência de exame físico presencial direto. Caso o profissional de saúde identifique sinais de alarme ou julgue que a condição clínica exige propedêutica presencial, o paciente será formalmente orientado e encaminhado para consulta presencial ou pronto-socorro de urgência (especialmente em quadros de cetoacidose diabética aguda ou hipoglicemia severa).
     </div>
+
+    <?php if (!empty($usosHistorico)): ?>
+    <!-- HISTÓRICO DE CONSULTAS SOB ESTE TCLE VIGENTE (CONFIRMAÇÕES RÁPIDAS) -->
+    <div style="background-color: #FAF8F5; border: 1px solid #E2DBD0; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 0.85rem;">
+      <div style="font-weight: 700; color: var(--cor-primaria); margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+        <span>📋</span> Consultas Vinculadas a este TCLE Anual (Confirmação em 1 Clique):
+      </div>
+      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;">
+        <thead>
+          <tr style="border-bottom: 1.5px solid #DDD3C5; color: #5A5049;">
+            <th style="padding: 0.4rem;">Data da Consulta</th>
+            <th style="padding: 0.4rem;">Especialista Atendente</th>
+            <th style="padding: 0.4rem;">Conselho</th>
+            <th style="padding: 0.4rem;">Confirmado em</th>
+            <th style="padding: 0.4rem;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($usosHistorico as $uso): ?>
+          <tr style="border-bottom: 1px solid #EDE6DB;">
+            <td style="padding: 0.45rem; font-weight: 600;"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($uso['data_hora_consulta']))) ?></td>
+            <td style="padding: 0.45rem;"><?= htmlspecialchars($uso['especialista_nome']) ?> (<?= htmlspecialchars($uso['especialidade']) ?>)</td>
+            <td style="padding: 0.45rem;"><code><?= htmlspecialchars("{$uso['conselho_sigla']}-{$uso['conselho_uf']} {$uso['conselho_numero']}") ?></code></td>
+            <td style="padding: 0.45rem;"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($uso['confirmado_em']))) ?></td>
+            <td style="padding: 0.45rem;"><span style="color: #285832; font-weight: 700;">✓ Confirmado</span></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
 
     <!-- CARIMBO DE ASSINATURA DIGITAL AUDITÁVEL -->
     <div class="carimbo-digital">
