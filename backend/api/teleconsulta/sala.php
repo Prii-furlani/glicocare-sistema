@@ -158,6 +158,12 @@ $stmtAv = $db->prepare('SELECT * FROM avaliacoes_especialistas WHERE agendamento
 $stmtAv->execute([':aid' => $agendamento['id']]);
 $avaliacao = $stmtAv->fetch() ?: null;
 
+// 6B. Valida Termo de Consentimento Livre e Esclarecido (TCLE - CFM 2.314/2022)
+$stmtTCLE = $db->prepare('SELECT * FROM consentimentos_teleconsulta WHERE agendamento_id = :aid AND aceito = 1 LIMIT 1');
+$stmtTCLE->execute([':aid' => $agendamento['id']]);
+$tcle = $stmtTCLE->fetch();
+$tcleAssinado = (bool) $tcle;
+
 // 7. Resposta formatada
 echo json_encode([
     'sucesso' => true,
@@ -191,6 +197,9 @@ echo json_encode([
             'tipo' => $agendamento['familiar_tipo'],
         ],
         'papel_sessao' => $papel,
+        'tcle_assinado' => $tcleAssinado,
+        'tcle' => $tcle ?: null,
+        'comprovante_tcle_url' => "/backend/api/agendamentos/comprovante_tcle.php?agendamento_id={$agendamento['id']}",
         'pre_atendimento' => $preAtendimento,
         'perfil_saude' => $perfilSaude,
         'alergias' => $alergias,

@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
+import ModalTCLE from '../components/ModalTCLE';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL SALACONSULTA */
@@ -56,37 +57,43 @@ export default function SalaConsulta() {
   // Modal de Suporte / Emergência
   const [modalEmergenciaAberta, setModalEmergenciaAberta] = useState(false);
 
+  // Modal de Termo de Consentimento Livre e Esclarecido (TCLE)
+  const [modalTCLEAberta, setModalTCLEAberta] = useState(false);
+  const [tcleAssinado, setTcleAssinado] = useState(true);
+
   // Carrega dados da sala a partir do backend PHP ou fallback
-  useEffect(() => {
-    async function carregarSala() {
-      setCarregando(true);
-      try {
-        const resp = await fetch(`/backend/api/teleconsulta/sala.php?token=${encodeURIComponent(token)}`);
-        const json = await resp.json();
+  const carregarSala = React.useCallback(async () => {
+    setCarregando(true);
+    try {
+      const resp = await fetch(`/backend/api/teleconsulta/sala.php?token=${encodeURIComponent(token)}`);
+      const json = await resp.json();
 
-        if (json.sucesso && json.dados) {
-          setDadosSala(json.dados);
-          // Pré-popula prontuário se já existir ou com dados do pré-atendimento
-          if (json.dados.prontuario) {
-            setQueixaPrincipal(json.dados.prontuario.queixa_principal || '');
-            setEvolucaoClinica(json.dados.prontuario.evolucao_clinica || '');
-            setCondutaOrientacoes(json.dados.prontuario.conduta_orientacoes || '');
-            setOrientadoPresencial(Boolean(json.dados.prontuario.encaminhamento_presencial));
-            setProntuarioSalvoSucesso(true);
-          } else if (json.dados.pre_atendimento) {
-            setQueixaPrincipal(json.dados.pre_atendimento.motivo_principal || '');
-          }
-        } else {
-          criarDadosDemonstrativos();
+      if (json.sucesso && json.dados) {
+        setDadosSala(json.dados);
+        if (typeof json.dados.tcle_assinado === 'boolean') {
+          setTcleAssinado(json.dados.tcle_assinado);
         }
-      } catch {
+        // Pré-popula prontuário se já existir ou com dados do pré-atendimento
+        if (json.dados.prontuario) {
+          setQueixaPrincipal(json.dados.prontuario.queixa_principal || '');
+          setEvolucaoClinica(json.dados.prontuario.evolucao_clinica || '');
+          setCondutaOrientacoes(json.dados.prontuario.conduta_orientacoes || '');
+          setOrientadoPresencial(Boolean(json.dados.prontuario.encaminhamento_presencial));
+          setProntuarioSalvoSucesso(true);
+        } else if (json.dados.pre_atendimento) {
+          setQueixaPrincipal(json.dados.pre_atendimento.motivo_principal || '');
+        }
+      } else {
         criarDadosDemonstrativos();
-      } finally {
-        setCarregando(false);
       }
+    } catch {
+      criarDadosDemonstrativos();
+    } finally {
+      setCarregando(false);
     }
+  }, [token]);
 
-    function criarDadosDemonstrativos() {
+  function criarDadosDemonstrativos() {
       // Mock de alta fidelidade alinhado à Dra. Helena Vasconcelos e Mariana/Theo Silva
       const mock = {
         agendamento: {
@@ -227,8 +234,9 @@ export default function SalaConsulta() {
       setQueixaPrincipal(mock.pre_atendimento.motivo_principal);
     }
 
+  useEffect(() => {
     carregarSala();
-  }, [token, usuario]);
+  }, [carregarSala]);
 
   // Timer decrescente da teleconsulta
   useEffect(() => {
@@ -441,6 +449,49 @@ export default function SalaConsulta() {
             <span style={{ fontSize: '0.7rem', color: '#BBAE9F' }}>restantes</span>
           </div>
 
+          {/* Badge de TCLE Assinado / Botão de Ação */}
+          {tcleAssinado ? (
+            <a
+              href={`/backend/api/agendamentos/comprovante_tcle.php?agendamento_id=${dadosSala?.agendamento?.id || 1}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                backgroundColor: 'rgba(59, 126, 72, 0.2)',
+                border: '1px solid #3B7E48',
+                color: '#7CE38B',
+                borderRadius: '20px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+              title="Visualizar Comprovante Oficial do TCLE Assinado com Carimbo Digital e Hash SHA-256"
+            >
+              <span>📜 TCLE Assinado</span>
+              <span style={{ fontSize: '0.7rem' }}>↗</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalTCLEAberta(true)}
+              style={{
+                backgroundColor: '#DC2626',
+                border: 'none',
+                color: '#FFF',
+                borderRadius: '20px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              ⚠️ Assinar TCLE Obrigatório
+            </button>
+          )}
+
           {/* Botão de Emergência (Visível para ambos, vital para o paciente) */}
           <button
             type="button"
@@ -510,14 +561,65 @@ export default function SalaConsulta() {
             style={{
               flex: 1,
               display: 'grid',
-              gridTemplateColumns: telaCheia ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: !tcleAssinado ? '1fr' : (telaCheia ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))'),
               gap: '1.25rem',
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: 380,
             }}
           >
-            {/* TILE 1: FEED DO ESPECIALISTA */}
+            {/* BLOQUEIO ÉTICO-LEGAL CASO O TCLE NÃO TENHA SIDO ASSINADO */}
+            {!tcleAssinado ? (
+              <div
+                style={{
+                  backgroundColor: '#27201C',
+                  border: '2px solid #E06A55',
+                  borderRadius: '20px',
+                  padding: '3rem 2rem',
+                  textAlign: 'center',
+                  maxWidth: 600,
+                  margin: 'auto',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                }}
+              >
+                <div style={{ fontSize: '3rem', marginBottom: '0.85rem' }}>📜</div>
+                <span
+                  style={{
+                    backgroundColor: 'rgba(224, 106, 85, 0.25)',
+                    color: '#FCA5A5',
+                    border: '1px solid #E06A55',
+                    padding: '0.2rem 0.75rem',
+                    borderRadius: '12px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Conformidade Obrigatória CFM 2.314/2022 & LGPD
+                </span>
+                <h2 style={{ fontFamily: 'var(--fonte-titulo)', color: '#FFF', fontSize: '1.65rem', margin: '0.85rem 0 0.5rem 0' }}>
+                  Assinatura do TCLE Pendente
+                </h2>
+                <p style={{ color: '#D8C6B6', fontSize: '0.94rem', lineHeight: 1.6, marginBottom: '1.75rem' }}>
+                  Para sua proteção e a do profissional, a sala de teleatendimento é liberada mediante
+                  a formalização eletrônica do <strong>Termo de Consentimento Livre e Esclarecido</strong>.
+                </p>
+                <Button
+                  variante="primario"
+                  onClick={() => setModalTCLEAberta(true)}
+                  style={{
+                    backgroundColor: 'var(--cor-cta)',
+                    padding: '0.9rem 1.85rem',
+                    fontSize: '0.95rem',
+                    borderRadius: 'var(--raio-pilula)',
+                  }}
+                >
+                  📄 Ler e Assinar Digitalmente o TCLE (1 minuto) →
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* TILE 1: FEED DO ESPECIALISTA */}
             <div
               style={{
                 position: 'relative',
@@ -677,6 +779,8 @@ export default function SalaConsulta() {
                 </span>
               </div>
             </div>
+              </>
+            )}
           </div>
 
           {/* BARRA INFERIOR DE CONTROLES FLUTUANTE */}
@@ -1622,6 +1726,22 @@ export default function SalaConsulta() {
           </div>
         </div>
       )}
+
+      {/* MODAL FORMAL DE TCLE (CFM 2.314/2022 & LGPD) */}
+      <ModalTCLE
+        aberto={modalTCLEAberta}
+        onFechar={() => setModalTCLEAberta(false)}
+        agendamentoId={dadosSala?.agendamento?.id || 1}
+        profissionalNome={dadosSala?.especialista?.nome}
+        profissionalConselho={dadosSala?.especialista?.conselho}
+        usuario={usuario}
+        perfilSaude={dadosSala?.perfil_saude}
+        onSucessoAssinatura={() => {
+          setTcleAssinado(true);
+          setModalTCLEAberta(false);
+          carregarSala();
+        }}
+      />
     </div>
   );
 }

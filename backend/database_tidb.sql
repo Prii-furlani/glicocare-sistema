@@ -333,27 +333,35 @@ CREATE TABLE IF NOT EXISTS `pre_atendimentos` (
 
 -- =============================================================================
 -- TABELA 7B: consentimentos_teleconsulta
--- Termo de Consentimento Livre e Esclarecido (CFM 2.314/2022, CFN, CFP, CONFEF e LGPD)
+-- Termo de Consentimento Livre e Esclarecido (TCLE) Formalizado (CFM 2.314/2022 & LGPD)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `consentimentos_teleconsulta` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
   `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
-  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
-  `versao_termo` VARCHAR(20) NOT NULL DEFAULT 'v1.0-2026' COMMENT 'Versão do termo CFM 2.314/2022 e LGPD',
+  `agendamento_id` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id) - 1:1',
+  `modalidade` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA' COMMENT 'Modalidade da teleassistência',
+  `nome_declarante` VARCHAR(150) NOT NULL COMMENT 'Nome completo do declarante / paciente / responsável',
+  `cpf_declarante` VARCHAR(14) NOT NULL COMMENT 'CPF do declarante (formato 000.000.000-00)',
+  `data_nascimento_paciente` DATE NOT NULL COMMENT 'Data de nascimento do paciente atendido',
+  `nome_paciente_dependente` VARCHAR(150) DEFAULT NULL COMMENT 'Nome do dependente quando declarado por responsável legal/cuidador',
+  `cidade_aceite` VARCHAR(100) NOT NULL DEFAULT 'São Paulo' COMMENT 'Município da formalização do termo',
+  `versao_termo` VARCHAR(30) NOT NULL DEFAULT 'TCLE-GC-2026.1' COMMENT 'Versão oficial do TCLE',
+  `texto_integral_hash` VARCHAR(64) NOT NULL COMMENT 'Hash SHA-256 do texto integral exibido no momento do aceite',
   `aceito` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite eletrônico confirmado',
-  `ip_aceite` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do usuário',
+  `ip_aceite` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do declarante',
+  `user_agent` VARCHAR(255) DEFAULT NULL COMMENT 'Navegador/dispositivo no momento do aceite',
   `data_hora_aceite` DATETIME NOT NULL COMMENT 'Timestamp no fuso America/Sao_Paulo',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_consentimento_agendamento` (`agendamento_id`),
   KEY `idx_consentimento_usuario` (`usuario_id`),
-  KEY `idx_consentimento_agendamento` (`agendamento_id`),
   CONSTRAINT `fk_consentimento_usuario`
     FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_consentimento_agendamento`
     FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido para telemedicina';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) formalizados';
 
 -- =============================================================================
 -- TABELA 7C: prontuarios_atendimentos
@@ -671,14 +679,19 @@ INSERT INTO `agendamentos` (
 )
 ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`), `sala_token_unico` = VALUES(`sala_token_unico`), `status_atendimento` = VALUES(`status_atendimento`);
 
--- 5A_CONSENTIMENTO. Consentimento Livre e Esclarecido do agendamento 1
+-- 5A_CONSENTIMENTO. Consentimento Livre e Esclarecido (TCLE) do agendamento 1
 INSERT INTO `consentimentos_teleconsulta` (
-  `id`, `usuario_id`, `agendamento_id`, `versao_termo`, `aceito`, `ip_aceite`, `data_hora_aceite`
+  `id`, `usuario_id`, `agendamento_id`, `modalidade`, `nome_declarante`, `cpf_declarante`,
+  `data_nascimento_paciente`, `nome_paciente_dependente`, `cidade_aceite`, `versao_termo`,
+  `texto_integral_hash`, `aceito`, `ip_aceite`, `user_agent`, `data_hora_aceite`
 ) VALUES
 (
-  1, 4, 1, 'v1.0-2026', 1, '127.0.0.1', '2026-11-18 10:25:00'
+  1, 4, 1, 'TELECONSULTA', 'Mariana Silva', '123.456.789-00',
+  '2019-05-14', 'Theo Silva', 'São Paulo', 'TCLE-GC-2026.1',
+  'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b', 1, '127.0.0.1',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GlicoCare/1.0', '2026-11-18 10:25:00'
 )
-ON DUPLICATE KEY UPDATE `aceito` = VALUES(`aceito`);
+ON DUPLICATE KEY UPDATE `cpf_declarante` = VALUES(`cpf_declarante`), `versao_termo` = VALUES(`versao_termo`);
 
 -- 5A_AVALIACOES. Avaliações moderadas da rede de especialistas
 INSERT INTO `avaliacoes_especialistas` (

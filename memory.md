@@ -400,6 +400,55 @@
   * Botão de destaque no topo da página: *"📋 Gerar Resumo Histórico para Compartilhar (PDF / Impressão)"*.
   * Modal responsivo e documento imprimível com `@media print` contendo: identificação do paciente e responsável legal, diagnóstico e tempo de aprendizado em anos/meses, alergias em destaque visual, medicamentos ativos, parâmetros de sensibilidade/IOB, últimos exames e condutas das teleconsultas, finalizando com hash criptográfico e termo LGPD.
 
+## 10. Termo de Consentimento Livre e Esclarecido (TCLE) para Telemedicina / Teleassistência (CFM 2.314/2022 & LGPD)
+
+### A. Estrutura Jurídico-Regulatória e Cláusulas Oficiais
+Em conformidade estrita com o modelo oficial de consentimento informado, com a Resolução CFM nº 2.314/2022, resoluções de conselhos afins (CFN, CFP, CONFEF) e a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018), todo teleatendimento exige aceite formalizado do declarante (paciente ou responsável legal) contendo 4 cláusulas pétreas:
+1. **Cláusula 1 — Da Definição e Finalidade da Teleconsulta**:
+   - Teleatendimento como ato profissional não presencial mediado por Tecnologias Digitais de Informação e Comunicação (TDIC), com o mesmo rigor ético e clínico da consulta presencial.
+2. **Cláusula 2 — Do Sigilo Profissional e Proteção de Dados Pessoais (LGPD)**:
+   - Tratamento de dados sensíveis de saúde com criptografia, guarda em ambiente de prontuário eletrônico seguro e garantia dos direitos de privacidade e anonimização.
+3. **Cláusula 3 — Do Registro Clínico e do Sigilo Bilateral de Imagem**:
+   - Registro obrigatório em prontuário eletrônico.
+   - **Proibição expressa de gravação unilateral**: nem o paciente/família nem o especialista podem gravar áudio ou vídeo da consulta sem prévia anuência formal mútua e justificada, sob pena de violação de sigilo ético e direitos de imagem.
+4. **Cláusula 4 — Das Limitações da Telessaúde e Encaminhamento Presencial**:
+   - Reconhecimento das limitações da ausência de exame físico palpatório.
+   - **Protocolo de Emergência Imediata**: em situações agudas com risco de vida (como Cetoacidose Diabética descompensada ou Hipoglicemia Severa com perda de consciência), a família é orientada a procurar imediatamente o Pronto-Socorro / SAMU 192 presencial.
+   - Autonomia e dever do profissional de interromper a teleconsulta e exigir avaliação presencial se identificar sinais de gravidade.
+
+### B. Persistência de Dados e Carimbo Digital de Autenticidade
+- **Tabela `consentimentos_teleconsulta` (TiDB Cloud MySQL):**
+  * `id`: INT AUTO_INCREMENT PRIMARY KEY.
+  * `usuario_id`: INT NOT NULL (FK -> `usuarios(id)`).
+  * `agendamento_id`: INT NOT NULL UNIQUE (FK 1:1 -> `agendamentos(id)`).
+  * `modalidade`: ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA'.
+  * `nome_declarante`: VARCHAR(150) NOT NULL.
+  * `cpf_declarante`: VARCHAR(20) NOT NULL (máscara `000.000.000-00` e validação).
+  * `data_nascimento_paciente`: DATE DEFAULT NULL.
+  * `nome_paciente_dependente`: VARCHAR(150) DEFAULT NULL (quando perfil `cuidador`).
+  * `cidade_aceite`: VARCHAR(100) NOT NULL DEFAULT 'São Paulo'.
+  * `versao_termo`: VARCHAR(50) NOT NULL DEFAULT 'TCLE-GC-2026.1'.
+  * `texto_integral_hash`: VARCHAR(64) NOT NULL (Hash criptográfico SHA-256 do texto das cláusulas e metadados).
+  * `aceito`: TINYINT(1) DEFAULT 1.
+  * `ip_aceite`: VARCHAR(45) NOT NULL.
+  * `user_agent`: TEXT DEFAULT NULL.
+  * `data_hora_aceite`: DATETIME NOT NULL (`America/Sao_Paulo`).
+
+### C. Endpoints e Comprovante Oficial
+- `/backend/api/agendamentos/assinar_tcle.php`:
+  * Validação formal de CPF, dados do declarante e integridade via SHA-256.
+  * Gravação transacional com geração/confirmação do `sala_token_unico`.
+  * Auditoria imutável via `AuditLogger::registrar()` no fuso de Brasília.
+- `/backend/api/agendamentos/comprovante_tcle.php`:
+  * Certificado digital de consentimento informado pronto para download/impressão contendo o Carimbo Digital de Aceite (Data/Hora de Brasília, IP do declarante, CPF mascarado, Hash SHA-256 e selo de conformidade CFM/LGPD).
+- `/backend/api/teleconsulta/sala.php`:
+  * Valida o status do TCLE vinculado ao agendamento, expondo `tcle_assinado`, `tcle` e `comprovante_tcle_url`.
+
+### D. Componentes de Interface
+- `ModalTCLE.jsx`: Modal acolhedor com leitura das 4 cláusulas, dados do declarante, cálculo de hash SHA-256 em tempo real via Web Crypto API e botão *"Li, compreendi e assino digitalmente este Termo →"*.
+- `SalaConsulta.jsx`: Verificação automática de TCLE assinado. Exibe badge oficial `📜 TCLE Assinado` com link direto ao comprovante ou bloqueia a liberação do vídeo com card de aviso até a formalização.
+- `PerfilEspecialista.jsx`: Integração na etapa 5 do agendamento/checkout seguro com link para abertura da `ModalTCLE`.
+
 
 
 

@@ -232,24 +232,49 @@ async function main() {
       CREATE TABLE IF NOT EXISTS \`consentimentos_teleconsulta\` (
         \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
         \`usuario_id\` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
-        \`agendamento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
-        \`versao_termo\` VARCHAR(20) NOT NULL DEFAULT 'v1.0-2026' COMMENT 'Versão do termo CFM 2.314/2022 e LGPD',
-        \`aceito\` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite eletrônico confirmado',
-        \`ip_aceite\` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do usuário',
-        \`data_hora_aceite\` DATETIME NOT NULL COMMENT 'Timestamp no fuso America/Sao_Paulo',
+        \`agendamento_id\` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id)',
+        \`modalidade\` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA',
+        \`nome_declarante\` VARCHAR(150) NOT NULL DEFAULT 'Paciente GlicoCare',
+        \`cpf_declarante\` VARCHAR(14) NOT NULL DEFAULT '000.000.000-00',
+        \`data_nascimento_paciente\` DATE NOT NULL DEFAULT '2019-05-14',
+        \`nome_paciente_dependente\` VARCHAR(150) DEFAULT NULL,
+        \`cidade_aceite\` VARCHAR(100) NOT NULL DEFAULT 'São Paulo',
+        \`versao_termo\` VARCHAR(30) NOT NULL DEFAULT 'TCLE-GC-2026.1',
+        \`texto_integral_hash\` VARCHAR(64) NOT NULL DEFAULT 'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
+        \`aceito\` TINYINT(1) NOT NULL DEFAULT 1,
+        \`ip_aceite\` VARCHAR(45) NOT NULL,
+        \`user_agent\` VARCHAR(255) DEFAULT NULL,
+        \`data_hora_aceite\` DATETIME NOT NULL,
         \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (\`id\`),
+        UNIQUE KEY \`uk_consentimento_agendamento\` (\`agendamento_id\`),
         KEY \`idx_consentimento_usuario\` (\`usuario_id\`),
-        KEY \`idx_consentimento_agendamento\` (\`agendamento_id\`),
         CONSTRAINT \`fk_consentimento_usuario\`
           FOREIGN KEY (\`usuario_id\` ) REFERENCES \`usuarios\` (\`id\`)
           ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT \`fk_consentimento_agendamento\`
           FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
           ON DELETE CASCADE ON UPDATE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido para telemedicina';
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido (TCLE) formalizados';
+
+      ALTER TABLE \`consentimentos_teleconsulta\`
+      ADD COLUMN IF NOT EXISTS \`modalidade\` ENUM('TELECONSULTA', 'TELEINTERCONSULTA') NOT NULL DEFAULT 'TELECONSULTA',
+      ADD COLUMN IF NOT EXISTS \`nome_declarante\` VARCHAR(150) NOT NULL DEFAULT 'Paciente GlicoCare',
+      ADD COLUMN IF NOT EXISTS \`cpf_declarante\` VARCHAR(14) NOT NULL DEFAULT '000.000.000-00',
+      ADD COLUMN IF NOT EXISTS \`data_nascimento_paciente\` DATE NOT NULL DEFAULT '2019-05-14',
+      ADD COLUMN IF NOT EXISTS \`nome_paciente_dependente\` VARCHAR(150) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`cidade_aceite\` VARCHAR(100) NOT NULL DEFAULT 'São Paulo',
+      ADD COLUMN IF NOT EXISTS \`texto_integral_hash\` VARCHAR(64) NOT NULL DEFAULT 'b28f9d6c7e3a1f8b4c5d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
+      ADD COLUMN IF NOT EXISTS \`user_agent\` VARCHAR(255) DEFAULT NULL;
+
+      UPDATE \`consentimentos_teleconsulta\`
+      SET \`nome_declarante\` = 'Mariana Silva',
+          \`cpf_declarante\` = '123.456.789-00',
+          \`nome_paciente_dependente\` = 'Theo Silva',
+          \`versao_termo\` = 'TCLE-GC-2026.1'
+      WHERE \`id\` = 1;
     `);
-    console.log('✅ Tabela consentimentos_teleconsulta verificada/criada com sucesso.');
+    console.log('✅ Tabela consentimentos_teleconsulta verificada/atualizada com colunas formais do TCLE.');
   } catch (err) {
     console.log('ℹ️ Tabela consentimentos_teleconsulta:', err.message);
   }

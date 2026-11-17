@@ -16,9 +16,11 @@
 
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { agendamentosService } from '../services/api';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
+import ModalTCLE from '../components/ModalTCLE';
 
 /* INÍCIO DOS DADOS DETALHADOS DOS 4 ESPECIALISTAS DA REDE GLICOCARE */
 const PERFIS_DETALHADOS_REDE = {
@@ -225,6 +227,8 @@ export default function PerfilEspecialista() {
   // Lista de dias disponíveis na agenda integrada do profissional
   const diasDisponiveis = Object.keys(profissional.agendaPorDia);
 
+  const { usuario } = useAuth();
+
   // Estados da Agenda Integrada e Checkout Interno (RN-MOD-MKT)
   const [diaSelecionado, setDiaSelecionado] = useState(diasDisponiveis[0]);
   const [horarioSelecionado, setHorarioSelecionado] = useState(
@@ -235,6 +239,7 @@ export default function PerfilEspecialista() {
   const [metodoPagamento, setMetodoPagamento] = useState('pix');
   const [checkoutConcluido, setCheckoutConcluido] = useState(false);
   const [aceiteConsentimento, setAceiteConsentimento] = useState(false);
+  const [modalTCLEAberta, setModalTCLEAberta] = useState(false);
   const [tokenSalaNativa, setTokenSalaNativa] = useState('SALA-NATIVA-GC-HELENA-THEO');
 
   // RN-AGD-02: Lista de slots bloqueados em tempo real para evitar conflitos de horário
@@ -1336,6 +1341,29 @@ export default function PerfilEspecialista() {
                     </div>
                   </div>
                 </label>
+
+                <div style={{ marginTop: '0.65rem', borderTop: '1px dashed var(--cor-borda-suave)', paddingTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    id="btn-abrir-tcle-oficial"
+                    onClick={() => setModalTCLEAberta(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      color: 'var(--cor-primaria)',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    📜 Abrir e assinar o TCLE oficial completo (TCLE-GC-2026.1) com carimbo digital ↗
+                  </button>
+                </div>
               </div>
 
               <Button
@@ -1363,6 +1391,20 @@ export default function PerfilEspecialista() {
           }
         }
       `}</style>
+
+      {/* MODAL FORMAL DE TCLE (CFM 2.314/2022 & LGPD) */}
+      <ModalTCLE
+        aberto={modalTCLEAberta}
+        onFechar={() => setModalTCLEAberta(false)}
+        agendamentoId={1}
+        profissionalNome={profissional.nome}
+        profissionalConselho={profissional.conselho}
+        usuario={usuario}
+        onSucessoAssinatura={() => {
+          setAceiteConsentimento(true);
+          setModalTCLEAberta(false);
+        }}
+      />
     </div>
   );
 }
