@@ -22,6 +22,7 @@ import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
 export const ARTIGOS_BIBLIOTECA = [
   {
     id: 1,
+    slug: 'hipoglicemia-sem-susto',
     seloSuperior: 'GUIA ESSENCIAL',
     imagemCapa: lufyMascoteFoto,
     iconeCategoria: '🐾',
@@ -34,6 +35,7 @@ export const ARTIGOS_BIBLIOTECA = [
   },
   {
     id: 2,
+    slug: 'dm1-na-escola',
     seloSuperior: 'PARA COMPARTILHAR',
     imagemCapa: familiaCuidadoFoto,
     iconeCategoria: '🏫',
@@ -46,6 +48,7 @@ export const ARTIGOS_BIBLIOTECA = [
   },
   {
     id: 3,
+    slug: 'do-sensor-a-autonomia',
     seloSuperior: 'AUTONOMIA POSSÍVEL',
     imagemCapa: null,
     numeroEditorial: '01',
@@ -60,6 +63,7 @@ export const ARTIGOS_BIBLIOTECA = [
   },
   {
     id: 4,
+    slug: 'como-falar-sobre-diabetes',
     seloSuperior: 'CONVERSA EM FAMÍLIA',
     imagemCapa: null,
     numeroEditorial: '02',
@@ -74,6 +78,7 @@ export const ARTIGOS_BIBLIOTECA = [
   },
   {
     id: 5,
+    slug: 'mochila-segura',
     seloSuperior: 'CHECKLIST PRÁTICO',
     imagemCapa: null,
     numeroEditorial: '03',
@@ -88,6 +93,7 @@ export const ARTIGOS_BIBLIOTECA = [
   },
   {
     id: 6,
+    slug: 'numeros-informam-pessoas-cuidam',
     seloSuperior: 'VIDA REAL',
     imagemCapa: null,
     numeroEditorial: '04',

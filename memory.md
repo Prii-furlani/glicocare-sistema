@@ -95,6 +95,26 @@
 5. **Widget do Bot (Lufy):**
    * Balão de fala flutuante com bordas arredondadas suaves, contendo uma frase acolhedora do mascote em destaque (ex: *"Ei, respira. A gente vai aprender isso juntos."*), acompanhado da identidade do Lufy e botão de chat rápido.
 
+### C. Páginas de Leitura de Artigos / Conteúdos (Layout Editorial Aberto — RN-EDI-01)
+- **Regra Visual Fundamental:** As páginas de detalhamento de artigos (`/artigo/:slug` ou `/artigo/:id`) **NUNCA** devem ser encaixotadas dentro de um card único ou container branco que envolva todo o texto. A leitura deve fluir de maneira aberta e serena diretamente sobre o fundo bege acolhedor (`--cor-fundo: #EAE4D9`).
+- **Cabeçalho Centralizado (~820px):**
+  * Badge em pílula com ícone da categoria e tempo estimado de leitura (ex: `🐾 Com o Lufy • 6 min de leitura`).
+  * Título H1 em `Fraunces` com destaque em itálico e cor terracota (`#7C533F`) nas palavras-chave empáticas.
+  * Subtítulo introdutório e metadados do autor com avatar circular em Verde Alívio (`#3B7E48`) contendo iniciais, nome e ano de revisão clínica.
+- **Imagens Amplas e Responsivas (max-width: 1040px):**
+  * Tanto a imagem de capa quanto imagens intermediárias ocupam largura ampla (1040px) com cantos arredondados (`border-radius: 16px`) e legenda centralizada em itálico suave.
+- **Coluna de Leitura Editorial (~720px):**
+  * Primeiro parágrafo com letra capitular (Drop Cap) em `Fraunces` Terracota (`#7C533F`) com 2 linhas de altura.
+  * Blocos de citação *"Respiro do Guardião"* em cards internos `--cor-superficie` (`#F6F3EE`) com borda lateral esquerda de `4px solid` em Verde Alívio (`#3B7E48`) ou Terracota (`#7C533F`).
+  * Lista vertical de passos numerados práticos: cards horizontais individuais em `#F6F3EE` com badge circular (`01`, `02`, `03`, `04`) à esquerda e título + descrição à direita.
+  * Banner escuro do mascote Lufy (`#231F1D`): fundo escuro acolhedor com avatar circular do Lufy, frase em `Fraunces` e link de rolagem suave *"Encontrar outras famílias ↓"*.
+  * Box de aviso ético e clínico discreto em `#F6F3EE` reforçando o papel pedagógico e o não-substitutivo do médico.
+- **Seção de Comentários e Comunidade (Grid 2 Colunas sobre #EAE4D9):**
+  * Separada por linha divisória horizontal sutil.
+  * Título *"Este também pode ser um lugar de encontro."*
+  * Coluna esquerda: card de formulário em `#F6F3EE` com campos, validação do moderador e botão verde de envio.
+  * Coluna direita: coluna *"VOZES QUE JÁ PASSARAM POR AQUI"* com os depoimentos aprovados em cards limpos `#F6F3EE` com borda lateral em Verde Alívio.
+
 ---
 
 ## 6. Tempo de Diagnóstico, Jornada de Aprendizado e Resumo Clínico

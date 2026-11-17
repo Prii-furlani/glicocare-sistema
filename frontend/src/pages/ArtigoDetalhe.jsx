@@ -1,12 +1,12 @@
 /* ==========================================================================
-   ARQUIVO: ArtigoDetalhe.jsx
-   PÁGINA: ArtigoDetalhe (Página de Leitura Completa — Artigo / Guia)
-   OBJETIVO: Exibir a página de leitura completa dos artigos e guias da
-   plataforma GlicoCare para famílias que lidam com o Diabetes Tipo 1 (DM1),
-   priorizando uma experiência extremamente calma, acolhedora, espaçada (18px,
-   line-height 1.7) e livre de poluição visual, com blocos ilustrativos,
-   caixas "Respiro do Guardião", card de encerramento do Lufy e a seção
-   interativa "Comentários e Acolhimento em Família" (com moderação RN-MOD-01).
+   ARQUIVO: ArtigoDetalhe.jsx (Localização: /frontend/src/pages/ArtigoDetalhe.jsx)
+   PÁGINA: ArtigoDetalhe (Layout Editorial Aberto — Leitura Fluida sobre #EAE4D9)
+   OBJETIVO:
+     Exibir artigos e guias da plataforma GlicoCare em formato editorial fluido,
+     eliminando cards externos encaixotados e valorizando a leitura aberta sobre
+     o fundo bege acolhedor (--cor-fundo: #EAE4D9), tipografia nobre (Fraunces +
+     Plus Jakarta Sans), capitular (drop cap), caixas "Respiro do Guardião",
+     passos numerados individuais, banner escuro do Lufy e seção comunitária em 2 colunas.
    ========================================================================== */
 
 import React, { useState } from 'react';
@@ -20,10 +20,22 @@ import lufyMascoteImg from '../assets/lufy-mascote.jpg';
 import familiaCuidadoImg from '../assets/familia-cuidado.jpg';
 import logoGlicoCareImg from '../assets/logo-glicocare.jpg';
 
-/* INÍCIO DO CONTEÚDO ESTRUTURADO COMPLETO DOS 6 ARTIGOS / GUIAS */
+/* ==========================================================================
+   INÍCIO DO CONTEÚDO ESTRUTURADO EDITORIAL DOS 6 ARTIGOS / GUIAS
+   ========================================================================== */
 const CONTEUDO_COMPLETO_ARTIGOS = {
   1: {
     indicadorTopo: '🐾 Com o Lufy • 6 min de leitura',
+    tituloFormatado: (
+      <>
+        Hipoglicemia <span className="texto-italico-terracota">sem susto:</span> um plano para toda a família
+      </>
+    ),
+    autor: {
+      nome: 'Dra. Helena Monteiro (Endocrinopediatra) & Curadoria GlicoCare',
+      iniciais: 'HM',
+      atualizacao: 'Revisão médica • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
       'Respire fundo: ver o número baixar no leitor assusta no começo, mas ter um roteiro calmo e combinado em casa transforma a pressa em cuidado seguro.',
     paragrafosIniciais: [
@@ -39,6 +51,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       'Na rotina prática orientada pela equipe médica, o protocolo mais acolhedor é a famosa Regra dos 15: ao identificar a glicemia abaixo da meta combinada com seu endocrinologista, ofereça imediatamente o carboidrato simples de absorção rápida (como um sachê de glicose líquida, meio copo de suco natural ou a medida exata prescrita) e aguarde 15 minutos em repouso antes de fazer uma nova leitura.',
       'Esse tempo de espera de 15 minutos é fundamental. Muitas vezes, movidos pela ansiedade, os familiares oferecem mais comida antes de o açúcar inicial chegar ao sangue, o que acaba gerando uma hiperglicemia de rebote logo depois.',
+    ],
+    passosTitulo: 'Protocolo Prático: A Regra dos 15 Passo a Passo',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Pausa serena e verificação',
+        descricao:
+          'Identifique os sinais com calma (suor frio, tontura, tremor ou fome repentina) e confirme o valor no sensor ou ponta de dedo.',
+      },
+      {
+        numero: '02',
+        titulo: '15 gramas de carboidrato de ação rápida',
+        descricao:
+          'Ofereça glicose líquida, 150ml de suco de fruta ou 3 balas de glicose mastigáveis. Evite alimentos gordurosos (chocolates e bolos) pois atrasam a absorção.',
+      },
+      {
+        numero: '03',
+        titulo: 'Aguardar 15 minutos em repouso',
+        descricao:
+          'Permaneça ao lado do seu filho conversando baixinho enquanto o organismo absorve o carboidrato, evitando oferecer mais alimento antes do tempo.',
+      },
+      {
+        numero: '04',
+        titulo: 'Reverificação e plano de seguimento',
+        descricao:
+          'Faça uma nova leitura. Se a glicemia já superou a meta de segurança (>70 mg/dL), ofereça um pequeno lanche se a próxima refeição estiver distante.',
+      },
     ],
     imagemSecundaria: {
       src: familiaCuidadoImg,
@@ -58,6 +97,16 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
   2: {
     indicadorTopo: '🏫 Rotina Escolar • 6 min de leitura',
+    tituloFormatado: (
+      <>
+        DM1 na escola: como construir uma parceria que <span className="texto-italico-terracota">acolhe</span>
+      </>
+    ),
+    autor: {
+      nome: 'Prof.ª Marcela Lins (Pedagoga) & Dra. Helena Monteiro',
+      iniciais: 'ML',
+      atualizacao: 'Orientação pedagógica • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
       'A escola é o segundo lar do seu filho. Veja como construir uma ponte de empatia, clareza e confiança com professores e coordenadores desde o primeiro dia.',
     paragrafosIniciais: [
@@ -73,6 +122,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       'Agende uma reunião tranquila de 20 minutos antes do início das aulas. Leve uma cartinha afetuosa de uma página com a foto da criança, explicando de forma simples o que é o sensor no bracinho (que lê a glicose sem picadas) e quando a família deve ser avisada.',
       'Entregue também a "Caixa Porto Seguro" da sala de aula: um estojo identificado contendo sachês de glicose ou suco já porcionados para correção rápida, além de um cartão plastificado com três passos claros para hipoglicemia.',
+    ],
+    passosTitulo: '4 Passos para uma Parceria Escolar Tranquila',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Reunião prévia de 20 minutos',
+        descricao:
+          'Agende um encontro acolhedor antes do início das aulas com professores e monitores de recreio.',
+      },
+      {
+        numero: '02',
+        titulo: 'Apresentação humana da criança',
+        descricao:
+          'Conte as brincadeiras preferidas do seu filho antes de falar do DM1, humanizando o olhar pedagógico.',
+      },
+      {
+        numero: '03',
+        titulo: 'Entrega da Caixa Porto Seguro',
+        descricao:
+          'Deixe na sala de aula um estojo identificado com sachês de glicose, glicosímetro e telefones de emergência.',
+      },
+      {
+        numero: '04',
+        titulo: 'Inclusão em todas as atividades',
+        descricao:
+          'Combine que a criança participe normalmente das aulas de educação física e passeios com checagem preventiva.',
+      },
     ],
     imagemSecundaria: {
       src: lufyMascoteImg,
@@ -92,6 +168,16 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
   3: {
     indicadorTopo: '💡 Tecnologia & Autonomia • 5 min de leitura',
+    tituloFormatado: (
+      <>
+        Do sensor à autonomia: tecnologia que <span className="texto-italico-terracota">aproxima</span>
+      </>
+    ),
+    autor: {
+      nome: 'Dr. Lucas Prado (Tecnologia em Saúde) & Dra. Helena Monteiro',
+      iniciais: 'LP',
+      atualizacao: 'Inovação e DM1 • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
       'Sensores contínuos vieram para libertar a infância — e não para prender a família a cada atualização de tela. Descubra como construir uma relação saudável com os dados.',
     paragrafosIniciais: [
@@ -107,6 +193,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       'A verdadeira autonomia nasce aos poucos. Para crianças pequenas, o sensor pode ser apresentado de forma lúdica — exatamente como o sensor que o Lufy usa no bracinho. Conforme crescem, vale ensinar o significado das setas de forma serena: "Olha, a setinha está reta, nosso barquinho está navegando em águas calmas!".',
       'Evite reagir com expressões de susto ou frustração diante do visor. Quando a criança percebe que qualquer número é recebido com equilíbrio pelos pais, ela desenvolve confiança para participar do próprio cuidado na adolescência.',
+    ],
+    passosTitulo: 'Como Transformar Gráficos em Liberdade',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Ajuste fino de alarmes sonoros',
+        descricao:
+          'Defina com o médico alarmes que toquem apenas em limites críticos reais, prevenindo a fadiga de alertas.',
+      },
+      {
+        numero: '02',
+        titulo: 'Leitura pedagógica sem julgamento',
+        descricao:
+          'Mostre para a criança a seta de tendência explicando que ela é um mapa do caminho, não uma bronca.',
+      },
+      {
+        numero: '03',
+        titulo: 'Pausas conscientes de tela',
+        descricao:
+          'Evite checar os números a cada minuto quando a glicemia já estiver estável e a criança estiver entretida.',
+      },
+      {
+        numero: '04',
+        titulo: 'Comemoração dos pequenos marcos',
+        descricao:
+          'Celebre a primeira vez que a criança pedir para ler o sensor sozinha ou avisar que sentiu uma alteração.',
+      },
     ],
     imagemSecundaria: {
       src: familiaCuidadoImg,
@@ -126,6 +239,16 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
   4: {
     indicadorTopo: '🐾 Com o Lufy • 6 min de leitura',
+    tituloFormatado: (
+      <>
+        Como falar sobre diabetes sem transformar tudo em <span className="texto-italico-terracota">diabetes</span>
+      </>
+    ),
+    autor: {
+      nome: 'Camila Torres (Psicóloga Clínica) & Equipe GlicoCare',
+      iniciais: 'CT',
+      atualizacao: 'Psicologia e Vínculo • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
       'Como preservar a leveza da infância, o brilho nos olhos e os diálogos em família para que o cuidado com o DM1 caminhe junto com a vida — sem ocupar todo o espaço.',
     paragrafosIniciais: [
@@ -141,6 +264,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       'Quando perguntamos primeiro sobre a pessoa e depois sobre o diabetes, enviamos uma mensagem poderosa ao coração da criança: "Eu vejo você inteiro, e você é muito maior do que qualquer rotina de saúde".',
       'Crie momentos em família totalmente livres do tema clínico — uma sessão de cinema no sofá, uma pintura ou um passeio no parque onde o cuidado acontece de forma discreta e natural nos bastidores.',
+    ],
+    passosTitulo: '4 Atitudes Diárias para Preservar a Infância',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'A primeira pergunta do reencontro',
+        descricao:
+          'Pergunte sobre as risadas e novidades do dia antes de verificar a linha do gráfico no aplicativo.',
+      },
+      {
+        numero: '02',
+        titulo: 'Cuidado nos bastidores',
+        descricao:
+          'Realize a contagem de carboidratos e a aplicação de forma serena, sem transformar a mesa em um consultório.',
+      },
+      {
+        numero: '03',
+        titulo: 'Respeito ao cansaço da criança',
+        descricao:
+          'Quando seu filho desabafar que está cansado de aplicar insulina, acolha com um abraço em vez de repreender.',
+      },
+      {
+        numero: '04',
+        titulo: 'Projetar um futuro sem limites',
+        descricao:
+          'Converse sobre profissões, viagens e sonhos, lembrando que pessoas com DM1 são atletas, cientistas e artistas.',
+      },
     ],
     imagemSecundaria: {
       src: lufyMascoteImg,
@@ -160,6 +310,16 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
   5: {
     indicadorTopo: '🏫 Rotina Escolar • 5 min de leitura',
+    tituloFormatado: (
+      <>
+        A mochila segura: o checklist prático para manhãs mais <span className="texto-italico-terracota">leves</span>
+      </>
+    ),
+    autor: {
+      nome: 'Beatriz Nogueira (Nutricionista) & Curadoria GlicoCare',
+      iniciais: 'BN',
+      atualizacao: 'Organização Prática • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
       'Um checklist prático, sereno e descomplicado para organizar a mochila na noite anterior e garantir manhãs tranquilas para toda a família.',
     paragrafosIniciais: [
@@ -175,8 +335,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       '1. Kit de Ação Rápida (Hipoglicemia): 2 a 3 porções medidas de carboidrato rápido (sachês de glicose líquida, jujubas contadas ou caixinha de suco) dentro de uma nécessaire fácil de abrir.',
       '2. Lanche com Carboidratos Identificados: Etiquete o potinho da lancheira com um bilhete carinhoso informando a quantidade de carboidratos para facilitar a conferência na hora do recreio.',
-      '3. Leitor ou Celular Carregado + Glicosímetro Reserva: Deixe o cabo carregador perto da mochila e mantenha tiras reservas para qualquer imprevisto técnico.',
-      '4. Cartão do Guardião: Um cartão plastificado com os telefones dos pais, nome do médico e o passo a passo resumido de emergência.',
+    ],
+    passosTitulo: 'Checklist dos 4 Pilares da Mochila',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Nécessaire de Hipoglicemia',
+        descricao:
+          '2 sachês de glicose líquida ou suco de 150ml guardados em um bolso lateral de acesso imediato.',
+      },
+      {
+        numero: '02',
+        titulo: 'Lanches com rótulos afetivos',
+        descricao:
+          'Potes etiquetados com a contagem de gramas de carboidrato e um recadinho carinhoso dos pais.',
+      },
+      {
+        numero: '03',
+        titulo: 'Glicosímetro reserva e baterias',
+        descricao:
+          'Aparelho convencional com tiras suficientes para qualquer dúvida ou imprevisto técnico do sensor.',
+      },
+      {
+        numero: '04',
+        titulo: 'Cartão Plastificado do Guardião',
+        descricao:
+          'Roteiro simples de 3 passos para a professora com telefones dos pais e contato do pediatra.',
+      },
     ],
     imagemSecundaria: {
       src: familiaCuidadoImg,
@@ -196,8 +381,18 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
   6: {
     indicadorTopo: '💡 Tecnologia & Autonomia • 6 min de leitura',
+    tituloFormatado: (
+      <>
+        Glicemia oscilou? Mais de 40 fatores explicam antes da <span className="texto-italico-terracota">culpa</span>
+      </>
+    ),
+    autor: {
+      nome: 'Dra. Helena Monteiro (Endocrinologista) & Equipe GlicoCare',
+      iniciais: 'HM',
+      atualizacao: 'Educação em Diabetes • Atualizado em 2026',
+    },
     subtituloIntrodutorio:
-      ' Mais de 40 fatores influenciam a glicemia além da comida e da insulina. Aprenda a substituir a cobrança por uma leitura gentil e construtiva dos números.',
+      'Mais de 40 fatores influenciam a glicemia além da comida e da insulina. Aprenda a substituir a cobrança por uma leitura gentil e construtiva dos números.',
     paragrafosIniciais: [
       'Quantas vezes você já olhou para um número alto no leitor e se perguntou imediatamente: "O que eu fiz de errado hoje?". Essa culpa silenciosa é um dos pesos mais injustos que mães, pais e pessoas com Diabetes Tipo 1 carregam.',
       'A ciência mostra que mais de 40 variáveis biológicas — como fase de crescimento, qualidade do sono, emoções, calor, resfriados e até a adrenalina de uma brincadeira — alteram a glicemia no dia a dia.',
@@ -211,6 +406,33 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     paragrafosMeio: [
       'Na pedagogia do cuidado GlicoCare, propomos uma mudança simples de vocabulário dentro de casa: evite chamar a glicemia de "boa" ou "ruim". Quando dizemos que um número foi "ruim", a criança sente que ela mesma falhou.',
       'Experimente substituir "Por que subiu desse jeito?" por "O que esse número nos pede agora?". Essa pequena virada retira o peso emocional do momento e foca toda a família na solução prática: hidratar, corrigir conforme orientação médica e seguir o dia.',
+    ],
+    passosTitulo: 'Como Encarar as Oscilações com Maturidade Serena',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Reconhecer as variáveis invisíveis',
+        descricao:
+          'Entenda que hormônios, dias de prova na escola, noites mal dormidas e resfriados alteram a glicemia sem que ninguém tenha errado.',
+      },
+      {
+        numero: '02',
+        titulo: 'A pergunta que desativa a culpa',
+        descricao:
+          'Pergunte sempre: "O que este número pede agora?". Agir no presente é mais eficaz do que lamentar as leituras passadas.',
+      },
+      {
+        numero: '03',
+        titulo: 'Eliminar rótulos morais',
+        descricao:
+          'Substitua "glicemia boa" ou "glicemia ruim" por "dentro da meta" ou "fora da meta". Números são bússolas, não notas escolares.',
+      },
+      {
+        numero: '04',
+        titulo: 'Acolher a maratona contínua',
+        descricao:
+          'O tratamento do DM1 premia a consistência com afeto ao longo dos anos, e não a perfeição ilusória de um único gráfico.',
+      },
     ],
     imagemSecundaria: {
       src: lufyMascoteImg,
@@ -230,7 +452,7 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
   },
 };
 
-/* Comentários anteriores aprovados de outras mães e famílias (RN-MOD-01) */
+/* Comentários aprovados da comunidade (RN-MOD-01) */
 const COMENTARIOS_FAMILIAS_APROVADOS = [
   {
     id: 201,
@@ -257,32 +479,39 @@ const COMENTARIOS_FAMILIAS_APROVADOS = [
       'A caixa "Respiro do Guardião" me fez respirar fundo aqui em casa. Parar de tratar o número do sensor como um boletim de notas mudou completamente a autoestima do meu filho. Gratidão por este porto seguro!',
   },
 ];
-/* FIM DO CONTEÚDO ESTRUTURADO COMPLETO DOS ARTIGOS */
+/* ==========================================================================
+   FIM DO CONTEÚDO ESTRUTURADO EDITORIAL
+   ========================================================================== */
 
-/* INÍCIO DA PÁGINA ARTIGO DETALHE (LEITURA COMPLETA) */
+/* ==========================================================================
+   INÍCIO DO COMPONENTE PRINCIPAL ARTIGO DETALHE
+   ========================================================================== */
 export default function ArtigoDetalhe() {
-  // Captura o ID do artigo na URL (/artigo/:id)
-  const { id } = useParams();
-  const idNumerico = Number(id) || 1;
+  // Captura o slug ou ID na URL (/artigo/:slug ou /artigo/:id)
+  const { slugOrId, id, slug } = useParams();
+  const param = slugOrId || slug || id || '1';
 
-  // Localiza os metadados básicos na lista da Biblioteca e o conteúdo detalhado
+  // Localiza o artigo na Biblioteca por ID numérico ou por slug textual
   const artigo =
-    ARTIGOS_BIBLIOTECA.find((a) => a.id === idNumerico) || ARTIGOS_BIBLIOTECA[0];
+    ARTIGOS_BIBLIOTECA.find(
+      (a) => String(a.id) === String(param) || a.slug === param
+    ) || ARTIGOS_BIBLIOTECA[0];
+
+  const idNumerico = artigo.id;
   const conteudo =
     CONTEUDO_COMPLETO_ARTIGOS[idNumerico] || CONTEUDO_COMPLETO_ARTIGOS[1];
 
-  // Estados do formulário "Comentários e Acolhimento em Família" (Nome, Cidade e Mensagem)
+  // Estados do formulário de comentários acolhedores
   const [nome, setNome] = useState('');
   const [cidade, setCidade] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [parecerModeracao, setParecerModeracao] = useState(null);
 
-  // Envia o comentário para análise crítica do Moderador Oficial e fila (RN-MOD-01)
+  // Envio de comentário com moderação prévia (RN-MOD-01)
   const handleEnviarComentarioFamilia = async (e) => {
     e.preventDefault();
     if (!nome.trim() || !cidade.trim() || !mensagem.trim()) return;
 
-    // Executa a análise crítica de Tom, Empatia e Segurança Emocional/Clínica
     const resultadoModerador = analisarMensagemModerador(mensagem);
     setParecerModeracao(resultadoModerador);
 
@@ -299,7 +528,7 @@ export default function ArtigoDetalhe() {
         conteudo: mensagem.trim(),
       });
     } catch {
-      // Fallback demonstrativo local caso o servidor PHP não esteja ativo na porta 8000
+      // Fallback gracioso local em modo de desenvolvimento
     }
 
     setNome('');
@@ -310,404 +539,446 @@ export default function ArtigoDetalhe() {
   return (
     <div className="pagina-leitura-container">
       {/* ====================================================================
-          INÍCIO DA SUPERFÍCIE DE LEITURA DO ARTIGO (#F6F3EE)
+          1. INÍCIO DO CABEÇALHO EDITORIAL DO ARTIGO (Centralizado, ~820px)
           ==================================================================== */}
-      <article className="artigo-superficie-leitura">
-        {/* 1. TOPO DO ARTIGO: Categoria / Indicador de tempo + Título + Subtítulo */}
-        <header>
-          <div className="artigo-indicador-topo">
-            <span>{conteudo.indicadorTopo}</span>
-          </div>
-
-          <h1 className="artigo-titulo-principal">{artigo.titulo}</h1>
-
-          <p className="artigo-subtitulo-acolhedor">
-            {conteudo.subtituloIntrodutorio}
-          </p>
-        </header>
-
-        {/* 2. CORPO DO TEXTO (LEITURA FLUIDA 18PX COM LINE-HEIGHT 1.7) */}
-        <div className="artigo-corpo-fluido">
-          {/* Bloco de Imagem Principal com border-radius 12px e legenda em itálico */}
-          <figure className="artigo-bloco-imagem" style={{ marginTop: 0 }}>
-            <img
-              src={artigo.imagemCapa || lufyMascoteImg}
-              alt={artigo.titulo}
-            />
-            <figcaption>
-              Ilustração GlicoCare: informação clara e acolhimento caminham
-              juntos para transformar a rotina familiar em um porto seguro.
-            </figcaption>
-          </figure>
-
-          {/* Parágrafos iniciais bem espaçados */}
-          {conteudo.paragrafosIniciais.map((paragrafo, index) => (
-            <p key={`ini-${index}`}>{paragrafo}</p>
-          ))}
-
-          {/* Caixa de Destaque 1: "Respiro do Guardião" (Barra lateral Verde Alívio #3B7E48) */}
-          <aside
-            className="respiro-do-guardiao"
-            aria-label="Respiro do Guardião — Apoio Emocional"
-          >
-            <div className="respiro-guardiao-selo">
-              {conteudo.respiroVerde.selo}
-            </div>
-            <p className="respiro-guardiao-texto">
-              {conteudo.respiroVerde.frase}
-            </p>
-          </aside>
-
-          {/* Subtítulo intermediário em Fraunces e parágrafos práticos */}
-          <h2>{conteudo.subtituloMeio}</h2>
-
-          {conteudo.paragrafosMeio.map((paragrafo, index) => (
-            <p key={`meio-${index}`}>{paragrafo}</p>
-          ))}
-
-          {/* Segundo Bloco de Imagem Ilustrativa com cantos 12px e legenda sutil em itálico */}
-          <figure className="artigo-bloco-imagem">
-            <img
-              src={conteudo.imagemSecundaria.src}
-              alt={conteudo.imagemSecundaria.legenda}
-            />
-            <figcaption>{conteudo.imagemSecundaria.legenda}</figcaption>
-          </figure>
-
-          {/* Caixa de Destaque 2: "Respiro do Guardião" (Barra lateral Terracota #7C533F) */}
-          <aside
-            className="respiro-do-guardiao variante-terracota"
-            aria-label="Respiro do Guardião — Reflexão em Família"
-          >
-            <div className="respiro-guardiao-selo">
-              {conteudo.respiroTerracota.selo}
-            </div>
-            <p className="respiro-guardiao-texto">
-              {conteudo.respiroTerracota.frase}
-            </p>
-          </aside>
-
-          {/* Parágrafos finais de fechamento */}
-          {conteudo.paragrafosFinais.map((paragrafo, index) => (
-            <p key={`fim-${index}`}>{paragrafo}</p>
-          ))}
+      <header className="artigo-cabecalho-editorial">
+        {/* Link sutil de retorno */}
+        <div>
+          <Link to="/biblioteca" className="artigo-link-retorno">
+            ← Voltar para a Biblioteca de Conteúdos
+          </Link>
         </div>
 
-        {/* 3. FINAL DO ARTIGO: CARD DE ENCERRAMENTO ACOLHEDOR DO MASCOTE LUFY */}
-        <div className="artigo-card-encerramento-lufy">
+        {/* Badge estilo pílula com ícone da categoria e tempo de leitura */}
+        <div>
+          <span className="artigo-indicador-topo">
+            {conteudo.indicadorTopo}
+          </span>
+        </div>
+
+        {/* Título Principal (H1) em Fraunces com destaque em itálico terracota */}
+        <h1 className="artigo-titulo-principal">
+          {conteudo.tituloFormatado || artigo.titulo}
+        </h1>
+
+        {/* Subtítulo acolhedor */}
+        <p className="artigo-subtitulo-acolhedor">
+          {conteudo.subtituloIntrodutorio}
+        </p>
+
+        {/* Metadados do autor (Avatar circular Verde Alívio + Nome + Ano) */}
+        <div className="artigo-meta-autor">
+          <div className="artigo-avatar-autor">
+            {conteudo.autor?.iniciais || 'GC'}
+          </div>
+          <div className="artigo-info-autor">
+            <div className="artigo-nome-autor">
+              {conteudo.autor?.nome || 'Equipe Editorial GlicoCare'}
+            </div>
+            <div className="artigo-atualizacao-autor">
+              {conteudo.autor?.atualizacao || 'Atualizado em 2026'}
+            </div>
+          </div>
+        </div>
+      </header>
+      {/* FIM DO CABEÇALHO EDITORIAL */}
+
+      {/* ====================================================================
+          2. INÍCIO DA IMAGEM DE CAPA AMPLA E RESPONSIVA (max-width: 1040px)
+          ==================================================================== */}
+      <figure className="artigo-imagem-ampla-container">
+        <img
+          src={artigo.imagemCapa || familiaCuidadoImg}
+          alt={artigo.titulo}
+        />
+        <figcaption className="artigo-imagem-legenda">
+          Ilustração editorial GlicoCare: informação clara e acolhimento caminham
+          juntos para transformar a rotina em um porto seguro.
+        </figcaption>
+      </figure>
+      {/* FIM DA IMAGEM PRINCIPAL AMPLA */}
+
+      {/* ====================================================================
+          3. INÍCIO DA COLUNA DE LEITURA EDITORIAL (~720px)
+          ==================================================================== */}
+      <article className="artigo-coluna-leitura">
+        {/* Parágrafos Iniciais com Capitular (Drop Cap) no 1º parágrafo */}
+        {conteudo.paragrafosIniciais.map((paragrafo, index) => (
+          <p
+            key={`ini-${index}`}
+            className={index === 0 ? 'artigo-drop-cap' : ''}
+          >
+            {paragrafo}
+          </p>
+        ))}
+
+        {/* Bloco de Citação 1: "Respiro do Guardião" (Borda 4px Verde Alívio #3B7E48) */}
+        <aside
+          className="respiro-do-guardiao"
+          aria-label="Respiro do Guardião — Apoio Emocional"
+        >
+          <div className="respiro-guardiao-selo">
+            {conteudo.respiroVerde.selo}
+          </div>
+          <p className="respiro-guardiao-texto">
+            {conteudo.respiroVerde.frase}
+          </p>
+        </aside>
+
+        {/* Subtítulo Intermediário em Fraunces */}
+        <h2>{conteudo.subtituloMeio}</h2>
+
+        {/* Parágrafos práticos intermediários */}
+        {conteudo.paragrafosMeio.map((paragrafo, index) => (
+          <p key={`meio-${index}`}>{paragrafo}</p>
+        ))}
+
+        {/* Passos Numerados em Lista Vertical com Cards em #F6F3EE */}
+        {conteudo.passosNumerados && (
+          <div className="artigo-lista-passos">
+            <h3 className="artigo-passos-titulo">{conteudo.passosTitulo}</h3>
+            <div>
+              {conteudo.passosNumerados.map((passo) => (
+                <div key={passo.numero} className="artigo-card-passo">
+                  <div className="artigo-passo-numero">{passo.numero}</div>
+                  <div className="artigo-passo-conteudo">
+                    <h4>{passo.titulo}</h4>
+                    <p>{passo.descricao}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </article>
+
+      {/* Imagem Intermediária Ampla (max-width: 1040px) */}
+      <figure className="artigo-imagem-ampla-container">
+        <img
+          src={conteudo.imagemSecundaria.src}
+          alt={conteudo.imagemSecundaria.legenda}
+        />
+        <figcaption className="artigo-imagem-legenda">
+          {conteudo.imagemSecundaria.legenda}
+        </figcaption>
+      </figure>
+
+      {/* Continuação da Coluna de Leitura */}
+      <article className="artigo-coluna-leitura">
+        {/* Bloco de Citação 2: "Respiro do Guardião" (Borda 4px Terracota #7C533F) */}
+        <aside
+          className="respiro-do-guardiao variante-terracota"
+          aria-label="Respiro do Guardião — Apoio Emocional"
+        >
+          <div className="respiro-guardiao-selo">
+            {conteudo.respiroTerracota.selo}
+          </div>
+          <p className="respiro-guardiao-texto">
+            {conteudo.respiroTerracota.frase}
+          </p>
+        </aside>
+
+        {/* Parágrafos Finais */}
+        {conteudo.paragrafosFinais.map((paragrafo, index) => (
+          <p key={`fim-${index}`}>{paragrafo}</p>
+        ))}
+
+        {/* Banner Escuro do Lufy (#231F1D) */}
+        <div className="artigo-banner-lufy-escuro">
           <img
             src={logoGlicoCareImg}
             alt="Mascote Lufy — Guardião GlicoCare"
-            className="artigo-card-encerramento-avatar"
+            className="artigo-banner-lufy-avatar"
           />
           <div>
-            <span
-              style={{
-                display: 'inline-block',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.12em',
-                color: 'var(--cor-cta)',
-                marginBottom: '0.35rem',
-              }}
-            >
-              🐾 Mensagem de Encerramento do Lufy
+            <span className="artigo-banner-lufy-tag">
+              🐾 Acolhimento do Guardião Lufy
             </span>
+            <p className="artigo-banner-lufy-frase">
+              {conteudo.mensagemLufyFinal}
+            </p>
+            <a
+              href="#secao-comentarios-comunidade"
+              className="artigo-banner-lufy-link"
+            >
+              Encontrar outras famílias ↓
+            </a>
+          </div>
+        </div>
+
+        {/* Aviso Ético em Box Discreto (#F6F3EE) */}
+        <div className="artigo-aviso-etico">
+          <strong>Aviso Ético e Clínico:</strong> Todo o conteúdo publicado na
+          GlicoCare possui finalidade estritamente educativa, de apoio
+          emocional e fortalecimento familiar. Ele nunca substitui o
+          acompanhamento médico, exames laboratoriais e condutas
+          individualizadas prescritas pelos endocrinologistas e profissionais que
+          cuidam da saúde do seu filho ou da sua família.
+        </div>
+      </article>
+      {/* FIM DA COLUNA DE LEITURA EDITORIAL */}
+
+      {/* Linha Divisória Horizontal Sutil */}
+      <hr className="artigo-divisor-secao" />
+
+      {/* ====================================================================
+          4. INÍCIO DA SEÇÃO DE COMENTÁRIOS E ACOLHIMENTO EM 2 COLUNAS
+          ==================================================================== */}
+      <section
+        id="secao-comentarios-comunidade"
+        className="artigo-secao-comunidade"
+        aria-labelledby="titulo-comentarios-encontro"
+      >
+        <div className="artigo-comunidade-cabecalho">
+          <div className="section-line-eyebrow">ESPAÇO DE CONEXÃO E APOIO MÚTUO</div>
+          <h2
+            id="titulo-comentarios-encontro"
+            style={{
+              fontFamily: 'var(--fonte-titulo)',
+              fontSize: 'clamp(1.75rem, 3.2vw, 2.35rem)',
+              color: 'var(--cor-texto)',
+              marginBottom: '0.65rem',
+            }}
+          >
+            Este também pode ser um lugar de{' '}
+            <span className="texto-italico-terracota">encontro.</span>
+          </h2>
+          <p
+            style={{
+              fontSize: '1rem',
+              color: '#5A5049',
+              lineHeight: 1.6,
+              maxWidth: '820px',
+              margin: 0,
+            }}
+          >
+            Compartilhe seus aprendizados, vivências ou uma mensagem de afeto.
+            Para manter a serenidade da nossa comunidade, todas as mensagens
+            passam por curadoria gentil antes da publicação (RN-MOD-01).
+          </p>
+        </div>
+
+        {/* Grade Responsiva em 2 Colunas: Formulário à Esquerda e Vozes à Direita */}
+        <div className="artigo-comunidade-grid">
+          {/* Coluna 1: Formulário de Mensagem */}
+          <div className="artigo-formulario-card">
             <h3
               style={{
                 fontFamily: 'var(--fonte-titulo)',
-                fontSize: '1.28rem',
-                color: 'var(--cor-texto)',
-                marginBottom: '0.45rem',
+                fontSize: '1.25rem',
+                color: 'var(--cor-primaria)',
+                margin: '0 0 0.35rem 0',
               }}
             >
-              Você não precisa dar conta de tudo sozinho hoje.
+              Deixe sua mensagem de acolhimento
             </h3>
             <p
               style={{
-                fontSize: '0.98rem',
-                lineHeight: 1.6,
-                color: 'var(--cor-texto-suave)',
-                marginBottom: '0.85rem',
+                fontSize: '0.88rem',
+                color: '#5A5049',
+                marginBottom: '1.35rem',
               }}
             >
-              {conteudo.mensagemLufyFinal}
+              Sua história pode ser o abraço que outra família precisa ler hoje.
             </p>
-            <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
-              <Link
-                to="/biblioteca"
+
+            {/* Parecer do Moderador Oficial */}
+            {parecerModeracao && (
+              <div
                 style={{
+                  backgroundColor: parecerModeracao.aprovada
+                    ? '#EDF7EE'
+                    : '#F9E6E3',
+                  color: parecerModeracao.aprovada ? '#1E4620' : '#9E3328',
+                  border: `1px solid ${
+                    parecerModeracao.aprovada ? '#B8E2BE' : '#C86D63'
+                  }`,
+                  padding: '0.9rem 1.15rem',
+                  borderRadius: '12px',
+                  marginBottom: '1.25rem',
                   fontSize: '0.88rem',
-                  fontWeight: 700,
-                  color: 'var(--cor-primaria)',
+                  fontWeight: 600,
                 }}
               >
-                ← Explorar outros guias da biblioteca
-              </Link>
-              <Link
-                to="/especialistas"
+                {parecerModeracao.saidaFormatada}
+              </div>
+            )}
+
+            <form onSubmit={handleEnviarComentarioFamilia}>
+              <div
+                className="form-grid-nome-cidade"
                 style={{
-                  fontSize: '0.88rem',
-                  fontWeight: 700,
-                  color: 'var(--cor-cta)',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
                 }}
               >
-                Conhecer especialistas parceiros ↗
-              </Link>
-            </div>
-          </div>
-        </div>
-      </article>
-      {/* FIM DA SUPERFÍCIE DE LEITURA DO ARTIGO */}
+                <FormInput
+                  name="nome"
+                  label="Seu Nome (e parentesco)"
+                  placeholder="Ex: Fernanda (mãe do Bento)"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  obrigatorio
+                />
 
-      {/* ====================================================================
-          INÍCIO DA SEÇÃO INTERATIVA: "COMENTÁRIOS E ACOLHIMENTO EM FAMÍLIA"
-          ==================================================================== */}
-      <section
-        className="artigo-secao-comentarios"
-        aria-labelledby="titulo-comentarios-familia"
-      >
-        <div className="section-line-eyebrow">ESPAÇO DE CONEXÃO E APOIO MÚTUO</div>
-        <h2
-          id="titulo-comentarios-familia"
-          style={{
-            fontFamily: 'var(--fonte-titulo)',
-            fontSize: 'clamp(1.65rem, 2.8vw, 2.15rem)',
-            color: 'var(--cor-texto)',
-            marginBottom: '0.55rem',
-          }}
-        >
-          Comentários e Acolhimento{' '}
-          <span className="texto-italico-terracota">em Família</span>
-        </h2>
-        <p
-          style={{
-            fontSize: '0.98rem',
-            color: 'var(--cor-texto-suave)',
-            lineHeight: 1.6,
-            marginBottom: '2rem',
-          }}
-        >
-          Este é um espaço seguro para compartilhar vivências reais, dúvidas e
-          palavras de carinho com outras mães, pais e familiares. Para manter a
-          serenidade da nossa comunidade, todas as mensagens passam por curadoria
-          gentil antes da publicação (RN-MOD-01).
-        </p>
+                <FormInput
+                  name="cidade"
+                  label="Sua Cidade / Estado"
+                  placeholder="Ex: São Paulo, SP"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  obrigatorio
+                />
+              </div>
 
-        {/* FORMULÁRIO LIMPO PARA ENVIO DE MENSAGENS/DEPOIMENTOS (Nome, Cidade e Mensagem) */}
-        <form
-          onSubmit={handleEnviarComentarioFamilia}
-          style={{
-            backgroundColor: 'var(--cor-fundo)', // Bege neutro suave #EAE4D9
-            padding: '1.85rem 2rem',
-            borderRadius: '18px',
-            border: '1px solid var(--cor-borda)',
-            marginBottom: '2.5rem',
-          }}
-        >
-          <h3
-            style={{
-              fontFamily: 'var(--fonte-titulo)',
-              fontSize: '1.25rem',
-              color: 'var(--cor-primaria)', // Terracota Executivo #7C533F
-              marginBottom: '0.35rem',
-            }}
-          >
-            Deixe sua mensagem de acolhimento
-          </h3>
-          <p
-            style={{
-              fontSize: '0.88rem',
-              color: 'var(--cor-texto-suave)',
-              marginBottom: '1.35rem',
-            }}
-          >
-            Sua história pode ser o abraço que outra família precisa ler hoje.
-          </p>
+              <FormInput
+                name="mensagem"
+                tipo="textarea"
+                label="Sua Mensagem ou Depoimento"
+                placeholder="Escreva aqui como este conteúdo ajudou sua rotina ou deixe uma palavra de apoio para outras famílias..."
+                value={mensagem}
+                onChange={(e) => setMensagem(e.target.value)}
+                obrigatorio
+              />
 
-          {/* Parecer do Moderador Oficial ([APROVADA] ou [REJEITADA]) */}
-          {parecerModeracao && (
-            <div
-              style={{
-                backgroundColor: parecerModeracao.aprovada
-                  ? 'var(--cor-cta-suave)'
-                  : '#F9E6E3',
-                color: parecerModeracao.aprovada ? 'var(--cor-cta)' : '#9E3328',
-                border: `1px solid ${
-                  parecerModeracao.aprovada ? 'var(--cor-cta)' : '#C86D63'
-                }`,
-                padding: '1rem 1.25rem',
-                borderRadius: '12px',
-                marginBottom: '1.25rem',
-                fontSize: '0.92rem',
-                fontWeight: 600,
-              }}
-            >
-              {parecerModeracao.saidaFormatada}
-            </div>
-          )}
-
-          {/* Grade com Nome e Cidade lado a lado no Desktop */}
-          <div
-            className="form-grid-nome-cidade"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1rem',
-            }}
-          >
-            <FormInput
-              name="nome"
-              label="Seu Nome (e parentesco)"
-              placeholder="Ex: Fernanda, mãe do Bento (7 anos)"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              obrigatorio
-            />
-
-            <FormInput
-              name="cidade"
-              label="Sua Cidade / Estado"
-              placeholder="Ex: São Paulo, SP"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              obrigatorio
-            />
-          </div>
-
-          <FormInput
-            name="mensagem"
-            tipo="textarea"
-            label="Sua Mensagem ou Depoimento"
-            placeholder="Escreva aqui como este conteúdo ajudou sua rotina ou deixe uma palavra de apoio para outras famílias..."
-            value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
-            obrigatorio
-          />
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              marginTop: '0.5rem',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '0.8rem',
-                color: 'var(--cor-texto-suave)',
-              }}
-            >
-              🔒 Ambiente protegido pela curadoria GlicoCare
-            </span>
-
-            {/* Botão de envio em Verde Alívio (#3B7E48) */}
-            <Button type="submit" variante="primario">
-              Enviar mensagem de acolhimento →
-            </Button>
-          </div>
-        </form>
-
-        {/* LISTA DE COMENTÁRIOS ANTERIORES DE OUTRAS MÃES E FAMÍLIAS */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1.25rem',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: 'var(--fonte-titulo)',
-                fontSize: '1.3rem',
-                color: 'var(--cor-texto)',
-              }}
-            >
-              Vozes que já passaram por aqui ({COMENTARIOS_FAMILIAS_APROVADOS.length})
-            </h3>
-            <span className="gc-badge">
-              ✓ Relatos verificados pela equipe GlicoCare
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gap: '1.15rem' }}>
-            {COMENTARIOS_FAMILIAS_APROVADOS.map((comentario) => (
-              <div key={comentario.id} className="comentario-familia-card">
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    marginBottom: '0.6rem',
-                  }}
-                >
-                  <div>
-                    <strong
-                      style={{
-                        color: 'var(--cor-texto)',
-                        fontSize: '0.96rem',
-                      }}
-                    >
-                      {comentario.nome}
-                    </strong>
-                    <span
-                      style={{
-                        fontSize: '0.84rem',
-                        color: 'var(--cor-primaria)',
-                        fontWeight: 600,
-                        marginLeft: '0.5rem',
-                      }}
-                    >
-                      • 📍 {comentario.cidade}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '0.78rem',
-                      color: 'var(--cor-texto-suave)',
-                    }}
-                  >
-                    {comentario.tempo}
-                  </span>
-                </div>
-
-                <p
-                  style={{
-                    fontSize: '0.96rem',
-                    lineHeight: 1.65,
-                    color: 'var(--cor-texto)',
-                    marginBottom: '0.55rem',
-                  }}
-                >
-                  “{comentario.mensagem}”
-                </p>
-
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 <span
                   style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--cor-cta)',
+                    fontSize: '0.78rem',
+                    color: '#6C625A',
                   }}
                 >
-                  ✓ Aprovado pela curadoria acolhedora GlicoCare
+                  🔒 Ambiente protegido pela curadoria GlicoCare
                 </span>
+
+                <Button type="submit" variante="primario">
+                  Enviar mensagem →
+                </Button>
               </div>
-            ))}
+            </form>
+          </div>
+
+          {/* Coluna 2: Vozes que já passaram por aqui */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1.25rem',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}
+            >
+              <h3
+                style={{
+                  fontFamily: 'var(--fonte-titulo)',
+                  fontSize: '1.15rem',
+                  color: 'var(--cor-texto)',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Vozes que já passaram por aqui ({COMENTARIOS_FAMILIAS_APROVADOS.length})
+              </h3>
+              <span
+                style={{
+                  backgroundColor: '#EDF7EE',
+                  color: '#1E4620',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '12px',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Relatos moderados
+              </span>
+            </div>
+
+            <div>
+              {COMENTARIOS_FAMILIAS_APROVADOS.map((comentario) => (
+                <div key={comentario.id} className="comentario-familia-card">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    <div>
+                      <strong
+                        style={{
+                          color: 'var(--cor-texto)',
+                          fontSize: '0.94rem',
+                        }}
+                      >
+                        {comentario.nome}
+                      </strong>
+                      <span
+                        style={{
+                          fontSize: '0.82rem',
+                          color: 'var(--cor-primaria)',
+                          fontWeight: 600,
+                          marginLeft: '0.45rem',
+                        }}
+                      >
+                        • 📍 {comentario.cidade}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.76rem',
+                        color: '#6C625A',
+                      }}
+                    >
+                      {comentario.tempo}
+                    </span>
+                  </div>
+
+                  <p
+                    style={{
+                      fontSize: '0.94rem',
+                      lineHeight: 1.6,
+                      color: 'var(--cor-texto)',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    “{comentario.mensagem}”
+                  </p>
+
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      color: 'var(--cor-cta)',
+                    }}
+                  >
+                    ✓ Aprovado pela curadoria acolhedora GlicoCare
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
-      {/* FIM DA SEÇÃO INTERATIVA: "COMENTÁRIOS E ACOLHIMENTO EM FAMÍLIA" */}
+      {/* FIM DA SEÇÃO DE COMENTÁRIOS E ACOLHIMENTO */}
     </div>
   );
 }
-/* FIM DA PÁGINA ARTIGO DETALHE */
+/* ==========================================================================
+   FIM DO COMPONENTE ARTIGO DETALHE
+   ========================================================================== */
