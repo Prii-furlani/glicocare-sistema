@@ -440,6 +440,32 @@ async function main() {
     console.log('ℹ️ Tabela mensagens_teleconsulta:', err.message);
   }
 
+  // 15. Cria tabela prontuarios_adendos para adendos clínicos datados imutáveis (RN-PRONT-01)
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`prontuarios_adendos\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do adendo clínico',
+        \`prontuario_id\` INT UNSIGNED NOT NULL COMMENT 'FK para prontuarios_atendimentos(id)',
+        \`especialista_id\` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+        \`texto_adendo\` TEXT NOT NULL COMMENT 'Texto do adendo clínico complementar',
+        \`data_hora_adendo\` DATETIME NOT NULL COMMENT 'Data e hora oficial do adendo',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_adendo_prontuario\` (\`prontuario_id\`),
+        KEY \`idx_adendo_especialista\` (\`especialista_id\`),
+        CONSTRAINT \`fk_adendo_prontuario\`
+          FOREIGN KEY (\`prontuario_id\`) REFERENCES \`prontuarios_atendimentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_adendo_especialista\`
+          FOREIGN KEY (\`especialista_id\`) REFERENCES \`especialistas\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Adendos clínicos datados vinculados a prontuários (RN-PRONT-01)';
+    `);
+    console.log('✅ Tabela prontuarios_adendos verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela prontuarios_adendos:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

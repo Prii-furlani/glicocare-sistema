@@ -428,6 +428,28 @@ CREATE TABLE IF NOT EXISTS `prontuarios_atendimentos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Prontuários eletrônicos de teleatendimento CFM 2.314/2022';
 
 -- =============================================================================
+-- TABELA 7C_ADENDOS: prontuarios_adendos
+-- Adendos clínicos complementares datados (RN-PRONT-01 - CFM)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `prontuarios_adendos` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do adendo clínico',
+  `prontuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para prontuarios_atendimentos(id)',
+  `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+  `texto_adendo` TEXT NOT NULL COMMENT 'Texto do adendo clínico complementar',
+  `data_hora_adendo` DATETIME NOT NULL COMMENT 'Data e hora oficial do adendo',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_adendo_prontuario` (`prontuario_id`),
+  KEY `idx_adendo_especialista` (`especialista_id`),
+  CONSTRAINT `fk_adendo_prontuario`
+    FOREIGN KEY (`prontuario_id`) REFERENCES `prontuarios_atendimentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_adendo_especialista`
+    FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Adendos clínicos datados vinculados a prontuários (RN-PRONT-01)';
+
+-- =============================================================================
 -- TABELA 7D: avaliacoes_especialistas
 -- Avaliação e Reputação Moderada da Rede de Profissionais
 -- =============================================================================

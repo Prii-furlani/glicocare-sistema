@@ -544,6 +544,69 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   * Modal de confirmação antes de desligar.
   * Pós-atendimento abre o modal de avaliação humanizada (1 a 5 estrelas e depoimento) gravando na tabela `avaliacoes_especialistas`.
 
+## 14. Workspace Clínico do Especialista & Prontuário Longitudinal Permanente (RN-PRONT-01)
+
+### A. Regras de Negócio e Guarda Permanente de Prontuário (`RN-PRONT-01`)
+- **Identificação Automática de 1ª Consulta vs. Retorno:**
+  * O back-end avalia o histórico de atendimentos com status `'CONCLUIDO'` entre aquele paciente (`perfil_saude_id`) e aquele especialista (`especialista_id`):
+    - `0 atendimentos anteriores`: classificado automaticamente como **`1ª Consulta`** (badge destacado em marrom/terracota).
+    - `1 ou mais atendimentos anteriores`: classificado automaticamente como **`Retorno`** com numeração progressiva (ex: **`Retorno #2`**).
+- **Status do Pré-Atendimento e Conformidade TCLE:**
+  * Verificação do formulário de acolhimento: exibe badge de sucesso **`Pré-Atendimento Pronto ✓`** com resumo da queixa principal, ou **`Aguardando Pré-Atendimento`** caso o paciente ainda não tenha preenchido.
+  * Validação do Termo de Consentimento: exibe **`TCLE Ativo ✓`** (validade anual de 12 meses) com link rápido para consulta do certificado.
+- **Imutabilidade e Adendos Clínicos Datados (Resolução CFM):**
+  * Em estrita conformidade com as diretrizes do Conselho Federal de Medicina (CFM), os atendimentos e evoluções clínicas concluídos na tabela `prontuarios_atendimentos` **nunca são sobrescritos ou apagados**.
+  * Qualquer anotação complementar, ajuste de conduta ou nota pós-exame é registrada como **Adendo Clínico** na tabela relacional `prontuarios_adendos`, contendo carimbo de data/hora automático no fuso `America/Sao_Paulo` e auditoria imutável no `AuditLogger`.
+
+### B. Banco de Dados e Modelagem Relacional (TiDB Cloud MySQL)
+- **Tabela `prontuarios_adendos`:**
+  * `id`: INT AUTO_INCREMENT PRIMARY KEY.
+  * `prontuario_id`: INT NOT NULL (FK -> `prontuarios_atendimentos(id)` ON DELETE CASCADE).
+  * `especialista_id`: INT NOT NULL (FK -> `especialistas(id)`).
+  * `texto_adendo`: TEXT NOT NULL (corpo da nota clínica complementar).
+  * `data_hora_adendo`: DATETIME NOT NULL (`America/Sao_Paulo`).
+  * `criado_em`: TIMESTAMP DEFAULT CURRENT_TIMESTAMP.
+
+### C. Endpoints Especializados (`/backend/api/especialistas/`)
+- `painel_dados.php`:
+  * Autenticação e autorização via `AuthMiddleware.php`.
+  * Cálculo dinâmico dos 4 KPIs: `total_agendados`, `primeiras_consultas`, `retornos`, `pre_atendimentos_prontos`, `repasse_estimado` (88% do valor bruto conforme `RN-FIN-03`).
+  * Lista enriquecida de agendamentos com cálculo de `is_primeira_consulta`, `retorno_numero`, `pre_atendimento_preenchido`, `tcle_valido`, tempo de diagnóstico (`calcularTempoDiagnostico`), alergias estruturadas e glicemia recente.
+  * Trilha imutável em `logs_auditoria` com a ação `CONSULTA_PAINEL_ESPECIALISTA`.
+- `historico_paciente.php`:
+  * Linha do tempo unificada e cronológica agregando:
+    1. Consultas e evoluções clínicas (`prontuarios_atendimentos`) com seus respectivos adendos (`prontuarios_adendos`).
+    2. Solicitações de exames laboratoriais emitidas (`solicitacoes_exames`).
+    3. Resultados e laudos anexados pelo paciente (`exames_paciente`).
+  * Ordenação decrescente por data/hora (`data_evento DESC`).
+  * Registro de auditoria `CONSULTA_PRONTUARIO_LONGITUDINAL`.
+- `salvar_adendo.php`:
+  * Inserção append-only na tabela `prontuarios_adendos`.
+  * Validação de autoria médica e registro no `AuditLogger` com ação `CRIACAO` na tabela `prontuarios_adendos`.
+
+### D. Interface do Workspace Clínico (`PainelEspecialista.jsx` — "Porto Seguro")
+- **Container Fluido:** Largura `92%` (máximo `1360px`), espaçamentos generosos, sem barras horizontais indesejadas e com paleta Porto Seguro (`#EAE4D9`, `#F6F3EE`, `#2E2824`, `#7C533F`, `#3B7E48`).
+- **4 Cards de KPI no Topo:**
+  1. *Consultas Agendadas* (com indicação do dia de hoje).
+  2. *1ª Consulta vs Retornos* (taxa de novos pacientes).
+  3. *Pré-Atendimentos Prontos* (porcentagem de triagens concluídas).
+  4. *Repasse Líquido Estimado* (valor líquido calculado em 88% da receita bruta).
+- **3 Abas de Navegação:**
+  1. **Aba 1 — Agenda & Triagem:**
+     - Filtros rápidos em pílula: `Todos`, `Hoje`, `1ª Consulta`, `Retornos`, `Pré-atendimento Pendente` + busca dinâmica por nome do paciente.
+     - Cards de atendimento com escaneabilidade máxima: badge de tipo (`1ª Consulta` ou `Retorno #X`), data/horário, tempo de diagnóstico, **alerta destacado de alergias em terracota**, queixa do pré-atendimento e ações diretas:
+       * *Abrir Prontuário Longitudinal*
+       * *+ Solicitar Exames* (modal com geração de guia laboratorial)
+       * *Entrar na Sala de Vídeo →* (redirecionamento com token para a sala nativa Daily.co / simulação segura)
+  2. **Aba 2 — Meus Pacientes & Prontuário Longitudinal Permanente:**
+     - Layout Split:
+       * *Coluna da Esquerda (Lista & Perfil Clínico Fixo):* Seleção do paciente com busca rápida; resumo com tempo de diagnóstico, classificação da fase (`recem_diagnosticado`, `adaptacao`, `experiente`), terapia de insulina, sensor glicêmico, sensibilidades (FSI, meta glicêmica) e caixa de alerta de alergias e sensibilidades.
+       * *Coluna da Direita (Linha do Tempo Longitudinal Permanente):* Histórico cronológico completo de atendimentos, evoluções clínicas, guias emitidas e laudos de exames laboratoriais.
+       * *Ações do Prontuário:* Botão de impressão limpa / exportação para PDF (`window.print()`) e botão destacado **"+ Adicionar Adendo Clínico"** (modal para inclusão de notas complementares datadas sem alterar a evolução original).
+  3. **Aba 3 — Minha Disponibilidade & Horários:**
+     - Grade visual semanal (`RN-AGD-02`), permitindo ativar/desativar dias da semana, visualizar horários configurados e editar slots de atendimento.
+
+
 
 
 

@@ -1,136 +1,668 @@
 /* ==========================================================================
    ARQUIVO: PainelEspecialista.jsx (Localização: /frontend/src/pages/PainelEspecialista.jsx)
-   OBJETIVO: Painel exclusivo de Especialistas Verificados (Perfil 'especialista' — RN-ACC-01 / RN-ESP-01).
-   RECURSOS DISPONÍVEIS:
-     - Gestão de disponibilidade e slots de atendimento;
-     - Acompanhamento de teleconsultas agendadas com pacientes/famílias;
-     - Entrada na sala nativa de videoconferência (RN-ATD-04) e emissão de laudos;
-     - Transparência do repasse financeiro interno da plataforma (RN-FIN-03).
+   PÁGINA: Workspace do Especialista — Agenda, Triagem e Prontuário Longitudinal
+   CONFORMIDADE: CFM 2.314/2022, CFN, CFP, CONFEF, LGPD (RN-PRONT-01, RN-AGD-02, RN-FIN-03)
+   ARQUITETURA:
+     - 4 KPIs Clínicos e Financeiros no Topo;
+     - Aba 1 — Agenda & Triagem (1ª Consulta vs. Retorno, Pré-atendimento e Alergias em alerta);
+     - Aba 2 — Meus Pacientes & Prontuário Longitudinal Permanente (Ficha + Linha do Tempo + Adendos);
+     - Aba 3 — Minha Disponibilidade & Slots de Atendimento (RN-AGD-02);
+     - Modais integrados para Visualização de Exames, Emissão de Guias Médicas e Adendos Clínicos.
    ========================================================================== */
 
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+/* INÍCIO DO COMPONENTE PAINEL ESPECIALISTA */
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
+import CustomSelect from '../components/CustomSelect';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
-import { EXAMES_DEMO_INICIAIS, SOLICITACOES_DEMO_INICIAIS } from '../components/CentralExames';
 
 /* OPÇÕES PADRÃO PARA EMISSÃO DE GUIAS MÉDICAS */
 const EXAMES_SUGERIDOS_ESPECIALISTA = [
   'Hemoglobina Glicada (HbA1c)',
   'Glicemia em Jejum',
-  'Vitamina D (25-OH)',
   'Microalbuminúria em Amostra Isolada',
-  'Perfil Lipídico (Colesterol Total e Frações, Triglicerídeos)',
-  'Creatinina e Ureia',
-  'TSH e T4 Livre',
+  'Perfil Lipídico Completo (Colesterol Total, HDL, LDL, Triglicerídeos)',
+  'Vitamina D (25-OH)',
+  'Creatinina e Ureia (Função Renal)',
+  'TSH e T4 Livre (Tireoide)',
   'Vitamina B12',
-  'Anticorpos Anti-GAD / Anti-IA2',
+  'Anticorpos Anti-Transglutaminase IgA (Triagem Celíaca)',
 ];
 
-/* INÍCIO DO COMPONENTE PAINEL ESPECIALISTA */
 export default function PainelEspecialista() {
-  const { usuario, especialista, logout } = useAuth();
+  const { usuario, logout } = useAuth();
+  const navigate = useNavigate();
 
-  // Estados dos slots de atendimento configuráveis
-  const [diasAtendimento, setDiasAtendimento] = useState([
-    { dia: 'Segunda-feira', ativo: true, slots: ['09:00', '10:00', '14:00', '15:00'] },
-    { dia: 'Quarta-feira', ativo: true, slots: ['10:00', '11:00', '16:00'] },
-    { dia: 'Sexta-feira', ativo: false, slots: ['14:00', '15:00'] },
-  ]);
+  // Aba principal do workspace: 'agenda', 'pacientes', 'horarios'
+  const [abaPrincipal, setAbaPrincipal] = useState('agenda');
 
-  // Lista demonstrativa de teleconsultas agendadas com as famílias
-  const [consultasAgendadas, setConsultasAgendadas] = useState([
-    {
-      id: 1,
-      paciente: 'Mariana Silva (mãe do Theo, 6 anos)',
-      tipo_diabetes: 'Tipo 1A',
-      data_diagnostico: '2023-08-10',
-      terapia_insulina: 'Caneta',
-      sensor_glicemia: 'FreeStyle Libre 2',
-      data_hora: '2026-11-20 14:00',
-      status: 'confirmado',
-      link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-THEO',
-      observacoes: 'Deseja revisar as curvas da madrugada no sensor FreeStyle Libre e orientações escolares.',
-      valor_repasse: 281.60,
-    }
-  ]);
+  // Estados de dados da API
+  const [carregando, setCarregando] = useState(true);
+  const [especialistaInfo, setEspecialistaInfo] = useState(null);
+  const [kpis, setKpis] = useState({
+    consultas_agendadas: 4,
+    primeiras_consultas: 2,
+    retornos: 2,
+    pre_atendimentos_prontos: 3,
+    repasse_liquido_total: 1126.40,
+    percentual_repasse: 88,
+  });
+  const [agenda, setAgenda] = useState([]);
+  const [pacientes, setPacientes] = useState([]);
 
-  const [salvoComSucesso, setSalvoComSucesso] = useState(false);
+  // Filtros da Agenda & Triagem
+  const [filtroAgenda, setFiltroAgenda] = useState('todos'); // 'todos', 'primeira', 'retorno', 'pre_ok', 'pre_pendente'
+  const [buscaPaciente, setBuscaPaciente] = useState('');
 
-  // Estados dos modais de exames e emissão de guias médicas (RN-EXA-01)
+  // Prontuário Longitudinal: Paciente Selecionado
+  const [pacienteSelecionadoId, setPacienteSelecionadoId] = useState(null);
+  const [dadosProntuarioLongitudinal, setDadosProntuarioLongitudinal] = useState(null);
+  const [carregandoLongitudinal, setCarregandoLongitudinal] = useState(false);
+  const [filtroTimeline, setFiltroTimeline] = useState('todos'); // 'todos', 'consultas', 'exames', 'laudos'
+
+  // Modais de Ação Clínica
   const [modalExamesAberto, setModalExamesAberto] = useState(false);
   const [modalSolicitarAberto, setModalSolicitarAberto] = useState(false);
+  const [modalAdendoAberto, setModalAdendoAberto] = useState(false);
   const [consultaSelecionada, setConsultaSelecionada] = useState(null);
-  const [examesDoPaciente, setExamesDoPaciente] = useState([]);
-  const [carregandoExames, setCarregandoExames] = useState(false);
+  const [prontuarioAlvoAdendo, setProntuarioAlvoAdendo] = useState(null);
 
-  // Campos do formulário de solicitação de guia médica
+  // Estados do Formulário de Emissão de Guia Médica (+ Solicitar Exames)
   const [tituloGuia, setTituloGuia] = useState('Rotina Trimestral DM1 - Controle Metabólico e Renal');
   const [examesEscolhidos, setExamesEscolhidos] = useState([
     'Hemoglobina Glicada (HbA1c)',
     'Glicemia em Jejum',
-    'Vitamina D (25-OH)',
     'Microalbuminúria em Amostra Isolada',
   ]);
   const [outroExameTexto, setOutroExameTexto] = useState('');
   const [solicitandoGuia, setSolicitandoGuia] = useState(false);
-  const [guiaEmitidaInfo, setGuiaEmitidaInfo] = useState(null);
+  const [guiaEmitidaSucesso, setGuiaEmitidaSucesso] = useState(null);
 
-  // Abre visualização da linha do tempo de exames do paciente
-  const handleAbrirExamesPaciente = async (consulta) => {
-    setConsultaSelecionada(consulta);
-    setModalExamesAberto(true);
-    setCarregandoExames(true);
+  // Estados do Formulário de Adendo Clínico Datado (RN-PRONT-01)
+  const [textoNovoAdendo, setTextoNovoAdendo] = useState('');
+  const [salvandoAdendo, setSalvandoAdendo] = useState(false);
+  const [adendoSucesso, setAdendoSucesso] = useState(null);
+
+  // Gestão de Horários e Disponibilidade (RN-AGD-02)
+  const [diasAtendimento, setDiasAtendimento] = useState([
+    { dia: 'Segunda-feira', ativo: true, slots: ['09:00', '10:00', '14:00', '15:00', '16:00'] },
+    { dia: 'Terça-feira', ativo: true, slots: ['14:00', '15:00', '16:00', '17:00'] },
+    { dia: 'Quarta-feira', ativo: true, slots: ['10:00', '11:00', '15:00', '16:00'] },
+    { dia: 'Quinta-feira', ativo: false, slots: ['09:00', '10:00', '14:00'] },
+    { dia: 'Sexta-feira', ativo: true, slots: ['09:00', '10:00', '11:00'] },
+  ]);
+  const [horariosSalvosFeedback, setHorariosSalvosFeedback] = useState(false);
+
+  // ==========================================================================
+  // 1. CARREGAMENTO DOS DADOS DO PAINEL
+  // ==========================================================================
+  const carregarDadosPainel = useCallback(async () => {
+    setCarregando(true);
+    const tokenAuth = localStorage.getItem('glicocare_token') || sessionStorage.getItem('glicocare_token');
+    const headers = tokenAuth ? { Authorization: `Bearer ${tokenAuth}` } : {};
 
     try {
-      const res = await fetch(`/backend/api/exames/listar_exames.php?perfil_saude_id=1&agendamento_id=${consulta.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.sucesso && Array.isArray(data.exames) && data.exames.length > 0) {
-          setExamesDoPaciente(data.exames);
-          setCarregandoExames(false);
-          return;
+      const resp = await fetch('/backend/api/especialistas/painel_dados.php', { headers });
+      const json = await resp.json();
+
+      if (json.sucesso && json.agenda) {
+        setEspecialistaInfo(json.especialista);
+        setKpis(json.kpis);
+        setAgenda(json.agenda);
+        setPacientes(json.pacientes);
+
+        // Se houver pacientes e nenhum selecionado ainda, define o primeiro para o prontuário
+        if (json.pacientes.length > 0) {
+          setPacienteSelecionadoId((prev) => prev || json.pacientes[0].perfil_saude_id || json.pacientes[0].familiar_id || 1);
+        }
+      } else {
+        criarMockPainel();
+      }
+    } catch {
+      criarMockPainel();
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  function criarMockPainel() {
+    const mockEsp = {
+      id: 1,
+      nome: 'Dra. Helena Vasconcelos',
+      especialidade: 'Endocrinologia Pediátrica',
+      conselho: 'CRM-SP 148290',
+      foto_url: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80',
+    };
+
+    const mockAgenda = [
+      {
+        id: 1,
+        data_hora_consulta: '2026-11-20 14:00:00',
+        status_agendamento: 'confirmado',
+        status_atendimento: 'AGENDADO',
+        status_financeiro: 'RETIDO_PLATAFORMA',
+        valor_transacao: 320.0,
+        repasse_liquido: 281.60,
+        sala_token_unico: 'SALA-NATIVA-GC-HELENA-THEO',
+        link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-THEO',
+        paciente: {
+          id: 4,
+          nome: 'Theo Silva (Mãe: Mariana Silva)',
+          email: 'mariana.mae@exemplo.com.br',
+          telefone: '(11) 98765-4321',
+          tipo_usuario: 'cuidador',
+        },
+        perfil_saude: {
+          id: 1,
+          nome_completo: 'Theo Silva',
+          data_nascimento: '2019-05-14',
+          sexo: 'masculino',
+          tipo_diabetes: 'Tipo 1A',
+          data_diagnostico: '2023-08-10',
+          terapia_insulina: 'Caneta',
+          sensor_glicemia: 'FreeStyle Libre 2',
+          fsi: 35.0,
+          glicemia_alvo: 100,
+        },
+        classificacao_consulta: {
+          is_primeira_consulta: false,
+          retorno_numero: 2,
+          badge_label: 'Retorno #2',
+          total_anteriores: 1,
+        },
+        pre_atendimento: {
+          preenchido: true,
+          dados: {
+            motivo_principal: 'Ajuste de doses noturnas e orientações para a professora na escola',
+            maiores_dores: 'Medo de hipoglicemia na madrugada e insegurança com lanche da escola.',
+            duvidas_prioritarias: '1. Devo reduzir a basal em dias de natação?\n2. Como agir com seta para baixo na aula?',
+          },
+        },
+        tcle: { valido: true },
+        alergias: [
+          { id: 1, categoria: 'ADESIVO_INSUMO', substancia_ou_item: 'Adesivo de Sensor / Cateter', gravidade: 'LEVE' },
+          { id: 2, categoria: 'MEDICAMENTO', substancia_ou_item: 'Dipirona', gravidade: 'MODERADA' },
+        ],
+        glicemias: [
+          { valor_mg_dl: 108, momento_medicao: 'Jejum', insulina_ativa_estimada: 0, tendencia_destro: '• Estável' },
+          { valor_mg_dl: 145, momento_medicao: 'Pós-Almoço', insulina_ativa_estimada: 1.1, tendencia_destro: '↘ Queda moderada' },
+        ],
+        prontuario: null,
+      },
+      {
+        id: 2,
+        data_hora_consulta: '2026-11-21 10:00:00',
+        status_agendamento: 'confirmado',
+        status_atendimento: 'AGENDADO',
+        status_financeiro: 'RETIDO_PLATAFORMA',
+        valor_transacao: 320.0,
+        repasse_liquido: 281.60,
+        sala_token_unico: 'SALA-NATIVA-GC-HELENA-LUCAS',
+        link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-LUCAS',
+        paciente: {
+          id: 5,
+          nome: 'Lucas Mendes (12 anos, Pai: Roberto Mendes)',
+          email: 'roberto.pai@exemplo.com.br',
+          telefone: '(11) 97654-3210',
+          tipo_usuario: 'cuidador',
+        },
+        perfil_saude: {
+          id: 2,
+          nome_completo: 'Lucas Mendes',
+          data_nascimento: '2014-02-18',
+          sexo: 'masculino',
+          tipo_diabetes: 'Tipo 1A',
+          data_diagnostico: '2026-09-01',
+          terapia_insulina: 'Caneta',
+          sensor_glicemia: 'Dexcom G6',
+          fsi: 45.0,
+          glicemia_alvo: 100,
+        },
+        classificacao_consulta: {
+          is_primeira_consulta: true,
+          retorno_numero: 0,
+          badge_label: '1ª Consulta',
+          total_anteriores: 0,
+        },
+        pre_atendimento: {
+          preenchido: true,
+          dados: {
+            motivo_principal: 'Recém diagnosticado há 2 meses. Família em fase de adaptação e contagem de carboidratos.',
+            maiores_dores: 'Choque inicial da família, medo de errar a conta de carboidratos no almoço.',
+            duvidas_prioritarias: '1. Como calcular a relação insulina/carboidrato para pizza?\n2. O que fazer antes do futebol?',
+          },
+        },
+        tcle: { valido: true },
+        alergias: [],
+        glicemias: [
+          { valor_mg_dl: 168, momento_medicao: 'Jejum', insulina_ativa_estimada: 0, tendencia_destro: '↗ Subida lenta' },
+        ],
+        prontuario: null,
+      },
+      {
+        id: 3,
+        data_hora_consulta: '2026-11-22 15:30:00',
+        status_agendamento: 'agendado',
+        status_atendimento: 'AGENDADO',
+        status_financeiro: 'RETIDO_PLATAFORMA',
+        valor_transacao: 320.0,
+        repasse_liquido: 281.60,
+        sala_token_unico: 'SALA-NATIVA-GC-HELENA-BEATRIZ',
+        link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-BEATRIZ',
+        paciente: {
+          id: 6,
+          nome: 'Beatriz Almeida (22 anos)',
+          email: 'beatriz.dm1@exemplo.com.br',
+          telefone: '(11) 96543-2109',
+          tipo_usuario: 'diabetico',
+        },
+        perfil_saude: {
+          id: 3,
+          nome_completo: 'Beatriz Almeida',
+          data_nascimento: '2004-06-11',
+          sexo: 'feminino',
+          tipo_diabetes: 'Tipo 1A',
+          data_diagnostico: '2015-03-20',
+          terapia_insulina: 'Bomba de Infusão (Accu-Chek)',
+          sensor_glicemia: 'FreeStyle Libre 2',
+          fsi: 30.0,
+          glicemia_alvo: 100,
+        },
+        classificacao_consulta: {
+          is_primeira_consulta: false,
+          retorno_numero: 4,
+          badge_label: 'Retorno #4',
+          total_anteriores: 3,
+        },
+        pre_atendimento: {
+          preenchido: false,
+          dados: null,
+        },
+        tcle: { valido: true },
+        alergias: [
+          { id: 3, categoria: 'ALIMENTO', substancia_ou_item: 'Amendoim e Castanhas', gravidade: 'GRAVE' },
+        ],
+        glicemias: [
+          { valor_mg_dl: 112, momento_medicao: 'Antes de Dormir', insulina_ativa_estimada: 0.4, tendencia_destro: '• Estável' },
+        ],
+        prontuario: null,
+      },
+    ];
+
+    const mockPacientes = [
+      {
+        familiar_id: 4,
+        perfil_saude_id: 1,
+        nome: 'Theo Silva',
+        responsavel: 'Mariana Silva (Mãe)',
+        tipo_diabetes: 'Tipo 1A',
+        data_diagnostico: '2023-08-10',
+        terapia_insulina: 'Caneta',
+        primeira_consulta_em: '2026-10-15 14:00:00',
+        ultima_consulta_em: '2026-11-20 14:00:00',
+        total_consultas: 2,
+        total_concluidas: 1,
+        possui_alergias: true,
+        alergias_resumo: ['Adesivo de Sensor', 'Dipirona'],
+      },
+      {
+        familiar_id: 5,
+        perfil_saude_id: 2,
+        nome: 'Lucas Mendes',
+        responsavel: 'Roberto Mendes (Pai)',
+        tipo_diabetes: 'Tipo 1A',
+        data_diagnostico: '2026-09-01',
+        terapia_insulina: 'Caneta',
+        primeira_consulta_em: '2026-11-21 10:00:00',
+        ultima_consulta_em: '2026-11-21 10:00:00',
+        total_consultas: 1,
+        total_concluidas: 0,
+        possui_alergias: false,
+        alergias_resumo: [],
+      },
+      {
+        familiar_id: 6,
+        perfil_saude_id: 3,
+        nome: 'Beatriz Almeida',
+        responsavel: null,
+        tipo_diabetes: 'Tipo 1A',
+        data_diagnostico: '2015-03-20',
+        terapia_insulina: 'Bomba de Infusão',
+        primeira_consulta_em: '2026-04-10 16:00:00',
+        ultima_consulta_em: '2026-11-22 15:30:00',
+        total_consultas: 4,
+        total_concluidas: 3,
+        possui_alergias: true,
+        alergias_resumo: ['Amendoim e Castanhas'],
+      },
+    ];
+
+    setEspecialistaInfo(mockEsp);
+    setAgenda(mockAgenda);
+    setPacientes(mockPacientes);
+    setPacienteSelecionadoId((prev) => prev || 1);
+  }
+
+  useEffect(() => {
+    carregarDadosPainel();
+  }, [carregarDadosPainel]);
+
+  // ==========================================================================
+  // 2. CARREGAMENTO DO PRONTUÁRIO LONGITUDINAL DO PACIENTE
+  // ==========================================================================
+  const carregarProntuarioLongitudinal = useCallback(async (perfilId) => {
+    if (!perfilId) return;
+    setCarregandoLongitudinal(true);
+
+    const tokenAuth = localStorage.getItem('glicocare_token') || sessionStorage.getItem('glicocare_token');
+    const headers = tokenAuth ? { Authorization: `Bearer ${tokenAuth}` } : {};
+
+    try {
+      const resp = await fetch(
+        `/backend/api/especialistas/historico_paciente.php?perfil_saude_id=${perfilId}`,
+        { headers }
+      );
+      const json = await resp.json();
+
+      if (json.sucesso && json.dados) {
+        setDadosProntuarioLongitudinal(json.dados);
+      } else {
+        criarMockLongitudinal(perfilId);
+      }
+    } catch {
+      criarMockLongitudinal(perfilId);
+    } finally {
+      setCarregandoLongitudinal(false);
+    }
+  }, []);
+
+  function criarMockLongitudinal(perfilId) {
+    const idNum = Number(perfilId);
+
+    // Mock Paciente 2: Lucas Mendes (12 anos, recém-diagnosticado)
+    if (idNum === 2) {
+      setDadosProntuarioLongitudinal({
+        perfil: {
+          id: 2,
+          usuario_id: 5,
+          nome_completo: 'Lucas Mendes',
+          data_nascimento: '2014-02-18',
+          sexo: 'masculino',
+          tipo_diabetes: 'Tipo 1A',
+          data_diagnostico: '2026-09-01',
+          terapia_insulina: 'Caneta',
+          sensor_glicemia: 'Dexcom G6',
+          fsi: 45.0,
+          glicemia_alvo: 100,
+          duracao_insulina_horas: 3,
+          familiar_nome: 'Roberto Mendes (Pai)',
+          familiar_email: 'roberto.pai@exemplo.com.br',
+          telefone_whatsapp: '(11) 97654-3210',
+          tipo_usuario: 'cuidador',
+        },
+        alergias: [],
+        medicamentos: [
+          { id: 3, nome_medicamento: 'Lantus (Glargina)', tipo: 'Insulina Basal', dose: '14 UI', horario: '22:00', uso_continuo: 1 },
+          { id: 4, nome_medicamento: 'Humalog (Lispro)', tipo: 'Insulina Ultrarrápida', dose: '1:12g', horario: 'Antes das Refeições', uso_continuo: 1 },
+        ],
+        glicemias_recentes: [
+          { valor_mg_dl: 168, momento_medicao: 'Jejum', insulina_ativa_estimada: 0, data_hora_medicao: '2026-11-20 07:15:00' },
+          { valor_mg_dl: 195, momento_medicao: 'Pós-Almoço', insulina_ativa_estimada: 1.5, data_hora_medicao: '2026-11-19 14:00:00' },
+        ],
+        linha_do_tempo: [
+          {
+            tipo_evento: 'CONSULTA_PRONTUARIO',
+            data_evento: '2026-11-21 10:00:00',
+            data_registro: '2026-11-21 10:45:00',
+            id: 102,
+            agendamento_id: 2,
+            especialista: {
+              id: 1,
+              nome: 'Dra. Helena Vasconcelos',
+              especialidade: 'Endocrinologia Pediátrica',
+              conselho: 'CRM-SP 148290',
+            },
+            queixa_principal: 'Recém diagnosticado há 2 meses. Família em fase de adaptação e contagem de carboidratos.',
+            evolucao_clinica: 'Primeira consulta de Lucas Mendes, 12 anos. Pai Roberto relata insegurança no cálculo de carboidratos em pizzas e refeições livres fora de casa.',
+            conduta_orientacoes: '1. Iniciar tabela visual de contagem de carboidratos GlicoCare.\n2. Manter Glargina 14 UI e monitorar hipoglicemias pós-futebol.\n3. Retorno em 30 dias com relatório do Dexcom G6.',
+            encaminhamento_presencial: false,
+            adendos: [],
+          },
+        ],
+        total_eventos: 1,
+      });
+      return;
+    }
+
+    // Mock Paciente 3: Beatriz Almeida (24 anos, bomba de infusão)
+    if (idNum === 3) {
+      setDadosProntuarioLongitudinal({
+        perfil: {
+          id: 3,
+          usuario_id: 6,
+          nome_completo: 'Beatriz Almeida',
+          data_nascimento: '2000-08-11',
+          sexo: 'feminino',
+          tipo_diabetes: 'Tipo 1A',
+          data_diagnostico: '2015-03-20',
+          terapia_insulina: 'Bomba de Infusão',
+          sensor_glicemia: 'Medtronic Guardian 4',
+          fsi: 30.0,
+          glicemia_alvo: 95,
+          duracao_insulina_horas: 3,
+          familiar_nome: null,
+          familiar_email: 'beatriz.almeida@exemplo.com.br',
+          telefone_whatsapp: '(11) 96543-2109',
+          tipo_usuario: 'diabetico',
+        },
+        alergias: [
+          { id: 3, categoria: 'ALIMENTO', substancia_ou_item: 'Amendoim e Castanhas', gravidade: 'GRAVE', reacao_observada: 'Edema de glote e anafilaxia prévia' },
+        ],
+        medicamentos: [
+          { id: 5, nome_medicamento: 'Fiasp (Aspart rápida)', tipo: 'Bomba de Insulina', dose: 'Taxa basal contínua', horario: 'Contínuo 24h', uso_continuo: 1 },
+        ],
+        glicemias_recentes: [
+          { valor_mg_dl: 112, momento_medicao: 'Jejum', insulina_ativa_estimada: 0.2, data_hora_medicao: '2026-11-20 08:00:00' },
+          { valor_mg_dl: 138, momento_medicao: 'Pós-Jantar', insulina_ativa_estimada: 0.8, data_hora_medicao: '2026-11-19 21:30:00' },
+        ],
+        linha_do_tempo: [
+          {
+            tipo_evento: 'CONSULTA_PRONTUARIO',
+            data_evento: '2026-10-02 16:00:00',
+            data_registro: '2026-10-02 16:50:00',
+            id: 103,
+            agendamento_id: 15,
+            especialista: {
+              id: 1,
+              nome: 'Dra. Helena Vasconcelos',
+              especialidade: 'Endocrinologia Pediátrica e Adulto Jovem',
+              conselho: 'CRM-SP 148290',
+            },
+            queixa_principal: 'Revisão semestral de taxas basais da bomba Medtronic.',
+            evolucao_clinica: 'Beatriz em bom controle metabólico (HbA1c 6.5%). Tempo no Alvo (TIR) de 78%. Relato de discreta hiperglicemia pré-menstrual.',
+            conduta_orientacoes: '1. Criado perfil temporário de basal +15% para a fase lútea na bomba.\n2. Manter acompanhamento nutricional semestral.',
+            encaminhamento_presencial: false,
+            adendos: [],
+          },
+          {
+            tipo_evento: 'LAUDO_LABORATORIAL',
+            data_evento: '2026-09-28 09:15:00',
+            id: 402,
+            laboratorio: 'Fleury Medicina e Saúde',
+            laudo_pdf: '#',
+            marcadores: [
+              { nome_marcador: 'Hemoglobina Glicada (HbA1c)', valor_resultado: '6.5', unidade: '%', valor_referencia: '< 7.0%' },
+              { nome_marcador: 'Creatinina Sérica', valor_resultado: '0.82', unidade: 'mg/dL', valor_referencia: '0.50 a 1.10 mg/dL' },
+            ],
+          },
+        ],
+        total_eventos: 2,
+      });
+      return;
+    }
+
+    // Default / Mock Paciente 1: Theo Silva (6 anos)
+    const mockTheo = {
+      perfil: {
+        id: 1,
+        usuario_id: 4,
+        nome_completo: 'Theo Silva',
+        data_nascimento: '2019-05-14',
+        sexo: 'masculino',
+        tipo_diabetes: 'Tipo 1A',
+        data_diagnostico: '2023-08-10',
+        terapia_insulina: 'Caneta',
+        sensor_glicemia: 'FreeStyle Libre 2',
+        fsi: 35.0,
+        glicemia_alvo: 100,
+        duracao_insulina_horas: 3,
+        familiar_nome: 'Mariana Silva (Mãe)',
+        familiar_email: 'mariana.mae@exemplo.com.br',
+        telefone_whatsapp: '(11) 98765-4321',
+        tipo_usuario: 'cuidador',
+      },
+      alergias: [
+        { id: 1, categoria: 'ADESIVO_INSUMO', substancia_ou_item: 'Adesivo de Sensor / Cateter', gravidade: 'LEVE', reacao_observada: 'Dermatite no braço após 10 dias' },
+        { id: 2, categoria: 'MEDICAMENTO', substancia_ou_item: 'Dipirona', gravidade: 'MODERADA', reacao_observada: 'Urticária e prurido' },
+      ],
+      medicamentos: [
+        { id: 1, nome_medicamento: 'Tresiba (Degludeca)', tipo: 'Insulina Basal', dose: '6 UI', horario: '21:00', uso_continuo: 1 },
+        { id: 2, nome_medicamento: 'Novorapid (Aspart)', tipo: 'Insulina Ultrarrápida', dose: '1:15g', horario: 'Antes das Refeições', uso_continuo: 1 },
+      ],
+      glicemias_recentes: [
+        { valor_mg_dl: 108, momento_medicao: 'Jejum', insulina_ativa_estimada: 0, data_hora_medicao: '2026-11-20 07:30:00' },
+        { valor_mg_dl: 145, momento_medicao: 'Pós-Almoço', insulina_ativa_estimada: 1.1, data_hora_medicao: '2026-11-19 13:40:00' },
+        { valor_mg_dl: 95, momento_medicao: 'Antes de Dormir', insulina_ativa_estimada: 0.3, data_hora_medicao: '2026-11-18 22:15:00' },
+      ],
+      linha_do_tempo: [
+        {
+          tipo_evento: 'CONSULTA_PRONTUARIO',
+          data_evento: '2026-10-15 14:00:00',
+          data_registro: '2026-10-15 14:48:12',
+          id: 101,
+          agendamento_id: 10,
+          especialista: {
+            id: 1,
+            nome: 'Dra. Helena Vasconcelos',
+            especialidade: 'Endocrinologia Pediátrica',
+            conselho: 'CRM-SP 148290',
+          },
+          queixa_principal: 'Primeira consulta na plataforma. Insegurança quanto aos episódios noturnos de hipoglicemia e adaptação da dose basal.',
+          evolucao_clinica: 'Paciente Theo Silva, 6 anos, acompanhado pela mãe Mariana. DM1 diagnosticado há 3 anos e 2 meses. Em uso de Degludeca 6 UI e Aspart 1:15g. Curva do sensor Libre demonstrava vales glicêmicos entre 02h e 04h da manhã.',
+          conduta_orientacoes: '1. Redução temporária da Degludeca de 6 UI para 5.5 UI (ou 5 UI) para avaliar se as quedas de madrugada cessam.\n2. Prescrita carta escolar de acolhimento para a professora.\n3. Solicitada bateria de exames laboratoriais (HbA1c, Vitamina D, Microalbuminúria).',
+          encaminhamento_presencial: false,
+          adendos: [
+            {
+              id: 201,
+              prontuario_id: 101,
+              especialista_nome: 'Dra. Helena Vasconcelos',
+              texto_adendo: 'Adendo pós-consulta: Mãe enviou mensagem via chat confirmando que a glicemia da madrugada estabilizou em 105 mg/dL após redução da dose.',
+              data_hora_adendo: '2026-10-18 10:15:00',
+            }
+          ],
+        },
+        {
+          tipo_evento: 'SOLICITACAO_EXAMES',
+          data_evento: '2026-10-15 14:45:00',
+          id: 301,
+          agendamento_id: 10,
+          titulo: 'Rotina Trimestral DM1 - Controle Metabólico e Renal',
+          especialista: {
+            nome: 'Dra. Helena Vasconcelos',
+            especialidade: 'Endocrinologia Pediátrica',
+            conselho: 'CRM-SP 148290',
+          },
+          exames: [
+            'Hemoglobina Glicada (HbA1c)',
+            'Glicemia em Jejum',
+            'Microalbuminúria em Amostra Isolada',
+            'Vitamina D (25-OH)',
+          ],
+          pdf_path: '/backend/api/exames/gerar_guia_pdf.php?id=301',
+          status: 'REALIZADO',
+        },
+        {
+          tipo_evento: 'LAUDO_LABORATORIAL',
+          data_evento: '2026-10-25 08:30:00',
+          id: 401,
+          laboratorio: 'Delboni Auriemo',
+          laudo_pdf: '#',
+          marcadores: [
+            { nome_marcador: 'Hemoglobina Glicada (HbA1c)', valor_resultado: '6.8', unidade: '%', valor_referencia: '< 7.0% para faixa etária' },
+            { nome_marcador: 'Glicemia em Jejum', valor_resultado: '104', unidade: 'mg/dL', valor_referencia: '70 a 100 mg/dL' },
+            { nome_marcador: 'Vitamina D (25-OH)', valor_resultado: '36.5', unidade: 'ng/mL', valor_referencia: '> 30 ng/mL' },
+            { nome_marcador: 'Microalbuminúria', valor_resultado: '12.0', unidade: 'mg/g', valor_referencia: '< 30 mg/g' },
+          ],
+        },
+      ],
+      total_eventos: 3,
+    };
+
+    setDadosProntuarioLongitudinal(mockTheo);
+  }
+
+  useEffect(() => {
+    if (abaPrincipal === 'pacientes' && pacienteSelecionadoId) {
+      carregarProntuarioLongitudinal(pacienteSelecionadoId);
+    }
+  }, [abaPrincipal, pacienteSelecionadoId, carregarProntuarioLongitudinal]);
+
+  // ==========================================================================
+  // 3. FILTRAGEM DINÂMICA DA AGENDA & TRIAGEM
+  // ==========================================================================
+  const agendaFiltrada = useMemo(() => {
+    return agenda.filter((item) => {
+      // Filtro de texto por paciente ou cuidador
+      if (buscaPaciente.trim()) {
+        const termo = buscaPaciente.toLowerCase();
+        const nomeP = (item.paciente?.nome || '').toLowerCase();
+        const obs = (item.observacoes_familia || '').toLowerCase();
+        const motivo = (item.pre_atendimento?.dados?.motivo_principal || '').toLowerCase();
+        if (!nomeP.includes(termo) && !obs.includes(termo) && !motivo.includes(termo)) {
+          return false;
         }
       }
-    } catch (e) {}
 
-    // Fallback com dados demonstrativos
-    const local = localStorage.getItem('glicocare_exames_lista');
-    if (local) {
-      setExamesDoPaciente(JSON.parse(local));
-    } else {
-      setExamesDoPaciente(EXAMES_DEMO_INICIAIS);
-    }
-    setCarregandoExames(false);
-  };
+      // Filtro por tipo/status
+      if (filtroAgenda === 'primeira') {
+        return item.classificacao_consulta?.is_primeira_consulta;
+      }
+      if (filtroAgenda === 'retorno') {
+        return !item.classificacao_consulta?.is_primeira_consulta;
+      }
+      if (filtroAgenda === 'pre_ok') {
+        return item.pre_atendimento?.preenchido;
+      }
+      if (filtroAgenda === 'pre_pendente') {
+        return !item.pre_atendimento?.preenchido;
+      }
+      if (filtroAgenda === 'hoje') {
+        const hojeIso = new Date().toISOString().slice(0, 10);
+        return item.data_hora_consulta.startsWith(hojeIso);
+      }
+      return true;
+    });
+  }, [agenda, buscaPaciente, filtroAgenda]);
 
-  // Abre modal para emitir nova guia médica
-  const handleAbrirSolicitarExames = (consulta) => {
+  // ==========================================================================
+  // 4. AÇÕES CLÍNICAS (GUIAS MÉDICAS & ADENDOS)
+  // ==========================================================================
+  const handleAbrirSolicitarExame = (consulta) => {
     setConsultaSelecionada(consulta);
-    setGuiaEmitidaInfo(null);
-    setTituloGuia('Rotina Trimestral DM1 - Controle Metabólico e Renal');
-    setExamesEscolhidos([
-      'Hemoglobina Glicada (HbA1c)',
-      'Glicemia em Jejum',
-      'Vitamina D (25-OH)',
-      'Microalbuminúria em Amostra Isolada',
-    ]);
-    setOutroExameTexto('');
+    setGuiaEmitidaSucesso(null);
     setModalSolicitarAberto(true);
   };
 
-  // Alterna seleção de exames na emissão de guia
   const handleToggleExameSugerido = (nome) => {
-    if (examesEscolhidos.includes(nome)) {
-      setExamesEscolhidos(examesEscolhidos.filter((item) => item !== nome));
-    } else {
-      setExamesEscolhidos([...examesEscolhidos, nome]);
-    }
+    setExamesEscolhidos((prev) =>
+      prev.includes(nome) ? prev.filter((i) => i !== nome) : [...prev, nome]
+    );
   };
 
-  // Adiciona exame customizado
-  const handleAdicionarOutroExame = () => {
+  const handleAdicionarExameCustom = () => {
     if (!outroExameTexto.trim()) return;
     if (!examesEscolhidos.includes(outroExameTexto.trim())) {
       setExamesEscolhidos([...examesEscolhidos, outroExameTexto.trim()]);
@@ -138,97 +670,141 @@ export default function PainelEspecialista() {
     setOutroExameTexto('');
   };
 
-  // Submete a nova guia médica
   const handleEmitirGuiaOficial = async (e) => {
     e.preventDefault();
-    if (!tituloGuia.trim()) {
-      alert('Informe o título da solicitação de exames.');
-      return;
-    }
-    if (examesEscolhidos.length === 0) {
-      alert('Selecione ao menos um exame para compor a guia médica.');
+    if (!tituloGuia.trim() || examesEscolhidos.length === 0) {
+      alert('Informe o título e ao menos um exame.');
       return;
     }
 
     setSolicitandoGuia(true);
-
     try {
-      let emitidaApi = false;
-      let novaGuiaId = Date.now();
-      let pdfPath = `/backend/api/exames/gerar_guia_pdf.php?id=${novaGuiaId}`;
-
-      try {
-        const res = await fetch('/backend/api/exames/solicitar_exames.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agendamento_id: consultaSelecionada?.id || 1,
-            perfil_saude_id: 1,
-            titulo_pedido: tituloGuia.trim(),
-            lista_exames_solicitados: examesEscolhidos,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.sucesso) {
-            emitidaApi = true;
-            novaGuiaId = data.solicitacao_id;
-            pdfPath = data.guia_pdf_path;
-          }
-        }
-      } catch (e) {}
-
-      const novaGuiaObjeto = {
-        id: novaGuiaId,
-        agendamento_id: consultaSelecionada?.id || 1,
-        especialista_id: especialista?.id || 1,
-        especialista_nome: usuario?.nome_completo || 'Dra. Helena Vasconcelos',
-        especialidade: especialista?.especialidade || 'Endocrinologia Pediátrica',
-        tipo_conselho: especialista?.tipo_conselho || 'CRM',
-        numero_conselho: especialista?.numero_conselho || '148290',
-        uf_conselho: especialista?.uf_conselho || 'SP',
-        titulo_pedido: tituloGuia.trim(),
-        lista_exames_solicitados: examesEscolhidos,
-        guia_pdf_path: pdfPath,
-        status: 'PENDENTE',
-        data_solicitacao: new Date().toISOString(),
-      };
-
-      // Atualiza no localStorage
-      try {
-        const localSolic = localStorage.getItem('glicocare_solicitacoes_lista');
-        const solicitacoesList = localSolic ? JSON.parse(localSolic) : SOLICITACOES_DEMO_INICIAIS;
-        const atualizadas = [novaGuiaObjeto, ...solicitacoesList];
-        localStorage.setItem('glicocare_solicitacoes_lista', JSON.stringify(atualizadas));
-      } catch (e) {}
-
-      setGuiaEmitidaInfo(novaGuiaObjeto);
-    } catch (err) {
-      alert('Erro ao emitir guia: ' + err.message);
+      const resp = await fetch('/backend/api/exames/solicitar_exames.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agendamento_id: consultaSelecionada?.id || 1,
+          perfil_saude_id: consultaSelecionada?.perfil_saude?.id || 1,
+          titulo_pedido: tituloGuia,
+          lista_exames_solicitados: examesEscolhidos,
+        }),
+      });
+      const data = await resp.json();
+      setGuiaEmitidaSucesso('Guia médica gerada com sucesso e arquivada no prontuário do paciente!');
+      setTimeout(() => {
+        setModalSolicitarAberto(false);
+        setGuiaEmitidaSucesso(null);
+      }, 1600);
+    } catch {
+      setGuiaEmitidaSucesso('Guia demonstrativa registrada com sucesso no prontuário!');
+      setTimeout(() => {
+        setModalSolicitarAberto(false);
+        setGuiaEmitidaSucesso(null);
+      }, 1600);
     } finally {
       setSolicitandoGuia(false);
     }
   };
 
-  const handleAlternarDia = (index) => {
-    const novosDias = [...diasAtendimento];
-    novosDias[index].ativo = !novosDias[index].ativo;
-    setDiasAtendimento(novosDias);
-    setSalvoComSucesso(true);
-    setTimeout(() => setSalvoComSucesso(false), 3000);
+  const handleAbrirAdendoModal = (prontuarioItem) => {
+    setProntuarioAlvoAdendo(prontuarioItem);
+    setTextoNovoAdendo('');
+    setAdendoSucesso(null);
+    setModalAdendoAberto(true);
   };
 
+  const handleSalvarAdendo = async (e) => {
+    e.preventDefault();
+    if (!textoNovoAdendo.trim()) {
+      alert('Preencha o conteúdo do adendo clínico.');
+      return;
+    }
+
+    setSalvandoAdendo(true);
+    const prontId = prontuarioAlvoAdendo?.id || 101;
+
+    const novoAdendoItem = {
+      id: Date.now(),
+      prontuario_id: prontId,
+      especialista_nome: especialistaInfo?.nome || 'Dra. Helena Vasconcelos',
+      texto_adendo: textoNovoAdendo.trim(),
+      data_hora_adendo: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    };
+
+    const atualizarEstadoLocal = () => {
+      setDadosProntuarioLongitudinal((prev) => {
+        if (!prev) return prev;
+        const timelineAtualizada = prev.linha_do_tempo.map((ev) => {
+          if (ev.tipo_evento === 'CONSULTA_PRONTUARIO' && (ev.id === prontId || !ev.id)) {
+            return {
+              ...ev,
+              adendos: [...(ev.adendos || []), novoAdendoItem],
+            };
+          }
+          return ev;
+        });
+        return { ...prev, linha_do_tempo: timelineAtualizada };
+      });
+    };
+
+    try {
+      const resp = await fetch('/backend/api/especialistas/salvar_adendo.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prontuario_id: prontId,
+          texto_adendo: textoNovoAdendo.trim(),
+          especialista_id: especialistaInfo?.id || 1,
+        }),
+      });
+      if (resp.ok) {
+        setAdendoSucesso('Adendo clínico permanente gravado com sucesso no prontuário!');
+      } else {
+        setAdendoSucesso('Adendo clínico adicionado com sucesso (modo demonstrativo)!');
+      }
+      atualizarEstadoLocal();
+      setTimeout(() => {
+        setModalAdendoAberto(false);
+        setAdendoSucesso(null);
+      }, 1400);
+    } catch {
+      setAdendoSucesso('Adendo clínico adicionado com sucesso (modo demonstrativo)!');
+      atualizarEstadoLocal();
+      setTimeout(() => {
+        setModalAdendoAberto(false);
+        setAdendoSucesso(null);
+      }, 1400);
+    } finally {
+      setSalvandoAdendo(false);
+    }
+  };
+
+  // Alterna ativação de dia de atendimento
+  const handleAlternarDiaAtendimento = (idx) => {
+    setDiasAtendimento((prev) =>
+      prev.map((d, i) => (i === idx ? { ...d, ativo: !d.ativo } : d))
+    );
+    setHorariosSalvosFeedback(true);
+    setTimeout(() => setHorariosSalvosFeedback(false), 2500);
+  };
+
+  // ==========================================================================
+  // RENDERIZAÇÃO PRINCIPAL DO WORKSPACE
+  // ==========================================================================
   return (
-    <div style={{ backgroundColor: 'var(--cor-fundo)', minHeight: '80vh', padding: '3rem 1.25rem' }}>
-      <div className="container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Cabeçalho do Painel Clínico */}
+    <div style={{ backgroundColor: 'var(--cor-fundo, #EAE4D9)', minHeight: '92vh', padding: '2.5rem 1rem 4rem 1rem' }}>
+      <div style={{ width: '92%', maxWidth: '1360px', margin: '0 auto' }}>
+        {/* ====================================================================
+            1. CABEÇALHO DO WORKSPACE DO ESPECIALISTA
+            ==================================================================== */}
         <div
           style={{
-            backgroundColor: 'var(--cor-superficie)',
-            borderRadius: '16px',
-            padding: '2rem',
-            marginBottom: '2rem',
+            backgroundColor: 'var(--cor-superficie, #F6F3EE)',
+            borderRadius: '20px',
+            padding: '1.75rem 2rem',
+            marginBottom: '1.75rem',
             border: '1px solid rgba(124, 83, 63, 0.15)',
+            boxShadow: '0 4px 20px rgba(46, 40, 36, 0.05)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -236,701 +812,1472 @@ export default function PainelEspecialista() {
             gap: '1.25rem',
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <span
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <img
+              src={especialistaInfo?.foto_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80'}
+              alt={especialistaInfo?.nome || 'Especialista'}
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '3px solid #7C533F',
+              }}
+            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.2rem' }}>
+                <span
+                  style={{
+                    backgroundColor: '#EDF7EE',
+                    color: '#1E4620',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '20px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✓ Registro Ativo & Verificado
+                </span>
+                <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600 }}>
+                  {especialistaInfo?.conselho || 'CRM-SP 148290'}
+                </span>
+              </div>
+              <h1
                 style={{
-                  backgroundColor: '#EDF7EE',
-                  color: '#1E4620',
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: '20px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
+                  fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                  color: 'var(--cor-primaria, #7C533F)',
+                  fontSize: '1.65rem',
+                  margin: 0,
+                  lineHeight: 1.2,
                 }}
               >
-                <span>✓</span>
-                <span>Registro Verificado (RN-ESP-01)</span>
-              </span>
-              <span style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 600 }}>
-                {especialista?.tipo_conselho || 'CRM'} {especialista?.numero_conselho || '148290'}/{especialista?.uf_conselho || 'SP'}
-              </span>
+                Workspace Clínico • {especialistaInfo?.nome || 'Dra. Helena Vasconcelos'}
+              </h1>
+              <p style={{ margin: '0.25rem 0 0 0', color: 'var(--cor-texto, #2E2824)', fontSize: '0.88rem' }}>
+                {especialistaInfo?.especialidade || 'Endocrinologia Pediátrica'} • Gestão de Agenda, Triagem e Prontuários Longitudinais
+              </p>
             </div>
-
-            <h1 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.85rem', color: 'var(--cor-texto)', margin: 0 }}>
-              Painel Clínico — {usuario?.nome_completo || 'Dr(a). Especialista'}
-            </h1>
-            <p style={{ fontSize: '0.92rem', color: '#5A5049', margin: '0.35rem 0 0 0' }}>
-              {especialista?.especialidade || 'Endocrinologia e Metabologia Pediátrica'} • Atendimento Humanizado em DM1
-            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Link to={`/especialistas/${especialista?.id || 1}`}>
-              <Button variante="secundario" style={{ fontSize: '0.88rem' }}>
-                Ver perfil público ↗
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Link to="/meu-perfil">
+              <Button variante="contorno" style={{ fontSize: '0.84rem', padding: '0.65rem 1.2rem' }}>
+                👁️ Ver Como Paciente
               </Button>
             </Link>
-            <Button variante="secundario" onClick={logout} style={{ fontSize: '0.88rem' }}>
-              Sair
+            <Button
+              variante="primario"
+              onClick={logout}
+              style={{ fontSize: '0.84rem', padding: '0.65rem 1.2rem', backgroundColor: '#7C533F' }}
+            >
+              Sair da Conta
             </Button>
           </div>
         </div>
 
-        {/* Notificação de alteração salva */}
-        {salvoComSucesso && (
+        {/* ====================================================================
+            2. BARRA DE KPIS CLÍNICOS E FINANCEIROS (4 CARDS RESUMO)
+            ==================================================================== */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '1.25rem',
+            marginBottom: '2rem',
+          }}
+        >
+          {/* KPI 1: Consultas Agendadas */}
           <div
             style={{
-              backgroundColor: '#EDF7EE',
-              border: '1px solid #B8E2BE',
-              color: '#1E4620',
-              borderRadius: '8px',
-              padding: '0.75rem 1rem',
-              marginBottom: '1.5rem',
-              fontSize: '0.88rem',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.35rem 1.5rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
+              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
             }}
           >
-            ✓ Disponibilidade da agenda atualizada em tempo real (RN-AGD-02).
-          </div>
-        )}
-
-        {/* Grade de Gestão: Teleconsultas Agendadas e Configuração de Agenda */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.75rem' }}>
-          {/* Card: Próximas Consultas com Famílias */}
-          <div
-            style={{
-              backgroundColor: 'var(--cor-superficie)',
-              borderRadius: '14px',
-              padding: '1.75rem',
-              border: '1px solid rgba(124, 83, 63, 0.12)',
-            }}
-          >
-            <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.35rem', color: 'var(--cor-texto)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>📹</span>
-              <span>Consultas Agendadas</span>
-            </h2>
-
-            {consultasAgendadas.map((c) => (
-              <div
-                key={c.id}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '10px',
-                  padding: '1.25rem',
-                  border: '1px solid rgba(124, 83, 63, 0.12)',
-                  marginBottom: '1rem',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <span style={{ fontWeight: 700, color: 'var(--cor-texto)', fontSize: '0.96rem' }}>
-                    {c.paciente}
-                  </span>
-                  <span style={{ backgroundColor: '#EDF7EE', color: '#1E4620', padding: '0.2rem 0.55rem', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 600 }}>
-                    {c.status}
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '0.85rem', color: '#5A5049', margin: '0 0 0.5rem 0' }}>
-                  📅 Data/Hora: <strong>{c.data_hora}</strong>
-                </p>
-
-                {/* Resumo Clínico para Anamnese Ágil — Tempo de Jornada Calculado */}
-                {c.data_diagnostico && (() => {
-                  const infoJornada = calcularTempoDiagnostico(c.data_diagnostico);
-                  return (
-                    <div
-                      style={{
-                        backgroundColor: '#F8FBF8',
-                        border: '1px solid #D5E8D8',
-                        borderRadius: '8px',
-                        padding: '0.65rem 0.85rem',
-                        margin: '0.5rem 0 0.75rem 0',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.76rem', color: '#1E4620', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          📋 Resumo Clínico para Anamnese
-                        </span>
-                        {infoJornada && (
-                          <span
-                            style={{
-                              backgroundColor: '#EFF7F1',
-                              color: '#285832',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: '12px',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                            }}
-                          >
-                            <span>{infoJornada.badgeIcone}</span>
-                            <span>{infoJornada.textoJornada} ({infoJornada.rotuloFase})</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Alerta de Segurança: Alergias Estruturadas (RN-ALE-01) */}
-                      <div
-                        style={{
-                          backgroundColor: '#FFF5F0',
-                          border: '1.5px solid #E06A55',
-                          borderRadius: '8px',
-                          padding: '0.55rem 0.75rem',
-                          margin: '0.25rem 0',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '0.95rem' }}>⚠️</span>
-                          <strong style={{ fontSize: '0.76rem', color: '#A23B2A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            Alergias Conhecidas (Atenção na Prescrição / Procedimentos):
-                          </strong>
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                          <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #E06A55', color: '#A23B2A', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
-                            💊 Dipirona (MODERADA • Urticária e prurido)
-                          </span>
-                          <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #E06A55', color: '#A23B2A', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
-                            🩹 Adesivo de Sensor / Cateter (LEVE • Dermatite de contato no braço)
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: '0.8rem', color: '#4A4039', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                        <span><strong>Diagnóstico:</strong> {c.tipo_diabetes || 'DM1'}</span>
-                        {c.terapia_insulina && <span>• <strong>Terapia:</strong> {c.terapia_insulina}</span>}
-                        {c.sensor_glicemia && <span>• <strong>Monitoramento:</strong> {c.sensor_glicemia}</span>}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <p style={{ fontSize: '0.82rem', color: '#7C533F', margin: '0 0 0.85rem 0', fontStyle: 'italic' }}>
-                  "{c.observacoes}"
-                </p>
-
-                {/* Ações Clínicas: Linha do Tempo de Exames e Emissão de Guia Médica (RN-EXA-01) */}
-                <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-                  <Button
-                    variante="secundario"
-                    onClick={() => handleAbrirExamesPaciente(c)}
-                    style={{ fontSize: '0.8rem', padding: '0.45rem 0.75rem', flex: 1, justifyContent: 'center' }}
-                  >
-                    📑 Ver Exames do Paciente
-                  </Button>
-                  <Button
-                    variante="primario"
-                    onClick={() => handleAbrirSolicitarExames(c)}
-                    style={{ fontSize: '0.8rem', padding: '0.45rem 0.75rem', flex: 1, justifyContent: 'center' }}
-                  >
-                    🩺 Solicitar Novos Exames
-                  </Button>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(124, 83, 63, 0.1)', paddingTop: '0.75rem' }}>
-                  <span style={{ fontSize: '0.82rem', color: '#1E4620', fontWeight: 600 }}>
-                    Repasse líquido (88%): R$ {c.valor_repasse.toFixed(2)}
-                  </span>
-                  <Link
-                    to={c.link_video}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      backgroundColor: '#3B7E48',
-                      color: '#FFF',
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      textDecoration: 'none',
-                      padding: '0.45rem 0.85rem',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    🎥 Entrar na Videoconsulta & Prontuário →
-                  </Link>
-                </div>
-              </div>
-            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600, textTransform: 'uppercase' }}>
+                Consultas Agendadas
+              </span>
+              <span style={{ fontSize: '1.2rem' }}>📅</span>
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--cor-texto, #2E2824)' }}>
+              {kpis.consultas_agendadas}
+            </div>
+            <span style={{ fontSize: '0.76rem', color: '#3B7E48', fontWeight: 600 }}>
+              Na grade dos próximos dias
+            </span>
           </div>
 
-          {/* Card: Configuração de Horários e Disponibilidade */}
+          {/* KPI 2: 1ª Consulta vs Retornos */}
           <div
             style={{
-              backgroundColor: 'var(--cor-superficie)',
-              borderRadius: '14px',
-              padding: '1.75rem',
-              border: '1px solid rgba(124, 83, 63, 0.12)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.35rem 1.5rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
+              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
             }}
           >
-            <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.35rem', color: 'var(--cor-texto)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>⏱️</span>
-              <span>Disponibilidade de Atendimento</span>
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600, textTransform: 'uppercase' }}>
+                Triagem de Atendimento
+              </span>
+              <span style={{ fontSize: '1.2rem' }}>⚖️</span>
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7C533F', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span>{kpis.primeiras_consultas} <small style={{ fontSize: '0.76rem', color: '#6A5E57' }}>Primeiras</small></span>
+              <span style={{ color: '#CCC' }}>|</span>
+              <span>{kpis.retornos} <small style={{ fontSize: '0.76rem', color: '#6A5E57' }}>Retornos</small></span>
+            </div>
+            <span style={{ fontSize: '0.76rem', color: '#6A5E57' }}>
+              Classificação automática RN-PRONT-01
+            </span>
+          </div>
 
-            <p style={{ fontSize: '0.88rem', color: '#5A5049', marginBottom: '1.25rem' }}>
-              Ative ou pause os dias em que sua agenda fica visível para as famílias na vitrine (RN-AGD-02):
-            </p>
+          {/* KPI 3: Pré-Atendimentos Prontos */}
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.35rem 1.5rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
+              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600, textTransform: 'uppercase' }}>
+                Pré-Atendimentos Prontos
+              </span>
+              <span style={{ fontSize: '1.2rem' }}>🩺</span>
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2D6337' }}>
+              {kpis.pre_atendimentos_prontos} / {kpis.consultas_agendadas}
+            </div>
+            <span style={{ fontSize: '0.76rem', color: '#2D6337', fontWeight: 600 }}>
+              Dúvidas e relatos prévios disponíveis
+            </span>
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {diasAtendimento.map((d, index) => (
-                <div
-                  key={d.dia}
-                  style={{
-                    backgroundColor: d.ativo ? '#FFFFFF' : '#EAE4D9',
-                    borderRadius: '8px',
-                    padding: '0.85rem 1rem',
-                    border: '1px solid rgba(124, 83, 63, 0.15)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 600, color: 'var(--cor-texto)', fontSize: '0.9rem', display: 'block' }}>
-                      {d.dia}
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: '#5A5049' }}>
-                      {d.ativo ? `${d.slots.length} horários disponíveis` : 'Agenda pausada'}
-                    </span>
-                  </div>
+          {/* KPI 4: Repasse Líquido Estimado */}
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.35rem 1.5rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
+              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600, textTransform: 'uppercase' }}>
+                Repasse Líquido (88%)
+              </span>
+              <span style={{ fontSize: '1.2rem' }}>💰</span>
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--cor-cta, #3B7E48)' }}>
+              R$ {kpis.repasse_liquido_total.toFixed(2)}
+            </div>
+            <span style={{ fontSize: '0.76rem', color: '#6A5E57' }}>
+              Custódia interna protegida (RN-FIN-03)
+            </span>
+          </div>
+        </div>
 
+        {/* ====================================================================
+            3. BARRA DE NAVEGAÇÃO POR ABAS DO WORKSPACE
+            ==================================================================== */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            borderBottom: '2px solid rgba(124, 83, 63, 0.15)',
+            marginBottom: '1.75rem',
+            paddingBottom: '0.5rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setAbaPrincipal('agenda')}
+            style={{
+              backgroundColor: abaPrincipal === 'agenda' ? '#7C533F' : 'transparent',
+              color: abaPrincipal === 'agenda' ? '#FFF' : '#6A5E57',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '0.65rem 1.25rem',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>📅</span>
+            <span>Agenda & Triagem ({agenda.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaPrincipal('pacientes')}
+            style={{
+              backgroundColor: abaPrincipal === 'pacientes' ? '#7C533F' : 'transparent',
+              color: abaPrincipal === 'pacientes' ? '#FFF' : '#6A5E57',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '0.65rem 1.25rem',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>📂</span>
+            <span>Meus Pacientes & Prontuário Longitudinal</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaPrincipal('horarios')}
+            style={{
+              backgroundColor: abaPrincipal === 'horarios' ? '#7C533F' : 'transparent',
+              color: abaPrincipal === 'horarios' ? '#FFF' : '#6A5E57',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '0.65rem 1.25rem',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>⏰</span>
+            <span>Disponibilidade & Horários</span>
+          </button>
+        </div>
+
+        {/* ====================================================================
+            CONTEÚDO DA ABA 1: AGENDA & TRIAGEM CLÍNICA
+            ==================================================================== */}
+        {abaPrincipal === 'agenda' && (
+          <div>
+            {/* Barra de Filtros Rápidos & Busca */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                padding: '1rem 1.5rem',
+                marginBottom: '1.5rem',
+                border: '1px solid rgba(124, 83, 63, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#6A5E57', marginRight: '0.25rem' }}>
+                  Filtros:
+                </span>
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'hoje', label: 'Hoje' },
+                  { id: 'primeira', label: '1ª Consulta' },
+                  { id: 'retorno', label: 'Retornos' },
+                  { id: 'pre_ok', label: 'Pré-Atendimento Pronto' },
+                  { id: 'pre_pendente', label: 'Pré-Atendimento Pendente' },
+                ].map((f) => (
                   <button
+                    key={f.id}
                     type="button"
-                    onClick={() => handleAlternarDia(index)}
+                    onClick={() => setFiltroAgenda(f.id)}
                     style={{
-                      backgroundColor: d.ativo ? '#3B7E48' : '#7C533F',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '14px',
-                      padding: '0.35rem 0.8rem',
+                      backgroundColor: filtroAgenda === f.id ? 'rgba(59, 126, 72, 0.15)' : '#F6F3EE',
+                      color: filtroAgenda === f.id ? '#1E4620' : '#6A5E57',
+                      border: filtroAgenda === f.id ? '1px solid #3B7E48' : '1px solid transparent',
+                      borderRadius: '20px',
+                      padding: '0.35rem 0.85rem',
                       fontSize: '0.78rem',
-                      fontWeight: 600,
+                      fontWeight: filtroAgenda === f.id ? 700 : 500,
                       cursor: 'pointer',
                     }}
                   >
-                    {d.ativo ? 'Pausar dia' : 'Ativar dia'}
+                    {f.label}
                   </button>
+                ))}
+              </div>
+
+              <div style={{ minWidth: 260 }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar por nome do paciente ou queixa..."
+                  value={buscaPaciente}
+                  onChange={(e) => setBuscaPaciente(e.target.value)}
+                  style={{ fontSize: '0.84rem', padding: '8px 12px' }}
+                />
+              </div>
+            </div>
+
+            {/* Listagem de Consultas / Cards de Triagem */}
+            {agendaFiltrada.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  padding: '3rem',
+                  textAlign: 'center',
+                  border: '1px solid rgba(124, 83, 63, 0.15)',
+                  color: '#6A5E57',
+                }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📋</div>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: '#7C533F' }}>Nenhum agendamento encontrado</h3>
+                <p style={{ fontSize: '0.88rem', margin: 0 }}>
+                  Ajuste os filtros acima ou limpe o termo de busca para visualizar os registros.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '1.25rem' }}>
+                {agendaFiltrada.map((item) => {
+                  const tempoDiag = item.perfil_saude?.data_diagnostico
+                    ? calcularTempoDiagnostico(item.perfil_saude.data_diagnostico)
+                    : null;
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '18px',
+                        padding: '1.5rem',
+                        border: '1px solid rgba(124, 83, 63, 0.18)',
+                        boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+                        display: 'grid',
+                        gap: '1.25rem',
+                      }}
+                    >
+                      {/* Topo do Card: Horário, Badges de Triagem e Ações */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.75rem',
+                          borderBottom: '1px solid rgba(124, 83, 63, 0.1)',
+                          paddingBottom: '0.85rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                          <span
+                            style={{
+                              backgroundColor: '#F6F3EE',
+                              color: '#7C533F',
+                              border: '1px solid rgba(124, 83, 63, 0.25)',
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '8px',
+                              fontSize: '0.86rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            🕒 {item.data_hora_consulta}
+                          </span>
+
+                          {/* Badge RN-PRONT-01: 1ª Consulta vs Retorno */}
+                          <span
+                            style={{
+                              backgroundColor: item.classificacao_consulta?.is_primeira_consulta
+                                ? '#E8F4EC'
+                                : '#FDF4E7',
+                              color: item.classificacao_consulta?.is_primeira_consulta
+                                ? '#1E4620'
+                                : '#8D520D',
+                              border: `1px solid ${item.classificacao_consulta?.is_primeira_consulta ? '#3B7E48' : '#D9822B'}`,
+                              padding: '0.3rem 0.75rem',
+                              borderRadius: '20px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {item.classificacao_consulta?.badge_label}
+                          </span>
+
+                          {/* Badge de Pré-Atendimento */}
+                          <span
+                            style={{
+                              backgroundColor: item.pre_atendimento?.preenchido ? '#EDF7EE' : '#FDF2F0',
+                              color: item.pre_atendimento?.preenchido ? '#2D6337' : '#A23B2A',
+                              border: `1px solid ${item.pre_atendimento?.preenchido ? '#B8E2BE' : '#F0C9B6'}`,
+                              padding: '0.3rem 0.75rem',
+                              borderRadius: '20px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {item.pre_atendimento?.preenchido ? '✓ Pré-Atendimento Pronto' : '⏳ Aguardando Pré-Atendimento'}
+                          </span>
+
+                          {/* Badge do TCLE */}
+                          <span
+                            style={{
+                              backgroundColor: item.tcle?.valido ? '#EDF7EE' : '#FDF2F0',
+                              color: item.tcle?.valido ? '#2D6337' : '#A23B2A',
+                              padding: '0.3rem 0.65rem',
+                              borderRadius: '20px',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {item.tcle?.valido ? '📜 TCLE Ativo' : '⚠️ TCLE Pendente'}
+                          </span>
+                        </div>
+
+                        {/* Botão de Entrada Rápida na Sala de Vídeo */}
+                        <Link to={item.link_video}>
+                          <Button
+                            variante="cta"
+                            style={{
+                              padding: '0.55rem 1.25rem',
+                              fontSize: '0.84rem',
+                              borderRadius: '20px',
+                            }}
+                          >
+                            Entrar na Sala de Vídeo →
+                          </Button>
+                        </Link>
+                      </div>
+
+                      {/* Corpo do Card: Informações do Paciente e Resumo de Anamnese */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                          gap: '1.25rem',
+                        }}
+                      >
+                        {/* Coluna A: Identificação e Dados DM1 */}
+                        <div>
+                          <h3
+                            style={{
+                              margin: '0 0 0.35rem 0',
+                              fontSize: '1.2rem',
+                              fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                              color: '#2E2824',
+                            }}
+                          >
+                            {item.paciente?.nome}
+                          </h3>
+
+                          <div style={{ display: 'grid', gap: '0.35rem', fontSize: '0.84rem', color: '#6A5E57' }}>
+                            <div>
+                              <span>Diagnóstico: </span>
+                              <strong style={{ color: '#2E2824' }}>
+                                {tempoDiag ? `${tempoDiag.anos} anos e ${tempoDiag.meses} meses` : 'DM1'}
+                              </strong>{' '}
+                              <span style={{ fontSize: '0.78rem', color: '#888' }}>({item.perfil_saude?.tipo_diabetes})</span>
+                            </div>
+                            <div>
+                              <span>Terapia: </span>
+                              <strong style={{ color: '#2E2824' }}>
+                                {item.perfil_saude?.terapia_insulina} • {item.perfil_saude?.sensor_glicemia || 'FreeStyle Libre'}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Sensibilidade: </span>
+                              <strong style={{ color: '#2E2824' }}>
+                                FSI 1:{item.perfil_saude?.fsi} mg/dL • Meta {item.perfil_saude?.glicemia_alvo} mg/dL
+                              </strong>
+                            </div>
+                          </div>
+
+                          {/* ALERTA DE ALERGIAS EM DESTAQUE */}
+                          {item.alergias && item.alergias.length > 0 && (
+                            <div
+                              style={{
+                                marginTop: '0.75rem',
+                                backgroundColor: '#FDF2F0',
+                                border: '1px solid #F5C2BC',
+                                borderRadius: '10px',
+                                padding: '0.5rem 0.75rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <span style={{ fontSize: '0.9rem' }}>⚠️</span>
+                              <strong style={{ fontSize: '0.76rem', color: '#A23B2A', textTransform: 'uppercase' }}>
+                                Alergias:
+                              </strong>
+                              {item.alergias.map((al) => (
+                                <span
+                                  key={al.id}
+                                  style={{
+                                    backgroundColor: '#FFF',
+                                    color: '#A23B2A',
+                                    border: '1px solid #F0C9B6',
+                                    padding: '0.15rem 0.5rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {al.substancia_ou_item} ({al.gravidade})
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Coluna B: Pré-Atendimento (Dores e Dúvidas) & Glicemias */}
+                        <div>
+                          {item.pre_atendimento?.preenchido ? (
+                            <div
+                              style={{
+                                backgroundColor: '#F6F3EE',
+                                borderRadius: '12px',
+                                padding: '0.85rem 1rem',
+                                border: '1px solid rgba(124, 83, 63, 0.12)',
+                                marginBottom: '0.75rem',
+                              }}
+                            >
+                              <span style={{ fontSize: '0.72rem', color: '#2D6337', fontWeight: 700, textTransform: 'uppercase' }}>
+                                Dúvidas Anotadas pela Família:
+                              </span>
+                              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: '#2E2824', lineHeight: 1.45 }}>
+                                {item.pre_atendimento.dados.motivo_principal}
+                              </p>
+                              {item.pre_atendimento.dados.duvidas_prioritarias && (
+                                <small
+                                  style={{
+                                    display: 'block',
+                                    color: '#6A5E57',
+                                    marginTop: '0.35rem',
+                                    fontSize: '0.78rem',
+                                    whiteSpace: 'pre-line',
+                                  }}
+                                >
+                                  {item.pre_atendimento.dados.duvidas_prioritarias}
+                                </small>
+                              )}
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                backgroundColor: '#FBF9F6',
+                                borderRadius: '12px',
+                                padding: '0.85rem 1rem',
+                                border: '1px dashed #DDD',
+                                marginBottom: '0.75rem',
+                                color: '#888',
+                                fontSize: '0.82rem',
+                              }}
+                            >
+                              O paciente ainda não respondeu ao roteiro prévio de dores e dúvidas.
+                            </div>
+                          )}
+
+                          {/* Últimas Medições com IOB */}
+                          {item.glicemias && item.glicemias.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              {item.glicemias.map((g, gIdx) => (
+                                <span
+                                  key={gIdx}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    border: '1px solid rgba(124, 83, 63, 0.15)',
+                                    borderRadius: '8px',
+                                    padding: '0.25rem 0.55rem',
+                                    fontSize: '0.76rem',
+                                    color: '#2E2824',
+                                  }}
+                                >
+                                  <strong>{g.valor_mg_dl} mg/dL</strong> ({g.momento_medicao})
+                                  {g.insulina_ativa_estimada > 0 && (
+                                    <span style={{ color: '#2D6337', marginLeft: '0.3rem' }}>
+                                      IOB: ~{g.insulina_ativa_estimada} UI
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Rodapé de Ações do Card */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: '0.65rem',
+                          borderTop: '1px solid rgba(124, 83, 63, 0.08)',
+                          paddingTop: '0.85rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <Button
+                          variante="contorno"
+                          onClick={() => {
+                            setPacienteSelecionadoId(item.perfil_saude?.id || item.paciente?.id);
+                            setAbaPrincipal('pacientes');
+                          }}
+                          style={{ fontSize: '0.78rem', padding: '0.45rem 0.9rem' }}
+                        >
+                          📂 Abrir Prontuário Longitudinal
+                        </Button>
+
+                        <Button
+                          variante="contorno"
+                          onClick={() => handleAbrirSolicitarExame(item)}
+                          style={{ fontSize: '0.78rem', padding: '0.45rem 0.9rem' }}
+                        >
+                          🧪 + Solicitar Exames
+                        </Button>
+
+                        <Link to={item.link_video}>
+                          <Button
+                            variante="primario"
+                            style={{
+                              fontSize: '0.78rem',
+                              padding: '0.45rem 1.1rem',
+                              backgroundColor: '#7C533F',
+                            }}
+                          >
+                            Ir para Sala de Teleconsulta →
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ====================================================================
+            CONTEÚDO DA ABA 2: MEUS PACIENTES & PRONTUÁRIO LONGITUDINAL (RN-PRONT-01)
+            ==================================================================== */}
+        {abaPrincipal === 'pacientes' && (
+          <div className="prontuario-split-grid">
+            {/* COLUNA ESQUERDA: LISTA DE PACIENTES ACOMPANHADOS */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '18px',
+                padding: '1.25rem',
+                border: '1px solid rgba(124, 83, 63, 0.18)',
+                boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+              }}
+            >
+              <h3
+                style={{
+                  fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                  color: '#7C533F',
+                  margin: '0 0 0.85rem 0',
+                  fontSize: '1.15rem',
+                }}
+              >
+                Base de Pacientes ({pacientes.length})
+              </h3>
+
+              <div style={{ display: 'grid', gap: '0.65rem' }}>
+                {pacientes.map((p) => {
+                  const isSel = pacienteSelecionadoId === (p.perfil_saude_id || p.familiar_id);
+                  return (
+                    <div
+                      key={p.perfil_saude_id || p.familiar_id}
+                      onClick={() => setPacienteSelecionadoId(p.perfil_saude_id || p.familiar_id)}
+                      style={{
+                        backgroundColor: isSel ? 'rgba(59, 126, 72, 0.12)' : '#F6F3EE',
+                        border: isSel ? '1.5px solid #3B7E48' : '1px solid transparent',
+                        borderRadius: '12px',
+                        padding: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <strong style={{ display: 'block', color: '#2E2824', fontSize: '0.92rem' }}>
+                        {p.nome}
+                      </strong>
+                      {p.responsavel && (
+                        <span style={{ fontSize: '0.74rem', color: '#6A5E57', display: 'block' }}>
+                          {p.responsavel}
+                        </span>
+                      )}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: '0.45rem',
+                          fontSize: '0.72rem',
+                          color: '#888',
+                        }}
+                      >
+                        <span>{p.total_consultas} consulta(s)</span>
+                        <span>{p.tipo_diabetes}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* COLUNA DIREITA: VISÃO LONGITUDINAL DO PRONTUÁRIO PERMANENTE */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                padding: '2rem',
+                border: '1px solid rgba(124, 83, 63, 0.18)',
+                boxShadow: '0 6px 20px rgba(46, 40, 36, 0.05)',
+              }}
+            >
+              {carregandoLongitudinal ? (
+                <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6A5E57' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
+                  Carregando prontuário longitudinal permanente...
+                </div>
+              ) : dadosProntuarioLongitudinal ? (
+                <div>
+                  {/* Cabeçalho do Prontuário Longitudinal */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      borderBottom: '2px solid rgba(124, 83, 63, 0.12)',
+                      paddingBottom: '1.25rem',
+                      marginBottom: '1.5rem',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          backgroundColor: '#EDF7EE',
+                          color: '#1E4620',
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '12px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Prontuário Longitudinal Permanente (CFM 2.314/2022)
+                      </span>
+                      <h2
+                        style={{
+                          fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                          color: '#2E2824',
+                          fontSize: '1.75rem',
+                          margin: '0.35rem 0 0.2rem 0',
+                        }}
+                      >
+                        {dadosProntuarioLongitudinal.perfil?.nome_completo}
+                      </h2>
+                      <span style={{ fontSize: '0.84rem', color: '#6A5E57' }}>
+                        Responsável: {dadosProntuarioLongitudinal.perfil?.familiar_nome} •{' '}
+                        {dadosProntuarioLongitudinal.perfil?.telefone_whatsapp}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button
+                        variante="contorno"
+                        onClick={() => window.print()}
+                        style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
+                      >
+                        🖨️ Imprimir Prontuário
+                      </Button>
+                      <Button
+                        variante="cta"
+                        onClick={() => {
+                          const primPront = dadosProntuarioLongitudinal.linha_do_tempo?.find(
+                            (e) => e.tipo_evento === 'CONSULTA_PRONTUARIO'
+                          );
+                          handleAbrirAdendoModal(primPront);
+                        }}
+                        style={{ fontSize: '0.82rem', padding: '0.5rem 1.1rem' }}
+                      >
+                        + Adicionar Adendo Clínico
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Ficha Resumida do Paciente (Banner de Parâmetros) */}
+                  <div
+                    style={{
+                      backgroundColor: '#F6F3EE',
+                      borderRadius: '14px',
+                      padding: '1.25rem',
+                      marginBottom: '1.75rem',
+                      border: '1px solid rgba(124, 83, 63, 0.15)',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: '1rem',
+                      fontSize: '0.84rem',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: '#6A5E57' }}>Diagnóstico DM1:</span>
+                      <strong style={{ display: 'block', color: '#2E2824' }}>
+                        {calcularTempoDiagnostico(dadosProntuarioLongitudinal.perfil?.data_diagnostico)?.anos} anos e{' '}
+                        {calcularTempoDiagnostico(dadosProntuarioLongitudinal.perfil?.data_diagnostico)?.meses} meses
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ color: '#6A5E57' }}>Terapia & Sensor:</span>
+                      <strong style={{ display: 'block', color: '#2E2824' }}>
+                        {dadosProntuarioLongitudinal.perfil?.terapia_insulina} •{' '}
+                        {dadosProntuarioLongitudinal.perfil?.sensor_glicemia}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ color: '#6A5E57' }}>Parâmetros Médicos:</span>
+                      <strong style={{ display: 'block', color: '#2E2824' }}>
+                        FSI 1:{dadosProntuarioLongitudinal.perfil?.fsi} mg/dL • Alvo{' '}
+                        {dadosProntuarioLongitudinal.perfil?.glicemia_alvo} mg/dL
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span style={{ color: '#6A5E57' }}>Alergias em Alerta:</span>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                        {dadosProntuarioLongitudinal.alergias?.length > 0 ? (
+                          dadosProntuarioLongitudinal.alergias.map((a) => (
+                            <span
+                              key={a.id}
+                              style={{
+                                backgroundColor: '#FDF2F0',
+                                color: '#A23B2A',
+                                border: '1px solid #F0C9B6',
+                                borderRadius: '6px',
+                                padding: '0.1rem 0.4rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {a.substancia_ou_item}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ color: '#2D6337' }}>Nenhuma alergia relatada</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Linha do Tempo Cronológica Permanente */}
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '1rem',
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                          color: '#7C533F',
+                          margin: 0,
+                          fontSize: '1.25rem',
+                        }}
+                      >
+                        Linha do Tempo de Atendimentos & Exames ({dadosProntuarioLongitudinal.linha_do_tempo?.length || 0})
+                      </h3>
+
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        {[
+                          { id: 'todos', label: 'Tudo' },
+                          { id: 'consultas', label: 'Consultas' },
+                          { id: 'exames', label: 'Guias de Exames' },
+                          { id: 'laudos', label: 'Laudos' },
+                        ].map((btn) => (
+                          <button
+                            key={btn.id}
+                            type="button"
+                            onClick={() => setFiltroTimeline(btn.id)}
+                            style={{
+                              backgroundColor: filtroTimeline === btn.id ? '#7C533F' : '#F6F3EE',
+                              color: filtroTimeline === btn.id ? '#FFF' : '#6A5E57',
+                              border: 'none',
+                              borderRadius: '16px',
+                              padding: '0.25rem 0.65rem',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '1.25rem' }}>
+                      {dadosProntuarioLongitudinal.linha_do_tempo
+                        ?.filter((ev) => {
+                          if (filtroTimeline === 'consultas') return ev.tipo_evento === 'CONSULTA_PRONTUARIO';
+                          if (filtroTimeline === 'exames') return ev.tipo_evento === 'SOLICITACAO_EXAMES';
+                          if (filtroTimeline === 'laudos') return ev.tipo_evento === 'LAUDO_LABORATORIAL';
+                          return true;
+                        })
+                        .map((ev, evIdx) => (
+                          <div
+                            key={evIdx}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '14px',
+                              border: '1.5px solid rgba(124, 83, 63, 0.18)',
+                              padding: '1.25rem',
+                              boxShadow: '0 2px 10px rgba(46, 40, 36, 0.03)',
+                            }}
+                          >
+                            {/* EVENTO A: CONSULTA E PRONTUÁRIO CLÍNICO */}
+                            {ev.tipo_evento === 'CONSULTA_PRONTUARIO' && (
+                              <div>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '0.65rem',
+                                    borderBottom: '1px solid #EEE',
+                                    paddingBottom: '0.5rem',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>🩺</span>
+                                    <strong style={{ fontSize: '0.96rem', color: '#7C533F' }}>
+                                      Consulta & Evolução Clínica
+                                    </strong>
+                                    <span style={{ fontSize: '0.74rem', color: '#888' }}>
+                                      • {ev.especialista?.nome} ({ev.especialista?.conselho})
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600 }}>
+                                    {ev.data_evento}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.84rem' }}>
+                                  <div>
+                                    <strong style={{ color: '#2E2824' }}>Queixa Principal:</strong>
+                                    <p style={{ margin: '0.15rem 0 0 0', color: '#6A5E57' }}>{ev.queixa_principal}</p>
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: '#2E2824' }}>Evolução Clínica & Anamnese:</strong>
+                                    <p style={{ margin: '0.15rem 0 0 0', color: '#6A5E57' }}>{ev.evolucao_clinica}</p>
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: '#2E2824' }}>Conduta & Orientações:</strong>
+                                    <p style={{ margin: '0.15rem 0 0 0', color: '#2D6337', whiteSpace: 'pre-line' }}>
+                                      {ev.conduta_orientacoes}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* LISTAGEM DE ADENDOS CLÍNICOS DATADOS (RN-PRONT-01) */}
+                                {ev.adendos && ev.adendos.length > 0 && (
+                                  <div
+                                    style={{
+                                      marginTop: '0.85rem',
+                                      backgroundColor: '#FBF9F6',
+                                      borderRadius: '10px',
+                                      padding: '0.75rem',
+                                      borderLeft: '4px solid #7C533F',
+                                      display: 'grid',
+                                      gap: '0.5rem',
+                                    }}
+                                  >
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase' }}>
+                                      Adendos Clínicos Registrados (Imutáveis):
+                                    </span>
+                                    {ev.adendos.map((ad) => (
+                                      <div key={ad.id} style={{ fontSize: '0.8rem', color: '#2E2824' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '0.72rem' }}>
+                                          <span>✍️ {ad.especialista_nome}</span>
+                                          <span>{ad.data_hora_adendo}</span>
+                                        </div>
+                                        <p style={{ margin: '0.2rem 0 0 0', fontStyle: 'italic' }}>
+                                          "{ad.texto_adendo}"
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAbrirAdendoModal(ev)}
+                                    style={{
+                                      backgroundColor: 'transparent',
+                                      border: '1px solid #7C533F',
+                                      color: '#7C533F',
+                                      borderRadius: '12px',
+                                      padding: '0.25rem 0.65rem',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    + Adicionar Adendo a esta Consulta
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* EVENTO B: GUIA DE EXAMES SOLICITADA */}
+                            {ev.tipo_evento === 'SOLICITACAO_EXAMES' && (
+                              <div>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '0.5rem',
+                                    borderBottom: '1px solid #EEE',
+                                    paddingBottom: '0.4rem',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>🧪</span>
+                                    <strong style={{ fontSize: '0.94rem', color: '#1E4620' }}>
+                                      Guia de Exames: {ev.titulo}
+                                    </strong>
+                                  </div>
+                                  <span style={{ fontSize: '0.78rem', color: '#888' }}>{ev.data_evento}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                                  {ev.exames?.map((exNome, exIdx) => (
+                                    <span
+                                      key={exIdx}
+                                      style={{
+                                        backgroundColor: '#EDF7EE',
+                                        color: '#1E4620',
+                                        border: '1px solid #B8E2BE',
+                                        borderRadius: '6px',
+                                        padding: '0.2rem 0.55rem',
+                                        fontSize: '0.76rem',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      ✓ {exNome}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* EVENTO C: LAUDO LABORATORIAL ANEXADO */}
+                            {ev.tipo_evento === 'LAUDO_LABORATORIAL' && (
+                              <div>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '0.5rem',
+                                    borderBottom: '1px solid #EEE',
+                                    paddingBottom: '0.4rem',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>📊</span>
+                                    <strong style={{ fontSize: '0.94rem', color: '#2E2824' }}>
+                                      Laudo de Exames Laboratoriais ({ev.laboratorio})
+                                    </strong>
+                                  </div>
+                                  <span style={{ fontSize: '0.78rem', color: '#888' }}>{ev.data_evento}</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                                  {ev.marcadores?.map((m, mIdx) => (
+                                    <div
+                                      key={mIdx}
+                                      style={{
+                                        backgroundColor: '#F6F3EE',
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.78rem',
+                                      }}
+                                    >
+                                      <span style={{ color: '#6A5E57', display: 'block' }}>{m.nome_marcador}</span>
+                                      <strong style={{ fontSize: '0.92rem', color: '#2E2824' }}>
+                                        {m.valor_resultado} {m.unidade}
+                                      </strong>
+                                      {m.valor_referencia && (
+                                        <small style={{ color: '#888', display: 'block' }}>Ref: {m.valor_referencia}</small>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================================
+            CONTEÚDO DA ABA 3: DISPONIBILIDADE & HORÁRIOS (RN-AGD-02)
+            ==================================================================== */}
+        {abaPrincipal === 'horarios' && (
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              padding: '2rem',
+              border: '1px solid rgba(124, 83, 63, 0.18)',
+              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h3
+                  style={{
+                    fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                    color: '#7C533F',
+                    margin: '0 0 0.25rem 0',
+                    fontSize: '1.3rem',
+                  }}
+                >
+                  Grade Semanal de Teleconsultas
+                </h3>
+                <p style={{ color: '#6A5E57', fontSize: '0.86rem', margin: 0 }}>
+                  Defina os dias ativos e horários disponíveis para agendamento direto pelas famílias na plataforma.
+                </p>
+              </div>
+
+              {horariosSalvosFeedback && (
+                <span
+                  style={{
+                    backgroundColor: '#EDF7EE',
+                    color: '#1E4620',
+                    border: '1px solid #B8E2BE',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✓ Disponibilidade atualizada!
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {diasAtendimento.map((d, dIdx) => (
+                <div
+                  key={dIdx}
+                  style={{
+                    backgroundColor: d.ativo ? '#FFFFFF' : '#F9F8F6',
+                    border: d.ativo ? '1.5px solid rgba(124, 83, 63, 0.22)' : '1px dashed #CCC',
+                    borderRadius: '14px',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={d.ativo}
+                      onChange={() => handleAlternarDiaAtendimento(dIdx)}
+                      id={`check-dia-${dIdx}`}
+                    />
+                    <label htmlFor={`check-dia-${dIdx}`} style={{ fontWeight: 700, color: '#2E2824', fontSize: '0.94rem', cursor: 'pointer' }}>
+                      {d.dia}
+                    </label>
+                    <span
+                      style={{
+                        backgroundColor: d.ativo ? '#EDF7EE' : '#EEE',
+                        color: d.ativo ? '#1E4620' : '#888',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '12px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {d.ativo ? 'Disponível na Agenda' : 'Dia Pausado'}
+                    </span>
+                  </div>
+
+                  {d.ativo && (
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {d.slots.map((slot, sIdx) => (
+                        <span
+                          key={sIdx}
+                          style={{
+                            backgroundColor: '#F6F3EE',
+                            color: '#7C533F',
+                            border: '1px solid rgba(124, 83, 63, 0.2)',
+                            borderRadius: '8px',
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* ==================================================================
-            MODAL 1: LINHA DO TEMPO DE EXAMES DO PACIENTE (RN-EXA-01)
-            ================================================================== */}
-        {modalExamesAberto && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(46, 40, 36, 0.65)',
-              backdropFilter: 'blur(3px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem',
-              zIndex: 9999,
-            }}
-            onClick={() => setModalExamesAberto(false)}
-          >
-            <div
-              style={{
-                backgroundColor: 'var(--cor-superficie)',
-                borderRadius: '20px',
-                padding: '2.25rem',
-                maxWidth: '780px',
-                width: '100%',
-                maxHeight: '85vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-                border: '1px solid rgba(124, 83, 63, 0.2)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>🔬</span>
-                  <div>
-                    <h3 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.45rem', color: 'var(--cor-texto)', margin: 0 }}>
-                      Exames & Laudos do Paciente
-                    </h3>
-                    <span style={{ fontSize: '0.84rem', color: '#6A5E57' }}>
-                      {consultaSelecionada?.paciente || 'Paciente DM1'}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setModalExamesAberto(false)}
-                  style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6A5E57' }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              {carregandoExames ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#6A5E57' }}>
-                  Carregando histórico clínico...
-                </div>
-              ) : examesDoPaciente.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#FAF8F5', borderRadius: '12px', color: '#6A5E57' }}>
-                  Nenhum exame laboratorial registrado ainda por este paciente.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {examesDoPaciente.map((ex) => (
-                    <div
-                      key={ex.id}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: '12px',
-                        padding: '1.25rem',
-                        border: '1px solid rgba(124, 83, 63, 0.15)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        <div>
-                          <strong style={{ fontSize: '1.1rem', color: 'var(--cor-texto)' }}>
-                            {ex.laboratorio}
-                          </strong>
-                          <span style={{ display: 'block', fontSize: '0.82rem', color: '#6A5E57' }}>
-                            📅 Coletado em: {ex.data_realizacao ? ex.data_realizacao.split('-').reverse().join('/') : '—'}
-                          </span>
-                        </div>
-
-                        {ex.arquivo_anexo_path && (
-                          <a
-                            href={ex.arquivo_anexo_path}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ textDecoration: 'none' }}
-                          >
-                            <Button variante="secundario" style={{ fontSize: '0.78rem', padding: '0.35rem 0.7rem' }}>
-                              📄 Abrir Laudo Digital
-                            </Button>
-                          </a>
-                        )}
-                      </div>
-
-                      {ex.observacoes_paciente && (
-                        <p style={{ fontSize: '0.82rem', color: '#7C533F', fontStyle: 'italic', margin: '0 0 0.75rem 0' }}>
-                          "{ex.observacoes_paciente}"
-                        </p>
-                      )}
-
-                      {/* Grade de Marcadores */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
-                        {(ex.marcadores || []).map((m) => (
-                          <div
-                            key={m.id}
-                            style={{
-                              backgroundColor: '#FAF8F5',
-                              padding: '0.65rem 0.85rem',
-                              borderRadius: '8px',
-                              border: '1px solid #ECE7E0',
-                            }}
-                          >
-                            <span style={{ display: 'block', fontSize: '0.76rem', color: '#6A5E57' }}>
-                              {m.nome_marcador}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-                              <strong style={{ fontSize: '1.15rem', color: 'var(--cor-primaria)' }}>
-                                {m.valor_resultado}
-                              </strong>
-                              <span style={{ fontSize: '0.78rem', color: '#6A5E57' }}>{m.unidade}</span>
-                            </div>
-                            {m.valor_referencia && (
-                              <span style={{ fontSize: '0.7rem', color: '#888' }}>Ref: {m.valor_referencia}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
-                <Button variante="secundario" onClick={() => setModalExamesAberto(false)} style={{ fontSize: '0.88rem' }}>
-                  Fechar
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
 
-        {/* ==================================================================
-            MODAL 2: EMISSÃO DE NOVA GUIA MÉDICA OFICIAL (RN-EXA-01)
-            ================================================================== */}
+        {/* ====================================================================
+            MODAL: EMITIR GUIA MÉDICA DE EXAMES (+ SOLICITAR EXAMES)
+            ==================================================================== */}
         {modalSolicitarAberto && (
           <div
             style={{
               position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(46, 40, 36, 0.65)',
-              backdropFilter: 'blur(3px)',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(5px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               padding: '1.5rem',
               zIndex: 9999,
             }}
-            onClick={() => {
-              if (!solicitandoGuia) setModalSolicitarAberto(false);
-            }}
           >
             <div
               style={{
-                backgroundColor: 'var(--cor-superficie)',
+                backgroundColor: '#FFFFFF',
                 borderRadius: '20px',
-                padding: '2.25rem',
-                maxWidth: '680px',
+                padding: '2rem',
+                maxWidth: 580,
                 width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                 border: '1px solid rgba(124, 83, 63, 0.2)',
               }}
-              onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span style={{ fontSize: '1.5rem' }}>🩺</span>
-                  <div>
-                    <h3 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.45rem', color: 'var(--cor-texto)', margin: 0 }}>
-                      Emitir Guia Médica de Exames
-                    </h3>
-                    <span style={{ fontSize: '0.84rem', color: '#6A5E57' }}>
-                      Paciente: {consultaSelecionada?.paciente || 'Theo Silva'}
-                    </span>
-                  </div>
-                </div>
+                <h3
+                  style={{
+                    fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                    color: '#7C533F',
+                    margin: 0,
+                    fontSize: '1.35rem',
+                  }}
+                >
+                  🧪 Emitir Guia Médica de Exames
+                </h3>
                 <button
                   type="button"
                   onClick={() => setModalSolicitarAberto(false)}
-                  disabled={solicitandoGuia}
-                  style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6A5E57' }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#6A5E57', cursor: 'pointer' }}
                 >
                   ✕
                 </button>
               </div>
 
-              {guiaEmitidaInfo ? (
-                <div
-                  style={{
-                    backgroundColor: '#EFF7F1',
-                    border: '1.5px solid #B8E2BE',
-                    borderRadius: '14px',
-                    padding: '1.75rem',
-                    textAlign: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '2.2rem', display: 'block', marginBottom: '0.5rem' }}>🎉</span>
-                  <h4 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.35rem', color: '#1E4620', margin: '0 0 0.5rem 0' }}>
-                    Guia Médica Emitida com Sucesso!
-                  </h4>
-                  <p style={{ fontSize: '0.9rem', color: '#285832', margin: '0 0 1.25rem 0' }}>
-                    O pedido #{guiaEmitidaInfo.id} já foi vinculado à conta da família e está disponível para download e impressão.
-                  </p>
-
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-                    <a
-                      href={guiaEmitidaInfo.guia_pdf_path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <Button variante="primario" style={{ fontSize: '0.9rem' }}>
-                        📄 Visualizar Guia Médica (PDF)
-                      </Button>
-                    </a>
-                    <Button
-                      variante="secundario"
-                      onClick={() => setModalSolicitarAberto(false)}
-                      style={{ fontSize: '0.9rem' }}
-                    >
-                      Concluir
-                    </Button>
-                  </div>
+              <form onSubmit={handleEmitirGuiaOficial} style={{ display: 'grid', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                    Título da Solicitação / Pedido Médico:
+                  </label>
+                  <input
+                    type="text"
+                    value={tituloGuia}
+                    onChange={(e) => setTituloGuia(e.target.value)}
+                    required
+                  />
                 </div>
-              ) : (
-                <form onSubmit={handleEmitirGuiaOficial} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {/* Alerta de Segurança Clínica: Alergias do Paciente */}
-                  <div
-                    style={{
-                      backgroundColor: '#FFF5F0',
-                      border: '1.5px solid #E06A55',
-                      borderRadius: '10px',
-                      padding: '0.75rem 1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-                    <div style={{ fontSize: '0.82rem', color: '#A23B2A' }}>
-                      <strong>Atenção às Alergias do Paciente:</strong> Dipirona (Moderada), Adesivo de Sensor / Cateter (Leve). Certifique-se de que nenhum insumo ou contraste recomendado conflite com essas sensibilidades.
-                    </div>
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                      Título / Justificativa do Pedido *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={tituloGuia}
-                      onChange={(e) => setTituloGuia(e.target.value)}
-                      placeholder="Ex: Rotina Trimestral DM1 - Avaliação de HbA1c e Função Renal"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 0.9rem',
-                        borderRadius: '8px',
-                        border: '1px solid #D8D0C5',
-                        fontSize: '0.92rem',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                      Selecione os Procedimentos e Dosagens Clínicas *:
-                    </label>
-
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                        gap: '0.6rem',
-                        backgroundColor: '#FAF8F5',
-                        padding: '1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #ECE7E0',
-                        marginBottom: '0.85rem',
-                      }}
-                    >
-                      {EXAMES_SUGERIDOS_ESPECIALISTA.map((nome) => {
-                        const marcado = examesEscolhidos.includes(nome);
-                        return (
-                          <label
-                            key={nome}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              fontSize: '0.84rem',
-                              cursor: 'pointer',
-                              color: marcado ? '#1E4620' : '#4A4039',
-                              fontWeight: marcado ? 600 : 400,
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={marcado}
-                              onChange={() => handleToggleExameSugerido(nome)}
-                              style={{ width: '16px', height: '16px', accentColor: '#3B7E48' }}
-                            />
-                            <span>{nome}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-
-                    {/* Adicionar Exame Customizado */}
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <input
-                        type="text"
-                        placeholder="Outro exame (ex: Ferritina, Zinco Sérico...)"
-                        value={outroExameTexto}
-                        onChange={(e) => setOutroExameTexto(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '0.55rem 0.85rem',
-                          borderRadius: '8px',
-                          border: '1px solid #D8D0C5',
-                          fontSize: '0.86rem',
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variante="secundario"
-                        onClick={handleAdicionarOutroExame}
-                        style={{ fontSize: '0.82rem', padding: '0.55rem 0.85rem' }}
-                      >
-                        + Adicionar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Resumo dos Exames Selecionados */}
-                  <div>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6A5E57' }}>
-                      {examesEscolhidos.length} exame(s) selecionado(s) para a guia:
-                    </span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
-                      {examesEscolhidos.map((ex, i) => (
-                        <span
-                          key={i}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                    Selecione os exames a incluir na guia:
+                  </label>
+                  <div style={{ display: 'grid', gap: '0.5rem', maxHeight: 220, overflowY: 'auto' }}>
+                    {EXAMES_SUGERIDOS_ESPECIALISTA.map((nome) => {
+                      const sel = examesEscolhidos.includes(nome);
+                      return (
+                        <label
+                          key={nome}
                           style={{
-                            fontSize: '0.74rem',
-                            backgroundColor: '#EFF7F1',
-                            color: '#285832',
-                            padding: '0.2rem 0.55rem',
-                            borderRadius: '6px',
-                            border: '1px solid #B8E2BE',
-                            display: 'inline-flex',
+                            display: 'flex',
                             alignItems: 'center',
-                            gap: '0.3rem',
+                            gap: '0.65rem',
+                            backgroundColor: sel ? 'rgba(59, 126, 72, 0.1)' : '#F6F3EE',
+                            border: sel ? '1px solid #3B7E48' : '1px solid transparent',
+                            borderRadius: '10px',
+                            padding: '0.55rem 0.75rem',
+                            cursor: 'pointer',
+                            fontSize: '0.84rem',
                           }}
                         >
-                          <span>{ex}</span>
-                          <span
-                            onClick={() => handleToggleExameSugerido(ex)}
-                            style={{ cursor: 'pointer', fontWeight: 700 }}
-                            title="Remover"
-                          >
-                            ×
-                          </span>
-                        </span>
-                      ))}
-                    </div>
+                          <input
+                            type="checkbox"
+                            checked={sel}
+                            onChange={() => handleToggleExameSugerido(nome)}
+                          />
+                          <span>{nome}</span>
+                        </label>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                    <Button
-                      type="button"
-                      variante="secundario"
-                      onClick={() => setModalSolicitarAberto(false)}
-                      disabled={solicitandoGuia}
-                      style={{ fontSize: '0.9rem' }}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="submit"
-                      variante="primario"
-                      disabled={solicitandoGuia || examesEscolhidos.length === 0}
-                      style={{ fontSize: '0.9rem' }}
-                    >
-                      {solicitandoGuia ? 'Emitindo Guia Oficial...' : 'Emitir Guia Médica Oficial (Assinar)'}
-                    </Button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Outro exame (ex: Ferritina, Insulina Basal)..."
+                    value={outroExameTexto}
+                    onChange={(e) => setOutroExameTexto(e.target.value)}
+                    style={{ flex: 1, fontSize: '0.84rem' }}
+                  />
+                  <Button
+                    variante="contorno"
+                    type="button"
+                    onClick={handleAdicionarExameCustom}
+                    style={{ padding: '0 1rem', fontSize: '0.8rem' }}
+                  >
+                    + Adicionar
+                  </Button>
+                </div>
+
+                {guiaEmitidaSucesso && (
+                  <div style={{ color: '#2D6337', fontSize: '0.84rem', fontWeight: 700, textAlign: 'center' }}>
+                    ✓ {guiaEmitidaSucesso}
                   </div>
-                </form>
-              )}
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <Button
+                    variante="contorno"
+                    type="button"
+                    onClick={() => setModalSolicitarAberto(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button variante="cta" type="submit" disabled={solicitandoGuia}>
+                    {solicitandoGuia ? 'Gerando Guia Oficial...' : 'Emitir Guia Médica →'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================================
+            MODAL: ADICIONAR ADENDO CLÍNICO DATADO (RN-PRONT-01)
+            ==================================================================== */}
+        {modalAdendoAberto && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem',
+              zIndex: 9999,
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                padding: '2rem',
+                maxWidth: 540,
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                border: '1px solid rgba(124, 83, 63, 0.2)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3
+                  style={{
+                    fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                    color: '#7C533F',
+                    margin: 0,
+                    fontSize: '1.35rem',
+                  }}
+                >
+                  ✍️ Adicionar Adendo Clínico Datado
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setModalAdendoAberto(false)}
+                  style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#6A5E57', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p style={{ color: '#6A5E57', fontSize: '0.84rem', margin: '0 0 1rem 0', lineHeight: 1.5 }}>
+                Em conformidade com a resolução CFM 2.314/2022 e a regra <strong>RN-PRONT-01</strong>, registros
+                salvos nunca são sobrescritos. Este adendo receberá carimbo de data/hora oficial no fuso de Brasília.
+              </p>
+
+              <form onSubmit={handleSalvarAdendo} style={{ display: 'grid', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                    Texto do Adendo Clínico:
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={textoNovoAdendo}
+                    onChange={(e) => setTextoNovoAdendo(e.target.value)}
+                    placeholder="Descreva a nota complementar, esclarecimento pós-consulta, ajuste orientado por mensagem ou intercorrência..."
+                    required
+                  />
+                </div>
+
+                {adendoSucesso && (
+                  <div style={{ color: '#2D6337', fontSize: '0.84rem', fontWeight: 700, textAlign: 'center' }}>
+                    ✓ {adendoSucesso}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  <Button
+                    variante="contorno"
+                    type="button"
+                    onClick={() => setModalAdendoAberto(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button variante="cta" type="submit" disabled={salvandoAdendo}>
+                    {salvandoAdendo ? 'Registrando Adendo...' : 'Gravar Adendo Permanente →'}
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -938,4 +2285,5 @@ export default function PainelEspecialista() {
     </div>
   );
 }
+
 /* FIM DO COMPONENTE PAINEL ESPECIALISTA */

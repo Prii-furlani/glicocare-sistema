@@ -2082,3 +2082,23 @@ section[id] {
 /* ==========================================================================
    FIM DOS ESTILOS DA NAVBAR RESPONSIVA
    ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DO GRID SPLIT RESPONSIVO DO PRONTUÁRIO LONGITUDINAL (RN-PRONT-01)
+   ========================================================================== */
+.prontuario-split-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .prontuario-split-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+/* ==========================================================================
+   FIM DO GRID SPLIT RESPONSIVO DO PRONTUÁRIO LONGITUDINAL (RN-PRONT-01)
+   ========================================================================== */
