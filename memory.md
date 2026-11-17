@@ -206,3 +206,33 @@
   * `GET`: Visualização autorizada para o familiar tutor, o especialista responsável e a curadoria (admin).
   * `POST` / `PUT`: Criação e edição restrita à família tutora ou admin, capturando snapshots antes e depois para a trilha imutável `logs_auditoria` via `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
 
+## 9. Padrão Oficial de Layout: Container Fluido e Menu Enxuto (RN-LAY-01)
+
+### A. Container Fluido Proporcional
+- **Classe Global `.container`**: `width: 92%; max-width: 1320px; margin: 0 auto; padding: 0 var(--espaco-lg);`
+  * Aproveita dinamicamente a largura de monitores desktop e telas widescreen, eliminando a sensação de conteúdo estreito ou "encaixotado" no centro.
+- **Leitura Confortável de Artigos (`.container-leitura`)**: `width: 92%; max-width: 760px; margin: 0 auto;`
+  * Mantém largura controlada exclusivamente para o corpo textual de artigos longos, preservando a ergonomia e o conforto ocular da família.
+
+### B. Barra de Navegação Desktop e Mobile (`Navbar.jsx` e CSS)
+- **Menu Desktop (>= 1024px) Enxuto e Sem Quebra de Linha:**
+  * Máximo de 5 links em linha única com `white-space: nowrap`: `Início`, `Conteúdos`, `Especialistas`, `Como Funciona`, `FAQ`.
+  * Eliminação completa de duplicidade de links ("Entrar" nunca é repetido ao lado do botão).
+  * Exatamente 2 ações alinhadas à extrema direita (`gap: 12px`, `flex-shrink: 0`):
+    - Botão secundário pílula `Entrar` (quando deslogado) ou pílula com identificação do perfil logado (ex: `Mariana · Família DM1`) + botão discreto `Sair`.
+    - Botão principal pílula Verde Alívio (`#3B7E48`): `Baixar guia gratuito →`.
+- **Breakpoint Responsivo em 1024px:**
+  * Em telas menores que `1024px` (tablets e smartphones), os links horizontais e ações de desktop são ocultados e substituídos pelo botão hambúrguer limpo.
+  * A gaveta mobile abre com itens verticais organizados e confortáveis para o polegar (`min-height: 44px` por item), incluindo atalhos para Início, Conteúdos, Especialistas, Como Funciona, Diferenciais, Planos, FAQ, autenticação e CTA do guia gratuito no rodapé.
+
+### C. Grid Dinâmico da Home (`Home.jsx`)
+- **Seção Hero:**
+  * **Desktop (>= 1024px):** Layout em 2 colunas equilibradas (`grid-template-columns: 1.1fr 0.9fr`, `gap: 64px`, `align-items: center`). Coluna esquerda com título em Fraunces, subtítulo e CTAs; coluna direita com o card do mascote Lufy ocupando 100% da largura da coluna, sem recuos excessivos.
+  * **Mobile (< 768px):** 1 coluna vertical fluida.
+- **Seção "Conheça o Lufy":**
+  * **Desktop (>= 1024px):** 2 colunas lado a lado (`grid-template-columns: 1fr 1fr`, `gap: 56px`, `align-items: center`) — imagem da família com a citação acolhedora à esquerda, narrativa e pilares *Calma* e *Coragem* à direita.
+  * **Mobile/Tablet (< 1024px):** Empilhamento suave em coluna única.
+- **Diferenciais e Biblioteca de Conteúdos:**
+  * Grid responsivo: **3 colunas no desktop (>= 1024px)**, **2 colunas no tablet (640px-1023px)** e **1 coluna / feed vertical no mobile**.
+
+

@@ -54,8 +54,8 @@
   --raio-card-grande: 22px;
   --raio-pilula: 9999px;
 
-  --largura-container: 1160px;
-  --largura-leitura: 840px;
+  --largura-container: 1320px;
+  --largura-leitura: 760px;
   --transicao-padrao: 0.22s ease;
 }
 /* FIM DOS DESIGN TOKENS (VARIÁVEIS GLOBAIS) */

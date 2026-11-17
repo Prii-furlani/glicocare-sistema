@@ -159,7 +159,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Centro/Direita (Exclusivo Desktop): Barra Horizontal Completa de Links */}
+        {/* Centro/Direita (Exclusivo Desktop >= 1024px): Barra Horizontal Enxuta (Máx. 5 itens) */}
         <nav
           className="gc-navbar__desktop-links"
           aria-label="Navegação principal desktop"
@@ -172,18 +172,11 @@ export default function Navbar() {
             Início
           </a>
           <a
-            href="/#diferenciais"
-            onClick={(e) => handleNavegarSecaoSuave(e, 'diferenciais')}
-            className="gc-navbar__link"
-          >
-            Diferenciais
-          </a>
-          <a
             href="/#conteudos"
             onClick={(e) => handleNavegarSecaoSuave(e, 'conteudos')}
             className="gc-navbar__link"
           >
-            Biblioteca / Conteúdos
+            Conteúdos
           </a>
           <Link
             to="/especialistas"
@@ -206,101 +199,36 @@ export default function Navbar() {
             Como Funciona
           </Link>
           <a
-            href="/#planos"
-            onClick={(e) => handleNavegarSecaoSuave(e, 'planos')}
-            className="gc-navbar__link"
-          >
-            Planos
-          </a>
-          <a
             href="/#faq"
             onClick={(e) => handleNavegarSecaoSuave(e, 'faq')}
             className="gc-navbar__link"
           >
             FAQ
           </a>
-
-          {/* Link para Tela de Login ou Painel do Perfil Logado (RN-ACC-01) */}
-          {estaAutenticado ? (
-            <Link
-              to={perfilInfo.rota}
-              className={`gc-navbar__link ${
-                location.pathname === perfilInfo.rota ? 'gc-navbar__link--ativo' : ''
-              }`}
-              style={{ fontWeight: 600, color: '#3B7E48' }}
-            >
-              {perfilInfo.icone} {perfilInfo.rotulo}
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              className={`gc-navbar__link ${
-                location.pathname === '/login' ? 'gc-navbar__link--ativo' : ''
-              }`}
-              style={{ fontWeight: 600, color: '#3B7E48' }}
-            >
-              Entrar
-            </Link>
-          )}
         </nav>
 
-        {/* Extrema Direita (Desktop CTA / Mobile Botão Hambúrguer) */}
+        {/* Extrema Direita: Exatamente 2 ações alinhadas (Entrar/Perfil + Baixar Guia) */}
         <div className="gc-navbar__actions">
-          {/* Autenticação Desktop: Exibe perfil + logout quando autenticado, ou botão entrar */}
+          {/* Ação 1: Autenticação Desktop (Pílula Entrar ou Perfil do Usuário Logado) */}
           {estaAutenticado ? (
-            <div
-              className="gc-navbar__user-desktop"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
+            <div className="gc-navbar__user-desktop">
               <Link
                 to={perfilInfo.rota}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
-                  color: '#2E2824',
-                  backgroundColor: '#F6F3EE',
-                  border: '1px solid rgba(124, 83, 63, 0.25)',
-                  borderRadius: '20px',
-                  padding: '0.45rem 0.85rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                }}
+                className="gc-navbar__user-pill"
                 title={`Acessar ${perfilInfo.rotulo}`}
               >
-                <span>{perfilInfo.icone}</span>
-                <span>{usuario.nome_completo?.split(' ')[0] || usuario.nome?.split(' ')[0] || 'Usuário'}</span>
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    backgroundColor: '#EAE4D9',
-                    color: '#7C533F',
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                  }}
-                >
+                <span aria-hidden="true">{perfilInfo.icone}</span>
+                <span className="gc-navbar__user-name">
+                  {usuario.nome_completo?.split(' ')[0] || usuario.nome?.split(' ')[0] || 'Usuário'}
+                </span>
+                <span className="gc-navbar__user-badge">
                   {perfilInfo.badge}
                 </span>
               </Link>
               <button
                 type="button"
                 onClick={logout}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#A23B2A',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  padding: '0.4rem 0.6rem',
-                }}
+                className="gc-navbar__btn-logout"
                 title="Encerrar sessão segura"
               >
                 Sair
@@ -310,37 +238,29 @@ export default function Navbar() {
             <Link
               to="/login"
               className="gc-navbar__btn-entrar-desktop"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                fontSize: '0.86rem',
-                fontWeight: 600,
-                color: '#3B7E48',
-                backgroundColor: 'transparent',
-                border: '1px solid rgba(59, 126, 72, 0.45)',
-                borderRadius: '20px',
-                padding: '0.5rem 1rem',
-                transition: 'all 0.2s',
-              }}
+              title="Entrar no seu espaço seguro"
             >
-              <span>👤</span>
+              <span aria-hidden="true">👤</span>
               <span>Entrar</span>
             </Link>
           )}
 
-          {/* Botão de Ação em Destaque (Exclusivo Desktop — oculto no Mobile) */}
+          {/* Ação 2: Botão Principal em Destaque Verde Alívio */}
           <div className="gc-navbar__desktop-cta">
             <Button
               variante="primario"
               onClick={() => setGuiaAvisoAberto(true)}
-              style={{ padding: '0.68rem 1.35rem', fontSize: '0.88rem' }}
+              style={{
+                padding: '0.65rem 1.35rem',
+                fontSize: '0.88rem',
+                whiteSpace: 'nowrap',
+              }}
             >
               Baixar guia gratuito →
             </Button>
           </div>
 
-          {/* Botão de Menu Hambúrguer de 3 linhas (Exclusivo Mobile — removido do Desktop) */}
+          {/* Botão de Menu Hambúrguer (Exclusivo < 1024px) */}
           <button
             type="button"
             className="gc-navbar__hamburger-btn"
@@ -404,7 +324,7 @@ export default function Navbar() {
                 onClick={(e) => handleNavegarSecaoSuave(e, 'conteudos')}
                 className="gc-navbar__mobile-link"
               >
-                <span>Biblioteca / Conteúdos</span>
+                <span>Conteúdos</span>
                 <span aria-hidden="true">→</span>
               </a>
 

@@ -246,7 +246,7 @@ export default function Home() {
   return (
     <div>
       {/* =====================================================================
-          1. INÍCIO DA HERO SECTION (#inicio) + SHOWCASE CARD DO LUFY
+          1. INÍCIO DA HERO SECTION (#inicio) + SHOWCASE CARD DO LUFY (GRID FLUIDO)
           ===================================================================== */}
       <section
         id="inicio"
@@ -255,253 +255,258 @@ export default function Home() {
         }}
       >
         <div className="container">
-          <div style={{ maxWidth: 820 }}>
-            <div className="eyebrow-pill" style={{ marginBottom: '1.6rem' }}>
-              <span className="eyebrow-pill__dot" aria-hidden="true" />
-              <span>INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.</span>
-            </div>
-
-            <h1 style={{ marginBottom: '1.65rem' }}>
-              Transforme o diagnóstico em uma rotina{' '}
-              <span className="palavra-destaque-segura">
-                segura
-                <svg
-                  className="palavra-destaque-curva"
-                  viewBox="0 0 220 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M3 10.5C62 3.5 154 3.5 217 9.5"
-                    stroke="#3B7E48"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>{' '}
-              e sem pânico.
-            </h1>
-
-            <p
-              style={{
-                fontSize: 'clamp(1.08rem, 1.8vw, 1.25rem)',
-                color: 'var(--cor-texto-suave)',
-                lineHeight: 1.65,
-                maxWidth: 660,
-                marginBottom: '2.15rem',
-              }}
-            >
-              Apoio pedagógico e acolhimento prático para famílias que vivem o
-              Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada
-              vez.
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: '1rem',
-                marginBottom: '2.25rem',
-              }}
-            >
-              <a href="#planos" className="gc-btn gc-btn--primario">
-                <span>Quero começar com segurança</span>
-                <span aria-hidden="true">→</span>
-              </a>
-
-              <a href="#conheca-o-lufy" className="gc-btn gc-btn--secundario">
-                <span>Conheça nossa história</span>
-                <span aria-hidden="true">↗</span>
-              </a>
-            </div>
-
-            <div className="rede-apoio-row">
-              <div className="rede-apoio-avatars" aria-hidden="true">
-                <span
-                  className="rede-avatar"
-                  style={{ backgroundColor: 'var(--cor-primaria)' }}
-                >
-                  P
-                </span>
-                <span
-                  className="rede-avatar"
-                  style={{ backgroundColor: 'var(--cor-cta)' }}
-                >
-                  M
-                </span>
-                <span
-                  className="rede-avatar"
-                  style={{ backgroundColor: 'var(--cor-taupe)' }}
-                >
-                  A
-                </span>
+          <div className="hero-grid">
+            {/* Coluna Esquerda: Título em Fraunces, Subtítulo, CTAs e Rede de Apoio */}
+            <div className="hero-content-col">
+              <div className="eyebrow-pill" style={{ marginBottom: '1.6rem' }}>
+                <span className="eyebrow-pill__dot" aria-hidden="true" />
+                <span>INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.</span>
               </div>
 
-              <div>
-                <strong
-                  style={{
-                    display: 'block',
-                    fontSize: '0.93rem',
-                    color: 'var(--cor-texto)',
-                    lineHeight: 1.3,
-                  }}
-                >
-                  Uma rede que entende
-                </strong>
-                <span
-                  style={{
-                    display: 'block',
-                    fontSize: '0.88rem',
-                    color: 'var(--cor-texto-suave)',
-                  }}
-                >
-                  você não precisa saber tudo hoje.
-                </span>
-              </div>
-            </div>
-          </div>
+              <h1 style={{ marginBottom: '1.65rem' }}>
+                Transforme o diagnóstico em uma rotina{' '}
+                <span className="palavra-destaque-segura">
+                  segura
+                  <svg
+                    className="palavra-destaque-curva"
+                    viewBox="0 0 220 14"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 10.5C62 3.5 154 3.5 217 9.5"
+                      stroke="#3B7E48"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>{' '}
+                e sem pânico.
+              </h1>
 
-          {/* Card de Destaque do Mascote Lufy */}
-          <div
-            className="hero-lufy-showcase"
-            style={{
-              maxWidth: 740,
-              margin: '3.25rem auto 0',
-            }}
-          >
-            <div className="lufy-dark-bubble">
               <p
                 style={{
-                  fontSize: '0.96rem',
-                  lineHeight: 1.5,
-                  marginBottom: '0.45rem',
-                  fontWeight: 500,
+                  fontSize: 'clamp(1.08rem, 1.8vw, 1.25rem)',
+                  color: 'var(--cor-texto-suave)',
+                  lineHeight: 1.65,
+                  maxWidth: 620,
+                  marginBottom: '2.15rem',
                 }}
               >
-                “Ei, respira. A gente vai aprender isso juntos.”
+                Apoio pedagógico e acolhimento prático para famílias que vivem o
+                Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada
+                vez.
               </p>
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: '0.82rem',
-                  color: 'var(--cor-borda)',
-                  fontWeight: 600,
-                }}
-              >
-                — Lufy
-              </span>
-            </div>
-
-            <img
-              src={lufyMascoteFoto}
-              alt="Mascote Lufy — Coala guardião com o sensor FreeStyle Libre no braço"
-              style={{
-                width: '100%',
-                maxHeight: 520,
-                objectFit: 'cover',
-                borderRadius: '14px',
-                display: 'block',
-              }}
-            />
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1.35rem 0.4rem 0.25rem',
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    display: 'block',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: 'var(--cor-primaria)',
-                    marginBottom: '0.25rem',
-                  }}
-                >
-                  SEU GUARDIÃO DA JORNADA
-                </span>
-                <h3
-                  style={{
-                    fontSize: '1.65rem',
-                    fontWeight: 700,
-                    color: 'var(--cor-texto)',
-                  }}
-                >
-                  Conheça o Lufy
-                </h3>
-              </div>
 
               <div
                 style={{
                   display: 'flex',
+                  flexWrap: 'wrap',
                   alignItems: 'center',
-                  gap: '0.75rem',
+                  gap: '1rem',
+                  marginBottom: '2.25rem',
                 }}
               >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.65rem',
-                    backgroundColor: '#EFECE6',
-                    border: '1px solid var(--cor-borda-suave)',
-                    borderRadius: 'var(--raio-pilula)',
-                    padding: '0.45rem 1.1rem 0.45rem 0.55rem',
-                  }}
-                >
+                <a href="#planos" className="gc-btn gc-btn--primario">
+                  <span>Quero começar com segurança</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+
+                <a href="#conheca-o-lufy" className="gc-btn gc-btn--secundario">
+                  <span>Conheça nossa história</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+
+              <div className="rede-apoio-row">
+                <div className="rede-apoio-avatars" aria-hidden="true">
                   <span
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: '50%',
-                      backgroundColor: '#DCEAD9',
-                      color: 'var(--cor-cta)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                    }}
+                    className="rede-avatar"
+                    style={{ backgroundColor: 'var(--cor-primaria)' }}
                   >
-                    ✓
+                    P
                   </span>
-                  <div style={{ fontSize: '0.78rem', lineHeight: 1.25 }}>
-                    <strong style={{ display: 'block', color: 'var(--cor-texto)' }}>
-                      Conteúdo claro
-                    </strong>
-                    <span style={{ color: 'var(--cor-texto-suave)' }}>
-                      e responsável
-                    </span>
-                  </div>
+                  <span
+                    className="rede-avatar"
+                    style={{ backgroundColor: 'var(--cor-cta)' }}
+                  >
+                    M
+                  </span>
+                  <span
+                    className="rede-avatar"
+                    style={{ backgroundColor: 'var(--cor-taupe)' }}
+                  >
+                    A
+                  </span>
                 </div>
 
-                <a
-                  href="#conheca-o-lufy"
-                  aria-label="Ir para seção Conheça o Lufy"
+                <div>
+                  <strong
+                    style={{
+                      display: 'block',
+                      fontSize: '0.93rem',
+                      color: 'var(--cor-texto)',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Uma rede que entende
+                  </strong>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '0.88rem',
+                      color: 'var(--cor-texto-suave)',
+                    }}
+                  >
+                    você não precisa saber tudo hoje.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Coluna Direita: Card de Destaque do Mascote Lufy (Aproveita a largura total) */}
+            <div className="hero-lufy-col">
+              <div
+                className="hero-lufy-showcase"
+                style={{
+                  margin: 0,
+                  width: '100%',
+                }}
+              >
+                <div className="lufy-dark-bubble">
+                  <p
+                    style={{
+                      fontSize: '0.96rem',
+                      lineHeight: 1.5,
+                      marginBottom: '0.45rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    “Ei, respira. A gente vai aprender isso juntos.”
+                  </p>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      color: 'var(--cor-borda)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    — Lufy
+                  </span>
+                </div>
+
+                <img
+                  src={lufyMascoteFoto}
+                  alt="Mascote Lufy — Coala guardião com o sensor FreeStyle Libre no braço"
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--cor-cta)',
-                    color: 'var(--cor-branco)',
-                    display: 'inline-flex',
+                    width: '100%',
+                    maxHeight: 520,
+                    objectFit: 'cover',
+                    borderRadius: '14px',
+                    display: 'block',
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1rem',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                    padding: '1.35rem 0.4rem 0.25rem',
                   }}
                 >
-                  ↗
-                </a>
+                  <div>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: 'var(--cor-primaria)',
+                        marginBottom: '0.25rem',
+                      }}
+                    >
+                      SEU GUARDIÃO DA JORNADA
+                    </span>
+                    <h3
+                      style={{
+                        fontSize: '1.65rem',
+                        fontWeight: 700,
+                        color: 'var(--cor-texto)',
+                      }}
+                    >
+                      Conheça o Lufy
+                    </h3>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.65rem',
+                        backgroundColor: '#EFECE6',
+                        border: '1px solid var(--cor-borda-suave)',
+                        borderRadius: 'var(--raio-pilula)',
+                        padding: '0.45rem 1.1rem 0.45rem 0.55rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: '50%',
+                          backgroundColor: '#DCEAD9',
+                          color: 'var(--cor-cta)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✓
+                      </span>
+                      <div style={{ fontSize: '0.78rem', lineHeight: 1.25 }}>
+                        <strong style={{ display: 'block', color: 'var(--cor-texto)' }}>
+                          Conteúdo claro
+                        </strong>
+                        <span style={{ color: 'var(--cor-texto-suave)' }}>
+                          e responsável
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href="#conheca-o-lufy"
+                      aria-label="Ir para seção Conheça o Lufy"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--cor-cta)',
+                        color: 'var(--cor-branco)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1rem',
+                      }}
+                    >
+                      ↗
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -510,7 +515,7 @@ export default function Home() {
       {/* FIM DA HERO SECTION */}
 
       {/* =====================================================================
-          2. INÍCIO DA SEÇÃO "CONHEÇA O LUFY — Tecnologia no braço. Afeto no coração."
+          2. INÍCIO DA SEÇÃO "CONHEÇA O LUFY — Tecnologia no braço. Afeto no coração." (2 COLUNAS)
           ===================================================================== */}
       <section
         id="conheca-o-lufy"
@@ -522,130 +527,130 @@ export default function Home() {
         }}
       >
         <div className="container">
-          <div
-            style={{
-              position: 'relative',
-              maxWidth: 920,
-              margin: '0 auto 4rem',
-            }}
-          >
-            <img
-              src={familiaCuidadoFoto}
-              alt="Mãe e filha conversando com serenidade na mesa da cozinha com insumos do DM1"
-              style={{
-                width: '100%',
-                borderRadius: '20px',
-                display: 'block',
-                boxShadow: 'var(--sombra-card)',
-              }}
-            />
-
-            <div
-              style={{
-                position: 'relative',
-                marginTop: '-3.25rem',
-                marginLeft: 'auto',
-                maxWidth: 540,
-                backgroundColor: '#EAE4D9',
-                border: '1px solid var(--cor-borda)',
-                borderRadius: '16px',
-                padding: '1.35rem 1.75rem',
-                boxShadow: '0 10px 30px rgba(46, 40, 36, 0.10)',
-              }}
-            >
-              <p
-                className="serif-title"
+          <div className="lufy-section-grid">
+            {/* Coluna Esquerda: Imagem da Família com a Citação Acolhedora */}
+            <div style={{ position: 'relative' }}>
+              <img
+                src={familiaCuidadoFoto}
+                alt="Mãe e filha conversando com serenidade na mesa da cozinha com insumos do DM1"
                 style={{
-                  fontSize: '1.15rem',
-                  lineHeight: 1.5,
-                  color: 'var(--cor-texto)',
+                  width: '100%',
+                  borderRadius: '20px',
+                  display: 'block',
+                  boxShadow: 'var(--sombra-card)',
                 }}
-              >
-                “Cuidar também é ensinar com calma, até que a confiança encontre
-                seu lugar.”
-              </p>
-            </div>
-          </div>
+              />
 
-          <div style={{ maxWidth: 920, margin: '0 auto' }}>
-            <div className="section-line-eyebrow">CONHEÇA O LUFY</div>
-
-            <h2 style={{ marginBottom: '1.5rem' }}>
-              Tecnologia no braço.{' '}
-              <span className="texto-italico-terracota">Afeto</span> no coração.
-            </h2>
-
-            <p
-              style={{
-                fontSize: '1.08rem',
-                color: 'var(--cor-texto-suave)',
-                marginBottom: '1.15rem',
-                maxWidth: 820,
-              }}
-            >
-              Lufy nasceu para ser uma presença familiar nos momentos em que
-              tudo parece novo demais. Um coala guardião que transforma termos
-              difíceis em conversas possíveis.
-            </p>
-
-            <p
-              style={{
-                fontSize: '1.08rem',
-                color: 'var(--cor-texto-suave)',
-                marginBottom: '2.25rem',
-                maxWidth: 820,
-              }}
-            >
-              Com seu sensor no braço, ele mostra às crianças que a tecnologia
-              faz parte do cuidado — mas que são o carinho, a informação e a
-              rede de apoio que tornam a jornada mais leve.
-            </p>
-
-            <div className="grid-2-colunas">
               <div
                 style={{
-                  backgroundColor: '#F3EFE8',
-                  border: '1px solid var(--cor-borda-suave)',
-                  borderRadius: '14px',
-                  padding: '1.65rem 1.85rem',
+                  marginTop: '-2.5rem',
+                  marginLeft: 'auto',
+                  marginRight: '1rem',
+                  maxWidth: 460,
+                  backgroundColor: '#EAE4D9',
+                  border: '1px solid var(--cor-borda)',
+                  borderRadius: '16px',
+                  padding: '1.25rem 1.6rem',
+                  boxShadow: '0 10px 30px rgba(46, 40, 36, 0.10)',
+                  position: 'relative',
+                  zIndex: 2,
                 }}
               >
-                <h3
+                <p
                   className="serif-title"
                   style={{
-                    color: 'var(--cor-primaria)',
-                    fontSize: '1.65rem',
-                    marginBottom: '0.3rem',
+                    fontSize: '1.08rem',
+                    lineHeight: 1.5,
+                    color: 'var(--cor-texto)',
                   }}
                 >
-                  Calma
-                </h3>
-                <p style={{ fontSize: '0.94rem', color: 'var(--cor-texto-suave)' }}>
-                  para acolher cada dúvida
+                  “Cuidar também é ensinar com calma, até que a confiança encontre
+                  seu lugar.”
                 </p>
               </div>
+            </div>
 
-              <div
+            {/* Coluna Direita: Narrativa do Lufy e Pilares Calma e Coragem */}
+            <div>
+              <div className="section-line-eyebrow">CONHEÇA O LUFY</div>
+
+              <h2 style={{ marginBottom: '1.25rem' }}>
+                Tecnologia no braço.{' '}
+                <span className="texto-italico-terracota">Afeto</span> no coração.
+              </h2>
+
+              <p
                 style={{
-                  backgroundColor: '#F3EFE8',
-                  border: '1px solid var(--cor-borda-suave)',
-                  borderRadius: '14px',
-                  padding: '1.65rem 1.85rem',
+                  fontSize: '1.08rem',
+                  color: 'var(--cor-texto-suave)',
+                  marginBottom: '1.15rem',
+                  lineHeight: 1.65,
                 }}
               >
-                <h3
-                  className="serif-title"
+                Lufy nasceu para ser uma presença familiar nos momentos em que
+                tudo parece novo demais. Um coala guardião que transforma termos
+                difíceis em conversas possíveis.
+              </p>
+
+              <p
+                style={{
+                  fontSize: '1.08rem',
+                  color: 'var(--cor-texto-suave)',
+                  marginBottom: '2rem',
+                  lineHeight: 1.65,
+                }}
+              >
+                Com seu sensor no braço, ele mostra às crianças que a tecnologia
+                faz parte do cuidado — mas que são o carinho, a informação e a
+                rede de apoio que tornam a jornada mais leve.
+              </p>
+
+              <div className="grid-2-colunas">
+                <div
                   style={{
-                    color: 'var(--cor-primaria)',
-                    fontSize: '1.65rem',
-                    marginBottom: '0.3rem',
+                    backgroundColor: '#F3EFE8',
+                    border: '1px solid var(--cor-borda-suave)',
+                    borderRadius: '14px',
+                    padding: '1.5rem 1.65rem',
                   }}
                 >
-                  Coragem
-                </h3>
-                <p style={{ fontSize: '0.94rem', color: 'var(--cor-texto-suave)' }}>
-                  para construir autonomia
-                </p>
+                  <h3
+                    className="serif-title"
+                    style={{
+                      color: 'var(--cor-primaria)',
+                      fontSize: '1.65rem',
+                      marginBottom: '0.3rem',
+                    }}
+                  >
+                    Calma
+                  </h3>
+                  <p style={{ fontSize: '0.94rem', color: 'var(--cor-texto-suave)' }}>
+                    para acolher cada dúvida
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#F3EFE8',
+                    border: '1px solid var(--cor-borda-suave)',
+                    borderRadius: '14px',
+                    padding: '1.5rem 1.65rem',
+                  }}
+                >
+                  <h3
+                    className="serif-title"
+                    style={{
+                      color: 'var(--cor-primaria)',
+                      fontSize: '1.65rem',
+                      marginBottom: '0.3rem',
+                    }}
+                  >
+                    Coragem
+                  </h3>
+                  <p style={{ fontSize: '0.94rem', color: 'var(--cor-texto-suave)' }}>
+                    para construir autonomia
+                  </p>
+                </div>
               </div>
             </div>
           </div>
