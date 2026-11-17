@@ -528,6 +528,82 @@ async function main() {
   // FIM — 17. PRECIFICAÇÃO DO ESPECIALISTA & RETORNO INCLUSO
   // ==========================================================================
 
+  // ==========================================================================
+  // INÍCIO — 18. CMS DINÂMICO DA HOME (configuracoes_home)
+  // ==========================================================================
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`configuracoes_home\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`secao\` VARCHAR(60) NOT NULL COMMENT 'ex: hero, lufy, diferenciais, cta_final',
+        \`chave\` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Identificador único do campo na tela',
+        \`tipo_campo\` ENUM('TEXTO_CURTO', 'TEXTO_LONGO', 'IMAGEM') NOT NULL DEFAULT 'TEXTO_CURTO',
+        \`rotulo_admin\` VARCHAR(150) NOT NULL COMMENT 'Nome amigável exibido no painel de edição',
+        \`valor\` TEXT NOT NULL COMMENT 'Texto ou caminho da imagem',
+        \`atualizado_em\` DATETIME NOT NULL COMMENT 'Data e hora da última alteração em America/Sao_Paulo'
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Configurações e CMS Dinâmico da Home';
+
+      INSERT INTO \`configuracoes_home\` (\`secao\`, \`chave\`, \`tipo_campo\`, \`rotulo_admin\`, \`valor\`, \`atualizado_em\`) VALUES
+      ('hero', 'hero_badge', 'TEXTO_CURTO', 'Hero: Badge Superior', 'INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.', NOW()),
+      ('hero', 'hero_titulo', 'TEXTO_CURTO', 'Hero: Título Principal', 'Transforme o diagnóstico em uma rotina segura e sem pânico.', NOW()),
+      ('hero', 'hero_titulo_destaque', 'TEXTO_CURTO', 'Hero: Palavra de Destaque no Título', 'segura', NOW()),
+      ('hero', 'hero_subtitulo', 'TEXTO_LONGO', 'Hero: Subtítulo Explicativo', 'Apoio pedagógico e acolhimento prático para famílias que vivem o Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada vez.', NOW()),
+      ('hero', 'hero_cta_primario', 'TEXTO_CURTO', 'Hero: Texto do Botão Primário', 'Quero começar com segurança', NOW()),
+      ('hero', 'hero_cta_secundario', 'TEXTO_CURTO', 'Hero: Texto do Botão Secundário', 'Conheça nossa história', NOW()),
+      ('hero', 'hero_balao_lufy', 'TEXTO_CURTO', 'Hero: Balão de Fala do Lufy', '“Ei, respira. A gente vai aprender isso juntos.”', NOW()),
+      ('hero', 'hero_imagem_url', 'IMAGEM', 'Hero: Imagem do Lufy Guardião', '', NOW()),
+      ('lufy', 'lufy_eyebrow', 'TEXTO_CURTO', 'Lufy: Sobretítulo da Seção', 'CONHEÇA O LUFY', NOW()),
+      ('lufy', 'lufy_titulo', 'TEXTO_CURTO', 'Lufy: Título da Seção', 'Tecnologia no braço. Afeto no coração.', NOW()),
+      ('lufy', 'lufy_titulo_destaque', 'TEXTO_CURTO', 'Lufy: Palavra Destacada em Terracota', 'Afeto', NOW()),
+      ('lufy', 'lufy_paragrafo_1', 'TEXTO_LONGO', 'Lufy: Primeiro Parágrafo', 'Lufy nasceu para ser uma presença familiar nos momentos em que tudo parece novo demais. Um coala guardião que transforma termos difíceis em conversas possíveis.', NOW()),
+      ('lufy', 'lufy_paragrafo_2', 'TEXTO_LONGO', 'Lufy: Segundo Parágrafo', 'Com o sensor no bracinho, ele mostra para as crianças que o monitoramento não é um peso, mas uma ferramenta de autonomia e liberdade.', NOW()),
+      ('lufy', 'lufy_citacao_foto', 'TEXTO_LONGO', 'Lufy: Citação Acolhedora na Foto da Família', '“Cuidar também é ensinar com calma, até que a confiança encontre seu lugar.”', NOW()),
+      ('lufy', 'lufy_imagem_url', 'IMAGEM', 'Lufy: Imagem da Família Cuidado', '', NOW()),
+      ('cta_final', 'cta_final_titulo', 'TEXTO_CURTO', 'Chamada Final: Título', 'Dê o primeiro passo para uma rotina mais serena.', NOW()),
+      ('cta_final', 'cta_final_subtitulo', 'TEXTO_LONGO', 'Chamada Final: Subtítulo', 'Junte-se a centenas de famílias que transformaram o medo em aprendizado e confiança diária.', NOW()),
+      ('cta_final', 'cta_final_botao', 'TEXTO_CURTO', 'Chamada Final: Texto do Botão', 'Conheça nossos planos e comece hoje', NOW())
+      ON DUPLICATE KEY UPDATE \`rotulo_admin\` = VALUES(\`rotulo_admin\`), \`valor\` = VALUES(\`valor\`), \`atualizado_em\` = VALUES(\`atualizado_em\`);
+    `);
+    console.log('✅ Tabela configuracoes_home criada e semeada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ configuracoes_home:', err.message);
+  }
+  // ==========================================================================
+  // FIM — 18. CMS DINÂMICO DA HOME
+  // ==========================================================================
+
+  // ==========================================================================
+  // INÍCIO — 19. ATUALIZAÇÃO EDITORIAL DA TABELA artigos_conteudos
+  // ==========================================================================
+  try {
+    await connection.query(`
+      ALTER TABLE \`artigos_conteudos\`
+      ADD COLUMN IF NOT EXISTS \`autor_nome\` VARCHAR(150) NOT NULL DEFAULT 'Priscila Manzoni Furlani'
+        COMMENT 'Nome do autor editorial',
+      ADD COLUMN IF NOT EXISTS \`titulo_destaque_italico\` VARCHAR(150) DEFAULT NULL
+        COMMENT 'Palavra ou trecho em destaque itálico terracota',
+      ADD COLUMN IF NOT EXISTS \`subtitulo\` VARCHAR(300) DEFAULT NULL
+        COMMENT 'Subtítulo do artigo',
+      ADD COLUMN IF NOT EXISTS \`tempo_leitura\` VARCHAR(50) NOT NULL DEFAULT '5 min de leitura'
+        COMMENT 'Texto amigável de tempo de leitura',
+      ADD COLUMN IF NOT EXISTS \`imagem_capa_url\` VARCHAR(255) DEFAULT NULL
+        COMMENT 'URL ou caminho da imagem de capa',
+      ADD COLUMN IF NOT EXISTS \`legenda_capa\` VARCHAR(255) DEFAULT NULL
+        COMMENT 'Legenda ou acessibilidade da imagem',
+      ADD COLUMN IF NOT EXISTS \`conteudo_blocos\` JSON DEFAULT NULL
+        COMMENT 'Blocos estruturados de conteúdo (parágrafos, H2, respiros, listas)';
+
+      ALTER TABLE \`artigos_conteudos\`
+      MODIFY COLUMN \`conteudo\` LONGTEXT NULL;
+    `);
+    console.log('✅ Colunas editoriais de artigos_conteudos verificadas.');
+  } catch (err) {
+    console.log('ℹ️ artigos_conteudos:', err.message);
+  }
+  // ==========================================================================
+  // FIM — 19. ATUALIZAÇÃO EDITORIAL DA TABELA artigos_conteudos
+  // ==========================================================================
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

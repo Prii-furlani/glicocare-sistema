@@ -8,6 +8,14 @@ const api = axios.create({
   timeout: 10000,
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('glicocare_token') || sessionStorage.getItem('glicocare_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const artigosService = {
   listar: (params) => api.get('/artigos/index.php', { params }),
   buscarPorId: (id) => api.get(`/artigos/index.php?id=${id}`),
@@ -34,6 +42,36 @@ export const agendamentosService = {
 
 export const authService = {
   login: (dados) => api.post('/auth/login.php', dados),
+};
+
+export const adminService = {
+  getDashboard: () => api.get('/admin/dashboard_geral.php'),
+  getHomeConfig: () => api.get('/admin/salvar_home.php'),
+  salvarHomeConfig: (dados) => {
+    if (dados instanceof FormData) {
+      return api.post('/admin/salvar_home.php', dados, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.post('/admin/salvar_home.php', dados);
+  },
+  listarArtigos: (params) => api.get('/admin/gerenciar_artigos.php', { params }),
+  obterArtigo: (id) => api.get(`/admin/gerenciar_artigos.php?id=${id}`),
+  salvarArtigo: (dados) => {
+    if (dados instanceof FormData) {
+      return api.post('/admin/gerenciar_artigos.php', dados, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.post('/admin/gerenciar_artigos.php', dados);
+  },
+  excluirArtigo: (id) => api.delete(`/admin/gerenciar_artigos.php?id=${id}`),
+  listarEspecialistas: () => api.get('/admin/curadoria_especialistas.php'),
+  atualizarEspecialista: (dados) => api.post('/admin/curadoria_especialistas.php', dados),
+  listarDepoimentos: (params) => api.get('/admin/moderar_depoimentos.php', { params }),
+  moderarDepoimento: (dados) => api.post('/admin/moderar_depoimentos.php', dados),
+  listarUsuarios: (params) => api.get('/admin/usuarios.php', { params }),
+  alternarStatusUsuario: (dados) => api.post('/admin/usuarios.php', dados),
 };
 
 export default api;

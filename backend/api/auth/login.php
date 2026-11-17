@@ -166,7 +166,7 @@ try {
 
     $rotaRedirecionamento = $perfilConfigurado ? '/meu-perfil' : '/boas-vindas';
     if ($tipoUsuario === 'admin' || $usuario['tipo_perfil'] === 'admin_moderador') {
-        $rotaRedirecionamento = '/painel-admin';
+        $rotaRedirecionamento = '/admin';
     } elseif ($tipoUsuario === 'especialista' || $usuario['tipo_perfil'] === 'especialista') {
         $rotaRedirecionamento = ($dadosEspecialista && (int)$dadosEspecialista['registro_verificado'] === 1)
             ? '/painel-especialista'

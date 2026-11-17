@@ -41,21 +41,21 @@ export default function Navbar() {
 
   // Rota e rótulo do painel de acordo com o perfil logado (4 Perfis GlicoCare)
   const obterDadosPerfil = () => {
-    if (!usuario) return { rota: '/login', badge: '', icone: '👤', rotulo: 'Entrar' };
+    if (!usuario) return { rota: '/login', badge: '', icone: '👤', rotulo: 'Entrar', ehAdmin: false };
     const p = usuario.tipo_usuario || usuario.papel || usuario.tipo_perfil || usuario.tipo;
     if (p === 'admin' || p === 'admin_moderador') {
-      return { rota: '/painel-admin', badge: 'Curadoria', icone: '🛡️', rotulo: 'Painel Curadoria' };
+      return { rota: '/admin', badge: 'Painel Admin', icone: '🛡️', rotulo: 'Painel Admin', ehAdmin: true };
     }
     if (p === 'especialista') {
-      return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel' };
+      return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel', ehAdmin: false };
     }
     if (p === 'cuidador') {
-      return { rota: '/meu-perfil', badge: 'Cuidador', icone: '🤝', rotulo: 'Meu Espaço' };
+      return { rota: '/meu-perfil', badge: 'Cuidador', icone: '🤝', rotulo: 'Meu Espaço', ehAdmin: false };
     }
     if (p === 'diabetico') {
-      return { rota: '/meu-perfil', badge: 'Diabético', icone: '🌱', rotulo: 'Meu Espaço' };
+      return { rota: '/meu-perfil', badge: 'Diabético', icone: '🌱', rotulo: 'Meu Espaço', ehAdmin: false };
     }
-    return { rota: '/meu-perfil', badge: 'Família DM1', icone: '🏠', rotulo: 'Meu Espaço' };
+    return { rota: '/meu-perfil', badge: 'Família DM1', icone: '🏠', rotulo: 'Meu Espaço', ehAdmin: false };
   };
 
   const perfilInfo = obterDadosPerfil();
@@ -211,7 +211,31 @@ export default function Navbar() {
         <div className="gc-navbar__actions">
           {/* Ação 1: Autenticação Desktop (Pílula Entrar ou Perfil do Usuário Logado) */}
           {estaAutenticado ? (
-            <div className="gc-navbar__user-desktop">
+            <div className="gc-navbar__user-desktop" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              {perfilInfo.ehAdmin && (
+                <Link
+                  to="/admin"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.45rem 0.85rem',
+                    backgroundColor: 'rgba(124, 83, 63, 0.12)',
+                    border: '1px solid rgba(124, 83, 63, 0.35)',
+                    borderRadius: '20px',
+                    color: '#7C533F',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    letterSpacing: '0.02em',
+                    transition: 'all 0.2s ease',
+                  }}
+                  title="Acessar o Painel Administrativo Geral"
+                >
+                  <span aria-hidden="true">⚙️</span>
+                  <span>Painel Admin</span>
+                </Link>
+              )}
               <Link
                 to={perfilInfo.rota}
                 className="gc-navbar__user-pill"

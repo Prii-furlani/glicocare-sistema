@@ -117,14 +117,14 @@ export default function Login() {
 
         // Fallback resiliente para visualização caso o servidor local PHP não esteja servido no Apache
         if (senha === 'glicocare123' || senha === 'password') {
-          if (email.includes('curadoria') || email.includes('admin')) {
+          if (email.includes('curadoria') || email.includes('admin') || email.includes('priscila')) {
             respostaDados = {
               sucesso: true,
-              mensagem: 'Que bom ter você de volta, Equipe de Curadoria!',
+              mensagem: 'Que bom ter você de volta, Administradora Priscila!',
               dados: {
                 token: 'mock-token-admin-12345',
-                usuario: { id: 1, nome_completo: 'Curadoria GlicoCare', email, tipo_perfil: 'admin_moderador' },
-                redirecionar_para: '/biblioteca',
+                usuario: { id: 1, nome_completo: 'Priscila Manzoni Furlani (Curadoria GlicoCare)', email, tipo_perfil: 'admin_moderador', tipo_usuario: 'admin' },
+                redirecionar_para: '/admin',
               }
             };
           } else if (email.includes('helena') || email.includes('nutri') || email.includes('especialista')) {
@@ -172,8 +172,11 @@ export default function Login() {
 
         setMensagemSucesso(mensagem || 'Login realizado com sucesso!');
 
-        // Redireciona para a rota de origem (se houver) ou para o painel do perfil
-        const destino = location.state?.from?.pathname || dados.redirecionar_para || '/biblioteca';
+        // Redireciona para o Painel Admin se for admin, ou para a rota de origem
+        const perfilLogado = dados?.usuario?.tipo_usuario || dados?.usuario?.tipo_perfil;
+        const destino = (perfilLogado === 'admin' || perfilLogado === 'admin_moderador')
+          ? '/admin'
+          : (location.state?.from?.pathname || dados.redirecionar_para || '/biblioteca');
         setTimeout(() => {
           navigate(destino);
         }, 750);

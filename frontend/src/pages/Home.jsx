@@ -8,7 +8,7 @@
      com o polegar, cards empilhados com border-radius de 12px e fundo #F6F3EE.
    ========================================================================== */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
 import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
@@ -235,6 +235,41 @@ export default function Home() {
   // Estado do acordeão FAQ (inicia com a pergunta 01 aberta como na imagem)
   const [faqAberto, setFaqAberto] = useState(0);
 
+  // Estado do CMS Dinâmico da Home (carregado via /backend/api/publico/home_config.php)
+  const [cmsConfig, setCmsConfig] = useState({
+    hero_badge: 'INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.',
+    hero_titulo: 'Transforme o diagnóstico em uma rotina segura e sem pânico.',
+    hero_titulo_destaque: 'segura',
+    hero_subtitulo: 'Apoio pedagógico e acolhimento prático para famílias que vivem o Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada vez.',
+    hero_cta_primario: 'Quero começar com segurança',
+    hero_cta_secundario: 'Conheça nossa história',
+    hero_balao_lufy: '“Ei, respira. A gente vai aprender isso juntos.”',
+    hero_imagem_url: '',
+    lufy_eyebrow: 'CONHEÇA O LUFY',
+    lufy_titulo: 'Tecnologia no braço. Afeto no coração.',
+    lufy_titulo_destaque: 'Afeto',
+    lufy_paragrafo_1: 'Lufy nasceu para ser uma presença familiar nos momentos em que tudo parece novo demais. Um coala guardião que transforma termos difíceis em conversas possíveis.',
+    lufy_paragrafo_2: 'Com o sensor no bracinho, ele mostra para as crianças que o monitoramento não é um peso, mas uma ferramenta de autonomia e liberdade.',
+    lufy_citacao_foto: '“Cuidar também é ensinar com calma, até que a confiança encontre seu lugar.”',
+    lufy_imagem_url: '',
+    cta_final_titulo: 'Dê o primeiro passo para uma rotina mais serena.',
+    cta_final_subtitulo: 'Junte-se a centenas de famílias que transformaram o medo em aprendizado e confiança diária.',
+    cta_final_botao: 'Conheça nossos planos e comece hoje',
+  });
+
+  useEffect(() => {
+    fetch('/backend/api/publico/home_config.php')
+      .then((res) => res.json())
+      .then((resJson) => {
+        if (resJson && resJson.sucesso && resJson.dados) {
+          setCmsConfig((prev) => ({ ...prev, ...resJson.dados }));
+        }
+      })
+      .catch((err) => {
+        console.warn('CMS Dinâmico utilizando fallback padrão:', err);
+      });
+  }, []);
+
   // Filtra os artigos exibidos na grade Desktop / Feed Vertical Mobile
   const artigosExibidos = ARTIGOS_BIBLIOTECA.filter(
     (art) => filtroBiblioteca === 'Todos' || art.categoria === filtroBiblioteca
@@ -264,29 +299,57 @@ export default function Home() {
             <div className="hero-content-col">
               <div className="eyebrow-pill" style={{ marginBottom: '1.6rem' }}>
                 <span className="eyebrow-pill__dot" aria-hidden="true" />
-                <span>INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.</span>
+                <span>{cmsConfig.hero_badge || 'INFORMAÇÃO QUE ACOLHE. CUIDADO QUE APROXIMA.'}</span>
               </div>
 
               <h1 style={{ marginBottom: '1.65rem' }}>
-                Transforme o diagnóstico em uma rotina{' '}
-                <span className="palavra-destaque-segura">
-                  segura
-                  <svg
-                    className="palavra-destaque-curva"
-                    viewBox="0 0 220 14"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M3 10.5C62 3.5 154 3.5 217 9.5"
-                      stroke="#3B7E48"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </span>{' '}
-                e sem pânico.
+                {cmsConfig.hero_titulo && cmsConfig.hero_titulo_destaque && cmsConfig.hero_titulo.includes(cmsConfig.hero_titulo_destaque) ? (
+                  <>
+                    {cmsConfig.hero_titulo.split(cmsConfig.hero_titulo_destaque)[0]}
+                    <span className="palavra-destaque-segura">
+                      {cmsConfig.hero_titulo_destaque}
+                      <svg
+                        className="palavra-destaque-curva"
+                        viewBox="0 0 220 14"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M3 10.5C62 3.5 154 3.5 217 9.5"
+                          stroke="#3B7E48"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
+                    {cmsConfig.hero_titulo.split(cmsConfig.hero_titulo_destaque)[1]}
+                  </>
+                ) : (
+                  cmsConfig.hero_titulo || (
+                    <>
+                      Transforme o diagnóstico em uma rotina{' '}
+                      <span className="palavra-destaque-segura">
+                        segura
+                        <svg
+                          className="palavra-destaque-curva"
+                          viewBox="0 0 220 14"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M3 10.5C62 3.5 154 3.5 217 9.5"
+                            stroke="#3B7E48"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>{' '}
+                      e sem pânico.
+                    </>
+                  )
+                )}
               </h1>
 
               <p
@@ -298,9 +361,8 @@ export default function Home() {
                   marginBottom: '2.15rem',
                 }}
               >
-                Apoio pedagógico e acolhimento prático para famílias que vivem o
-                Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada
-                vez.
+                {cmsConfig.hero_subtitulo ||
+                  'Apoio pedagógico e acolhimento prático para famílias que vivem o Diabetes Tipo 1 — do diagnóstico à autonomia, um passo de cada vez.'}
               </p>
 
               <div
@@ -313,12 +375,12 @@ export default function Home() {
                 }}
               >
                 <a href="#planos" className="gc-btn gc-btn--primario">
-                  <span>Quero começar com segurança</span>
+                  <span>{cmsConfig.hero_cta_primario || 'Quero começar com segurança'}</span>
                   <span aria-hidden="true">→</span>
                 </a>
 
                 <a href="#conheca-o-lufy" className="gc-btn gc-btn--secundario">
-                  <span>Conheça nossa história</span>
+                  <span>{cmsConfig.hero_cta_secundario || 'Conheça nossa história'}</span>
                   <span aria-hidden="true">↗</span>
                 </a>
               </div>
@@ -387,7 +449,7 @@ export default function Home() {
                       fontWeight: 500,
                     }}
                   >
-                    “Ei, respira. A gente vai aprender isso juntos.”
+                    {cmsConfig.hero_balao_lufy || '“Ei, respira. A gente vai aprender isso juntos.”'}
                   </p>
                   <span
                     style={{
@@ -402,7 +464,7 @@ export default function Home() {
                 </div>
 
                 <img
-                  src={lufyMascoteFoto}
+                  src={cmsConfig.hero_imagem_url || lufyMascoteFoto}
                   alt="Mascote Lufy — Coala guardião com o sensor FreeStyle Libre no braço"
                   style={{
                     width: '100%',
@@ -535,7 +597,7 @@ export default function Home() {
             {/* Coluna Esquerda: Imagem da Família com a Citação Acolhedora */}
             <div style={{ position: 'relative' }}>
               <img
-                src={familiaCuidadoFoto}
+                src={cmsConfig.lufy_imagem_url || familiaCuidadoFoto}
                 alt="Mãe e filha conversando com serenidade na mesa da cozinha com insumos do DM1"
                 style={{
                   width: '100%',
@@ -568,19 +630,31 @@ export default function Home() {
                     color: 'var(--cor-texto)',
                   }}
                 >
-                  “Cuidar também é ensinar com calma, até que a confiança encontre
-                  seu lugar.”
+                  {cmsConfig.lufy_citacao_foto ||
+                    '“Cuidar também é ensinar com calma, até que a confiança encontre seu lugar.”'}
                 </p>
               </div>
             </div>
 
             {/* Coluna Direita: Narrativa do Lufy e Pilares Calma e Coragem */}
             <div>
-              <div className="section-line-eyebrow">CONHEÇA O LUFY</div>
+              <div className="section-line-eyebrow">{cmsConfig.lufy_eyebrow || 'CONHEÇA O LUFY'}</div>
 
               <h2 style={{ marginBottom: '1.25rem' }}>
-                Tecnologia no braço.{' '}
-                <span className="texto-italico-terracota">Afeto</span> no coração.
+                {cmsConfig.lufy_titulo && cmsConfig.lufy_titulo_destaque && cmsConfig.lufy_titulo.includes(cmsConfig.lufy_titulo_destaque) ? (
+                  <>
+                    {cmsConfig.lufy_titulo.split(cmsConfig.lufy_titulo_destaque)[0]}
+                    <span className="texto-italico-terracota">{cmsConfig.lufy_titulo_destaque}</span>
+                    {cmsConfig.lufy_titulo.split(cmsConfig.lufy_titulo_destaque)[1]}
+                  </>
+                ) : (
+                  cmsConfig.lufy_titulo || (
+                    <>
+                      Tecnologia no braço.{' '}
+                      <span className="texto-italico-terracota">Afeto</span> no coração.
+                    </>
+                  )
+                )}
               </h2>
 
               <p
@@ -591,9 +665,8 @@ export default function Home() {
                   lineHeight: 1.65,
                 }}
               >
-                Lufy nasceu para ser uma presença familiar nos momentos em que
-                tudo parece novo demais. Um coala guardião que transforma termos
-                difíceis em conversas possíveis.
+                {cmsConfig.lufy_paragrafo_1 ||
+                  'Lufy nasceu para ser uma presença familiar nos momentos em que tudo parece novo demais. Um coala guardião que transforma termos difíceis em conversas possíveis.'}
               </p>
 
               <p
@@ -604,9 +677,8 @@ export default function Home() {
                   lineHeight: 1.65,
                 }}
               >
-                Com seu sensor no braço, ele mostra às crianças que a tecnologia
-                faz parte do cuidado — mas que são o carinho, a informação e a
-                rede de apoio que tornam a jornada mais leve.
+                {cmsConfig.lufy_paragrafo_2 ||
+                  'Com seu sensor no braço, ele mostra às crianças que a tecnologia faz parte do cuidado — mas que são o carinho, a informação e a rede de apoio que tornam a jornada mais leve.'}
               </p>
 
               <div className="grid-2-colunas">
@@ -1566,6 +1638,53 @@ export default function Home() {
         </div>
       </section>
       {/* FIM DA SEÇÃO FAQ */}
+
+      {/* =====================================================================
+          9. INÍCIO DA SEÇÃO CTA FINAL (DINÂMICO CMS)
+          ===================================================================== */}
+      <section
+        id="cta-final"
+        style={{
+          backgroundColor: 'var(--cor-superficie)',
+          borderTop: '1px solid var(--cor-borda-suave)',
+          padding: 'clamp(3.5rem, 6vw, 5.5rem) 0',
+          textAlign: 'center',
+        }}
+      >
+        <div className="container" style={{ maxWidth: '820px', margin: '0 auto' }}>
+          <h2
+            style={{
+              fontSize: 'clamp(1.75rem, 3vw, 2.35rem)',
+              color: 'var(--cor-texto)',
+              marginBottom: '1.25rem',
+            }}
+          >
+            {cmsConfig.cta_final_titulo || 'Dê o primeiro passo para uma rotina mais serena.'}
+          </h2>
+          <p
+            style={{
+              fontSize: '1.1rem',
+              color: 'var(--cor-texto-suave)',
+              lineHeight: 1.6,
+              marginBottom: '2.25rem',
+              maxWidth: '640px',
+              marginInline: 'auto',
+            }}
+          >
+            {cmsConfig.cta_final_subtitulo ||
+              'Junte-se a centenas de famílias que transformaram o medo em aprendizado e confiança diária.'}
+          </p>
+          <a
+            href="#planos"
+            className="gc-btn gc-btn--primario"
+            style={{ padding: '0.95rem 2.25rem', fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <span>{cmsConfig.cta_final_botao || 'Conheça nossos planos e comece hoje'}</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+      {/* FIM DA SEÇÃO CTA FINAL */}
     </div>
   );
 }

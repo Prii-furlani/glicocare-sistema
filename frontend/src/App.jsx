@@ -124,7 +124,15 @@ export default function App() {
               }
             />
 
-            {/* Painel de Curadoria e Administração (Perfil 'admin' / Moderação) */}
+            {/* Painel Administrativo Completo e CMS (Perfil 'admin' — Exclusivo Priscila) */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <PainelAdmin />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/painel-admin"
               element={

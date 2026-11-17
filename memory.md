@@ -647,6 +647,64 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   * `justificativa_clinica`: TEXT DEFAULT NULL (justificativa técnica vinculada à emissão em tempo real na teleconsulta).
 - **Auditoria Imutável:** Todas as alterações de honorários, agendamentos de retorno isento e salvamentos de prontuário com anotações privadas são registradas no `AuditLogger` em `America/Sao_Paulo`.
 
+## 16. Painel Administrativo Completo (/admin) e CMS Dinâmico da Home (configuracoes_home)
+
+### A. Regras de Negócio, Acesso Restrito e Redirecionamento (RN-ACC-01)
+- **Perfil Exclusivo Admin (Priscila Manzoni Furlani):**
+  * O painel `/admin` (com alias `/painel-admin`) é estritamente restrito a contas com `tipo_usuario === 'admin'` ou `tipo_perfil === 'admin_moderador'`.
+  * Ao autenticar na tela de login (`/login`) com a conta de administração (`curadoria@glicocare.com.br`), o usuário é redirecionado imediatamente para `/admin`.
+  * Na barra de navegação superior (`Navbar.jsx`), quando o perfil for `admin`, um botão/badge em destaque **"⚙️ Painel Admin"** é renderizado ao lado do nome do usuário tanto no desktop quanto no menu mobile.
+
+### B. CMS Dinâmico da Home (`configuracoes_home`)
+- **Tabela Relacional no TiDB Cloud MySQL:**
+  * `id`: INT AUTO_INCREMENT PRIMARY KEY.
+  * `secao`: VARCHAR(60) NOT NULL (`hero`, `lufy`, `diferenciais`, `cta_final`).
+  * `chave`: VARCHAR(100) NOT NULL UNIQUE (identificador único do campo na Landing Page).
+  * `tipo_campo`: ENUM('TEXTO_CURTO', 'TEXTO_LONGO', 'IMAGEM') NOT NULL DEFAULT 'TEXTO_CURTO'.
+  * `rotulo_admin`: VARCHAR(150) NOT NULL (nome amigável exibido no painel de edição).
+  * `valor`: TEXT NOT NULL (texto, chamada ou caminho da imagem).
+  * `atualizado_em`: DATETIME NOT NULL (`America/Sao_Paulo`).
+- **Campos Editáveis Gerenciados:**
+  * `hero_badge`: Badge superior com ponto verde.
+  * `hero_titulo`: Título H1 principal com suporte a sublinhado suave na palavra destacada.
+  * `hero_titulo_destaque`: Palavra que recebe o traço curvilíneo verde (`segura`).
+  * `hero_subtitulo`: Subtítulo explicativo e acolhedor.
+  * `hero_cta_primario` e `hero_cta_secundario`: Textos dos botões de ação do Hero.
+  * `hero_balao_lufy`: Frase de acolhimento no balão do mascote Lufy.
+  * `hero_imagem_url`: Imagem do mascote Lufy (com upload de JPG, PNG ou WEBP até 8MB em `/backend/uploads/home/`).
+  * `lufy_eyebrow`: Sobretítulo da seção "Conheça o Lufy".
+  * `lufy_titulo` e `lufy_titulo_destaque`: Título com destaque itálico em terracota (`Afeto`).
+  * `lufy_paragrafo_1` e `lufy_paragrafo_2`: Parágrafos narrativos da história do Lufy.
+  * `lufy_citacao_foto`: Frase inspiradora sobreposta à foto da família.
+  * `lufy_imagem_url`: Imagem acolhedora da família (com upload até 8MB).
+  * `cta_final_titulo`, `cta_final_subtitulo` e `cta_final_botao`: Seção de chamada final antes do rodapé.
+- **Consumo Público na Home (`Home.jsx`):**
+  * Consome o endpoint público leve `/backend/api/publico/home_config.php` no mount do componente, aplicando os textos e imagens dinâmicos do banco com fallback automático e transparente em caso de indisponibilidade de rede.
+
+### C. Gestão Editorial da Biblioteca (`artigos_conteudos`)
+- **Colunas Suportadas:**
+  * `autor_nome` (padrão `'Priscila Manzoni Furlani'`), `titulo`, `titulo_destaque_italico`, `subtitulo`, `slug`, `categoria`, `resumo`, `tempo_leitura`, `imagem_capa_url`, `legenda_capa`, `conteudo_blocos` (JSON), `status_publicacao` (`'publicado'`, `'rascunho'`, `'arquivado'`).
+- **Editor Estruturado por Blocos:**
+  * Permite adicionar parágrafos normais, subtítulos H2, citações destacadas do Lufy ("Respiro do Guardião") e passos/dicas numeradas com ordenação (subir/descer) e pré-visualização instantânea antes da publicação.
+
+### D. Endpoints Administrativos e Governança (`/backend/api/admin/`)
+- `dashboard_geral.php` (GET): Retorna métricas globais consolidadas (famílias, pacientes, especialistas ativos vs. pendentes, consultas, split financeiro 35% GlicoCare / 65% Especialistas e os 25 últimos logs de auditoria).
+- `salvar_home.php` (GET / POST): Obtém e atualiza chaves do CMS com processamento seguro de upload multipart de imagens até 8MB em `/backend/uploads/home/` e registro no `AuditLogger`.
+- `publico/home_config.php` (GET): Endpoint público e resiliente sem necessidade de autenticação para abastecer a `Home.jsx`.
+- `gerenciar_artigos.php` (GET / POST / PUT / DELETE): CRUD completo de artigos com suporte a upload de capa em `/backend/uploads/artigos/` e auditoria `CRIACAO`, `EDICAO` e `EXCLUSAO`.
+- `curadoria_especialistas.php` (GET / POST): Curadoria profissional, verificação de conselhos (`CRM`, `CRN`, etc.), ativação/pausa e ajuste individual de split de repasse e retorno.
+- `moderar_depoimentos.php` (GET / POST): Aprovação ou rejeição de relatos familiares (`RN-MOD-01`) e avaliações de teleconsultas.
+- `usuarios.php` (GET / POST): Listagem e busca de contas com ativação/desativação imediata.
+
+### E. Interface do Painel Administrativo (`PainelAdmin.jsx`)
+- **5 Abas Principais:**
+  1. *📊 Visão Geral & Finanças:* KPIs, gráfico/barra do split 35% / 65% e tabela pesquisável de logs imutáveis com filtro por ação.
+  2. *🎨 Editar Tela Home (CMS):* Formulário visual por seções da Landing Page com preview de imagens e botão *"✓ Salvar Alterações na Home"*.
+  3. *📚 Biblioteca de Conteúdos:* Tabela com filtros e modal de criação/edição com editor de blocos e aba de preview.
+  4. *🩺 Especialistas & Curadoria:* Cards com conselho profissional, comutadores de aprovação/pausa e configuração de split.
+  5. *💬 Moderação & Usuários:* Fila de aprovação de depoimentos e gestão completa de contas.
+
+
 
 
 
