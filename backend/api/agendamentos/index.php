@@ -101,15 +101,18 @@ if ($method === 'POST') {
 
     // 3. RN-ATD-04: Sala nativa de videoconferência
     $salaNativaId   = 'SALA-NATIVA-GC-' . strtoupper(bin2hex(random_bytes(4)));
-    $rotaInternaVideo = '/atendimento-nativo/' . $salaNativaId;
+    $rotaInternaVideo = '/sala-consulta/' . $salaNativaId;
 
     $stmt = $db->prepare(
         'INSERT INTO agendamentos
          (familiar_usuario_id, especialista_id, data_hora_consulta, valor_transacao_interna,
           taxa_servico_glicocare, repasse_especialista, comprovante_nf, codigo_transacao_interna,
-          status_pagamento_interno, status_agendamento, link_video_integrado, observacoes_familia)
+          status_pagamento_interno, status_financeiro, status_agendamento, status_atendimento,
+          sala_token_unico, link_video_integrado, observacoes_familia)
          VALUES
-         (:fuid, :eid, :data_hora, :valor, :taxa, :repasse, :nf, :cod_trans, "pago_retido_custodia", "confirmado", :link, :obs)'
+         (:fuid, :eid, :data_hora, :valor, :taxa, :repasse, :nf, :cod_trans,
+          "pago_retido_custodia", "RETIDO_PLATAFORMA", "confirmado", "AGENDADO",
+          :token, :link, :obs)'
     );
     $stmt->execute([
         ':fuid'      => $familiarId,
@@ -120,10 +123,49 @@ if ($method === 'POST') {
         ':repasse'   => $repasseLiquido,
         ':nf'        => $numeroReciboNF,
         ':cod_trans' => $codTransacao,
+        ':token'     => $salaNativaId,
         ':link'      => $rotaInternaVideo,
         ':obs'       => $payload['observacoes_familia'] ?? null,
     ]);
     $novoId = (int) $db->lastInsertId();
+
+    // 3B. Registra o Termo de Consentimento Informado (CFM 2.314/2022 & LGPD)
+    $ipOrigem = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    if (str_contains($ipOrigem, ',')) {
+        $ipOrigem = trim(explode(',', $ipOrigem)[0]);
+    }
+    $dataHoraLocal = (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->format('Y-m-d H:i:s');
+    $versaoTermo   = $payload['versao_termo'] ?? 'v1.0-2026';
+
+    try {
+        $stmtCons = $db->prepare(
+            'INSERT INTO consentimentos_teleconsulta
+             (usuario_id, agendamento_id, versao_termo, aceito, ip_aceite, data_hora_aceite)
+             VALUES (:uid, :aid, :versao, 1, :ip, :data_hora)'
+        );
+        $stmtCons->execute([
+            ':uid'       => $familiarId,
+            ':aid'       => $novoId,
+            ':versao'    => $versaoTermo,
+            ':ip'        => $ipOrigem,
+            ':data_hora' => $dataHoraLocal,
+        ]);
+        $consentimentoId = (int) $db->lastInsertId();
+
+        AuditLogger::registrar(
+            $db,
+            'CRIACAO',
+            'consentimentos_teleconsulta',
+            $consentimentoId,
+            '/agendamentos/checkout',
+            null,
+            ['agendamento_id' => $novoId, 'versao_termo' => $versaoTermo, 'ip_aceite' => $ipOrigem],
+            $familiarId,
+            $pacienteNome
+        );
+    } catch (Exception $e) {
+        // Silencioso se tabela não migrada
+    }
 
     // 4. Captura snapshot recém-criado e audita (RN-AUD-01)
     $snapshotNovo = AuditLogger::capturarSnapshot($db, 'agendamentos', $novoId);

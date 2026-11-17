@@ -188,6 +188,135 @@ async function main() {
     console.log('ℹ️ Tabela pre_atendimentos:', err.message);
   }
 
+  // 6. Atualizações para Telemedicina Integrada e Conformidade CFM 2.314/2022
+  try {
+    await connection.query(`
+      ALTER TABLE \`especialistas\`
+      ADD COLUMN IF NOT EXISTS \`conselho_sigla\` VARCHAR(20) DEFAULT 'CRM',
+      ADD COLUMN IF NOT EXISTS \`conselho_numero\` VARCHAR(40) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`conselho_uf\` CHAR(2) DEFAULT 'SP',
+      ADD COLUMN IF NOT EXISTS \`normas_categoria_aceitas\` TINYINT(1) NOT NULL DEFAULT 1;
+
+      UPDATE \`especialistas\`
+      SET \`conselho_sigla\` = COALESCE(\`conselho_sigla\`, \`tipo_conselho\`),
+          \`conselho_numero\` = COALESCE(\`conselho_numero\`, \`numero_conselho\`),
+          \`conselho_uf\` = COALESCE(\`conselho_uf\`, \`uf_conselho\`)
+      WHERE \`conselho_sigla\` IS NULL OR \`conselho_numero\` IS NULL;
+    `);
+    console.log('✅ Colunas de conformidade e conselho verificadas em especialistas.');
+  } catch (err) {
+    console.log('ℹ️ Colunas em especialistas:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`agendamentos\`
+      ADD COLUMN IF NOT EXISTS \`sala_token_unico\` VARCHAR(120) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`lembrete_enviado\` TINYINT(1) NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS \`status_financeiro\` ENUM('RETIDO_PLATAFORMA', 'LIBERADO_ESPECIALISTA', 'ESTORNADO') NOT NULL DEFAULT 'RETIDO_PLATAFORMA',
+      ADD COLUMN IF NOT EXISTS \`status_atendimento\` ENUM('AGENDADO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') NOT NULL DEFAULT 'AGENDADO';
+
+      UPDATE \`agendamentos\`
+      SET \`sala_token_unico\` = 'SALA-NATIVA-GC-HELENA-THEO',
+          \`status_atendimento\` = 'AGENDADO',
+          \`status_financeiro\` = 'RETIDO_PLATAFORMA'
+      WHERE \`id\` = 1 AND (\`sala_token_unico\` IS NULL OR \`sala_token_unico\` = '');
+    `);
+    console.log('✅ Colunas de sala nativa e status de teleconsulta verificadas em agendamentos.');
+  } catch (err) {
+    console.log('ℹ️ Colunas em agendamentos:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`consentimentos_teleconsulta\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
+        \`usuario_id\` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+        \`agendamento_id\` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+        \`versao_termo\` VARCHAR(20) NOT NULL DEFAULT 'v1.0-2026' COMMENT 'Versão do termo CFM 2.314/2022 e LGPD',
+        \`aceito\` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite eletrônico confirmado',
+        \`ip_aceite\` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do usuário',
+        \`data_hora_aceite\` DATETIME NOT NULL COMMENT 'Timestamp no fuso America/Sao_Paulo',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_consentimento_usuario\` (\`usuario_id\`),
+        KEY \`idx_consentimento_agendamento\` (\`agendamento_id\`),
+        CONSTRAINT \`fk_consentimento_usuario\`
+          FOREIGN KEY (\`usuario_id\` ) REFERENCES \`usuarios\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_consentimento_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido para telemedicina';
+    `);
+    console.log('✅ Tabela consentimentos_teleconsulta verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela consentimentos_teleconsulta:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`prontuarios_atendimentos\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do prontuário do atendimento',
+        \`agendamento_id\` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK 1:1 para agendamentos(id)',
+        \`perfil_saude_id\` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+        \`especialista_id\` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+        \`queixa_principal\` TEXT NOT NULL COMMENT 'Motivo e queixa relatados no atendimento',
+        \`evolucao_clinica\` TEXT NOT NULL COMMENT 'Anamnese remota e notas de evolução clínica',
+        \`conduta_orientacoes\` TEXT NOT NULL COMMENT 'Plano terapêutico, metas e orientações de rotina',
+        \`encaminhamento_presencial\` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Indicada consulta presencial de segurança',
+        \`data_registro\` DATETIME NOT NULL COMMENT 'Momento do registro oficial do prontuário',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`atualizado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_prontuario_perfil\` (\`perfil_saude_id\`),
+        KEY \`idx_prontuario_especialista\` (\`especialista_id\`),
+        CONSTRAINT \`fk_prontuario_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_prontuario_perfil\`
+          FOREIGN KEY (\`perfil_saude_id\`) REFERENCES \`perfis_saude\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_prontuario_especialista\`
+          FOREIGN KEY (\`especialista_id\`) REFERENCES \`especialistas\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Prontuários eletrônicos de teleatendimento CFM 2.314/2022';
+    `);
+    console.log('✅ Tabela prontuarios_atendimentos verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela prontuarios_atendimentos:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`avaliacoes_especialistas\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da avaliação',
+        \`agendamento_id\` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK 1:1 para agendamentos(id)',
+        \`especialista_id\` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+        \`usuario_id\` INT UNSIGNED DEFAULT NULL COMMENT 'FK para usuarios(id) do paciente/cuidador',
+        \`nota\` TINYINT UNSIGNED NOT NULL COMMENT 'Nota de 1 a 5 estrelas',
+        \`comentario\` TEXT DEFAULT NULL COMMENT 'Relato acolhedor ou elogio da família',
+        \`status_moderacao\` ENUM('PENDENTE', 'APROVADO', 'REJEITADO') NOT NULL DEFAULT 'APROVADO' COMMENT 'Status de moderação de reputação',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_avaliacoes_especialista\` (\`especialista_id\`, \`status_moderacao\`),
+        KEY \`idx_avaliacoes_usuario\` (\`usuario_id\`),
+        CONSTRAINT \`fk_avaliacao_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_avaliacao_especialista\`
+          FOREIGN KEY (\`especialista_id\`) REFERENCES \`especialistas\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_avaliacao_usuario\`
+          FOREIGN KEY (\`usuario_id\`) REFERENCES \`usuarios\` (\`id\`)
+          ON DELETE SET NULL ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Avaliações e reputação moderada de especialistas';
+    `);
+    console.log('✅ Tabela avaliacoes_especialistas verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela avaliacoes_especialistas:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

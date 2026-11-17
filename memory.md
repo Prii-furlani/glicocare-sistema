@@ -329,6 +329,78 @@
 - **Painel do Especialista (`PainelEspecialista.jsx`):**
   * Alerta visual em `#FFF5F0` com borda terracota `#E06A55` posicionado no topo do resumo clínico do paciente e no modal de emissão de guia médica/receitas, prevenindo qualquer prescrição de risco.
 
+## 12. Fluxo Integrado de Telemedicina, Prontuário Eletrônico e Conformidade (CFM 2.314/2022, CFN, CFP, CONFEF & LGPD)
+
+### A. Estrutura do Banco de Dados Relacional (TiDB Cloud MySQL)
+- **Tabela `especialistas`:**
+  * `conselho_sigla` VARCHAR(20) DEFAULT 'CRM' (CRM, CRN, CRP, CREF).
+  * `conselho_numero` VARCHAR(40) (número de registro profissional validado).
+  * `conselho_uf` CHAR(2) (UF de registro do conselho).
+  * `normas_categoria_aceitas` TINYINT(1) DEFAULT 1 (aceite obrigatório das resoluções de telessaúde).
+- **Tabela `agendamentos`:**
+  * `sala_token_unico` VARCHAR(120) (token criptográfico único para rota nativa).
+  * `lembrete_enviado` TINYINT(1) DEFAULT 0.
+  * `status_atendimento` ENUM('AGENDADO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO') DEFAULT 'AGENDADO'.
+  * `status_financeiro` ENUM('RETIDO_PLATAFORMA', 'LIBERADO_ESPECIALISTA', 'ESTORNADO') DEFAULT 'RETIDO_PLATAFORMA' (custódia interna RN-FIN-03).
+- **Tabela `consentimentos_teleconsulta` (CFM 2.314/2022 & LGPD):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `usuario_id`: INT UNSIGNED NOT NULL (FK -> `usuarios(id)`).
+  * `agendamento_id`: INT UNSIGNED NOT NULL (FK -> `agendamentos(id)`).
+  * `versao_termo`: VARCHAR(20) DEFAULT 'v1.0-2026'.
+  * `aceito`: TINYINT(1) DEFAULT 1.
+  * `ip_aceite`: VARCHAR(45) NOT NULL.
+  * `data_hora_aceite`: DATETIME NOT NULL (`America/Sao_Paulo`).
+- **Tabela `prontuarios_atendimentos` (Prontuário Eletrônico CFM 2.314/2022):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `agendamento_id`: INT UNSIGNED NOT NULL UNIQUE (FK 1:1 -> `agendamentos(id)`).
+  * `perfil_saude_id`: INT UNSIGNED NOT NULL (FK -> `perfis_saude(id)`).
+  * `especialista_id`: INT UNSIGNED NOT NULL (FK -> `especialistas(id)`).
+  * `queixa_principal`: TEXT NOT NULL (pré-alimentada do pré-atendimento).
+  * `evolucao_clinica`: TEXT NOT NULL (anamnese e notas do atendimento).
+  * `conduta_orientacoes`: TEXT NOT NULL (metas, ajustes e rotina escolar).
+  * `encaminhamento_presencial`: TINYINT(1) DEFAULT 0 (requisito ético do CFM para limitações da telessaúde).
+  * `data_registro`: DATETIME NOT NULL (`America/Sao_Paulo`).
+- **Tabela `avaliacoes_especialistas` (Reputação e Moderação):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `agendamento_id`: INT UNSIGNED NOT NULL UNIQUE (FK 1:1 -> `agendamentos(id)`).
+  * `especialista_id`: INT UNSIGNED NOT NULL (FK -> `especialistas(id)`).
+  * `usuario_id`: INT UNSIGNED DEFAULT NULL (FK -> `usuarios(id)`).
+  * `nota`: TINYINT UNSIGNED NOT NULL (1 a 5 estrelas).
+  * `comentario`: TEXT DEFAULT NULL.
+  * `status_moderacao`: ENUM('PENDENTE', 'APROVADO', 'REJEITADO') DEFAULT 'APROVADO'.
+
+### B. Endpoints da API PHP (`/backend/api/teleconsulta/` e `/backend/api/perfil/`)
+- `sala.php` (GET):
+  * Valida token criptográfico da sala e aplica RBAC estrito (apenas paciente/familiar ou especialista vinculado).
+  * Retorna sessão consolidada: dados do agendamento, profissional com conselho ativo, pré-atendimento, perfil de saúde, alergias estruturadas, medicamentos ativos, diário recente com IOB e exames laboratoriais.
+- `salvar_prontuario.php` (POST):
+  * Apenas especialista autenticado: grava/atualiza `prontuarios_atendimentos`.
+  * Atualiza atomicamente `agendamentos.status_atendimento = 'CONCLUIDO'`, `status_agendamento = 'concluido'`, `status_financeiro = 'LIBERADO_ESPECIALISTA'` e `status_pagamento_interno = 'repassado_especialista'`.
+  * Registra auditoria imutável via `AuditLogger::registrar()` para prontuário e agendamento no fuso `America/Sao_Paulo`.
+- `consentimento.php` (GET / POST):
+  * Registra formalmente a anuência ao Termo de Consentimento Livre e Esclarecido capturando IP e timestamp oficial.
+- `avaliar.php` (GET / POST):
+  * Registra avaliação do paciente (1 a 5 estrelas e comentário acolhedor) vinculada ao agendamento concluído.
+  * Fornece média consolidada e depoimentos aprovados para a vitrine pública de especialistas.
+- `resumo_compartilhavel.php` (GET):
+  * Compila histórico unificado (identificação, diagnóstico, jornada, alergias, medicações, glicemias, exames e orientações de teleconsultas) com hash SHA-256 de integridade digital.
+
+### C. Interface Front-End e Experiência do Usuário
+- **Sala Nativa de Videoconsulta (`/sala-consulta/:token` e `/atendimento-nativo/:token`):**
+  * Ambiente imersivo com simulação de vídeo em alta fidelidade, badge de conformidade CFM 2.314/2022, timer regressivo da sessão (60 min) e botão de Suporte/Emergência (SAMU 192 e sinais de alarme de cetoacidose).
+  * Drawer lateral com 3 abas essenciais:
+    - *Aba 1 (Prontuário)*: Formulário clínico com queixa, evolução, conduta e checkbox obrigatório CFM; botão de conclusão que salva o prontuário e dispara a liberação financeira ao especialista.
+    - *Aba 2 (Pré-Atendimento)*: Motivo principal, dores e dúvidas prioritárias digitadas pela família.
+    - *Aba 3 (Resumo DM1)*: Tipo de diabetes, anos/meses de jornada, alerta em vermelho para alergias ativas (ex: Dipirona e Adesivo), medicamentos ativos com horários, diário recente com IOB e últimos exames laboratoriais.
+- **Perfil do Especialista & Agendamento (`PerfilEspecialista.jsx`):**
+  * Seção *"Avaliações das Famílias"* com média e relatos de famílias reais.
+  * Checkbox obrigatório do **Termo de Consentimento Livre e Esclarecido (CFM 2.314/2022 & LGPD)** no checkout seguro.
+  * Pós-checkout com botão direto *"🎥 Entrar na Sala de Videoconsulta Nativa"* e atalho para o Pré-Atendimento.
+- **Histórico Médico Compartilhável (`MeuPerfil.jsx` + `ResumoHistoricoCompartilhavel.jsx`):**
+  * Botão de destaque no topo da página: *"📋 Gerar Resumo Histórico para Compartilhar (PDF / Impressão)"*.
+  * Modal responsivo e documento imprimível com `@media print` contendo: identificação do paciente e responsável legal, diagnóstico e tempo de aprendizado em anos/meses, alergias em destaque visual, medicamentos ativos, parâmetros de sensibilidade/IOB, últimos exames e condutas das teleconsultas, finalizando com hash criptográfico e termo LGPD.
+
+
 
 
 

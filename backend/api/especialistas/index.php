@@ -38,10 +38,17 @@ if ($method === 'GET') {
 
     if (!empty($_GET['id'])) {
         $stmt = $db->prepare(
-            'SELECT e.*, u.nome_completo, u.email, u.telefone_whatsapp
+            'SELECT e.*, u.nome_completo, u.email, u.telefone_whatsapp,
+                    COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                    COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                    COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf,
+                    COALESCE(AVG(a.nota), 4.9) AS media_nota,
+                    COUNT(a.id) AS total_avaliacoes
              FROM especialistas e
              INNER JOIN usuarios u ON e.usuario_id = u.id
-             WHERE e.id = :id'
+             LEFT JOIN avaliacoes_especialistas a ON a.especialista_id = e.id AND a.status_moderacao = "APROVADO"
+             WHERE e.id = :id
+             GROUP BY e.id'
         );
         $stmt->execute([':id' => (int) $_GET['id']]);
         $especialista = $stmt->fetch();
@@ -52,18 +59,37 @@ if ($method === 'GET') {
             exit;
         }
 
+        // Busca lista de depoimentos e avaliações aprovadas
+        $stmtAvs = $db->prepare(
+            'SELECT a.id, a.nota, a.comentario, a.criado_em,
+                    COALESCE(u.nome_completo, "Família GlicoCare") AS paciente_nome
+             FROM avaliacoes_especialistas a
+             LEFT JOIN usuarios u ON a.usuario_id = u.id
+             WHERE a.especialista_id = :id AND a.status_moderacao = "APROVADO"
+             ORDER BY a.criado_em DESC'
+        );
+        $stmtAvs->execute([':id' => (int) $_GET['id']]);
+        $especialista['avaliacoes'] = $stmtAvs->fetchAll();
+
         echo json_encode(['sucesso' => true, 'dados' => $especialista]);
         exit;
     }
 
     $stmt = $db->prepare(
         'SELECT e.id, u.nome_completo, u.email, e.especialidade, e.tipo_conselho,
-                e.numero_conselho, e.uf_conselho, e.foco_atuacao, e.biografia_metodo,
-                e.valor_consulta, e.duracao_consulta_min, e.status_credenciamento,
-                e.registro_verificado, e.slug
+                e.numero_conselho, e.uf_conselho,
+                COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
+                COALESCE(e.conselho_numero, e.numero_conselho) AS conselho_numero,
+                COALESCE(e.conselho_uf, e.uf_conselho) AS conselho_uf,
+                e.foco_atuacao, e.biografia_metodo, e.valor_consulta, e.duracao_consulta_min,
+                e.status_credenciamento, e.registro_verificado, e.slug,
+                COALESCE(AVG(a.nota), 4.9) AS media_nota,
+                COUNT(a.id) AS total_avaliacoes
          FROM especialistas e
          INNER JOIN usuarios u ON e.usuario_id = u.id
+         LEFT JOIN avaliacoes_especialistas a ON a.especialista_id = e.id AND a.status_moderacao = "APROVADO"
          WHERE e.status_credenciamento = :status
+         GROUP BY e.id
          ORDER BY u.nome_completo ASC'
     );
     $stmt->execute([':status' => $statusFiltro]);

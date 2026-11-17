@@ -50,7 +50,7 @@ export default function PainelEspecialista() {
       sensor_glicemia: 'FreeStyle Libre 2',
       data_hora: '2026-11-20 14:00',
       status: 'confirmado',
-      link_video: '/atendimento-nativo/SALA-NATIVA-GC-HELENA-THEO',
+      link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-THEO',
       observacoes: 'Deseja revisar as curvas da madrugada no sensor FreeStyle Libre e orientações escolares.',
       valor_repasse: 281.60,
     }
@@ -442,14 +442,17 @@ export default function PainelEspecialista() {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.3rem',
-                      color: '#3B7E48',
-                      fontWeight: 600,
-                      fontSize: '0.85rem',
-                      textDecoration: 'underline',
+                      gap: '0.35rem',
+                      backgroundColor: '#3B7E48',
+                      color: '#FFF',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      textDecoration: 'none',
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
                     }}
                   >
-                    Entrar na sala de vídeo →
+                    🎥 Entrar na Videoconsulta & Prontuário →
                   </Link>
                 </div>
               </div>

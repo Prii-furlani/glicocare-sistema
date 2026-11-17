@@ -50,8 +50,12 @@ CREATE TABLE IF NOT EXISTS `especialistas` (
   `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
   `especialidade` VARCHAR(120) NOT NULL COMMENT 'Ex: Endocrinologia e Metabologia, Nutrição em DM1',
   `tipo_conselho` ENUM('CRM', 'CRN', 'CRP', 'CREF', 'PEDAGOGIA') NOT NULL COMMENT 'Conselho de classe',
+  `conselho_sigla` VARCHAR(20) DEFAULT 'CRM' COMMENT 'Sigla oficial do conselho (CRM, CRN, CRP, CONFEF)',
   `numero_conselho` VARCHAR(40) NOT NULL COMMENT 'Número do registro profissional',
+  `conselho_numero` VARCHAR(40) DEFAULT NULL COMMENT 'Alias do número para conformidade CFM',
   `uf_conselho` CHAR(2) NOT NULL COMMENT 'UF do conselho (ex: SP, RJ)',
+  `conselho_uf` CHAR(2) DEFAULT NULL COMMENT 'Alias da UF para conformidade CFM',
+  `normas_categoria_aceitas` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite das resoluções de teleatendimento (CFM 2.314/2022, etc.)',
   `foco_atuacao` VARCHAR(255) NOT NULL COMMENT 'Focos (ex: Ajuste de Insulina, Contagem de Carboidratos)',
   `biografia_metodo` TEXT NOT NULL COMMENT 'Apresentação da metodologia de acolhimento',
   `resumo_card` VARCHAR(255) DEFAULT NULL COMMENT 'Texto curto para o card da vitrine',
@@ -271,6 +275,11 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
     'repassado_especialista',
     'reembolsado'
   ) NOT NULL DEFAULT 'pago_retido_custodia' COMMENT 'Status financeiro interno RN-FIN-03',
+  `status_financeiro` ENUM(
+    'RETIDO_PLATAFORMA',
+    'LIBERADO_ESPECIALISTA',
+    'ESTORNADO'
+  ) NOT NULL DEFAULT 'RETIDO_PLATAFORMA' COMMENT 'Custódia financeira e liberação pós-prontuário (RN-FIN-03)',
   `status_agendamento` ENUM(
     'agendado',
     'confirmado',
@@ -278,6 +287,14 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
     'concluido',
     'cancelado'
   ) NOT NULL DEFAULT 'confirmado' COMMENT 'Estado operacional da teleconsulta',
+  `status_atendimento` ENUM(
+    'AGENDADO',
+    'EM_ANDAMENTO',
+    'CONCLUIDO',
+    'CANCELADO'
+  ) NOT NULL DEFAULT 'AGENDADO' COMMENT 'Estado clínico e teleconsulta integrada',
+  `sala_token_unico` VARCHAR(120) DEFAULT NULL COMMENT 'Token criptográfico único da sala de teleconsulta nativa',
+  `lembrete_enviado` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Notificação/lembrete de teleconsulta disparado',
   `link_video_integrado` VARCHAR(255) NOT NULL COMMENT 'Rota interna de teleconsulta nativa (RN-ATD-04)',
   `url_laudo_receita_pdf` VARCHAR(255) DEFAULT NULL COMMENT 'Laudo ou receita emitidos na consulta',
   `observacoes_familia` TEXT DEFAULT NULL COMMENT 'Notas prévias enviadas pela família',
@@ -313,6 +330,87 @@ CREATE TABLE IF NOT EXISTS `pre_atendimentos` (
     FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Módulo de Pré-Atendimento Acolhedor';
+
+-- =============================================================================
+-- TABELA 7B: consentimentos_teleconsulta
+-- Termo de Consentimento Livre e Esclarecido (CFM 2.314/2022, CFN, CFP, CONFEF e LGPD)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `consentimentos_teleconsulta` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do termo de consentimento aceito',
+  `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+  `agendamento_id` INT UNSIGNED NOT NULL COMMENT 'FK para agendamentos(id)',
+  `versao_termo` VARCHAR(20) NOT NULL DEFAULT 'v1.0-2026' COMMENT 'Versão do termo CFM 2.314/2022 e LGPD',
+  `aceito` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Aceite eletrônico confirmado',
+  `ip_aceite` VARCHAR(45) NOT NULL COMMENT 'Endereço IP do dispositivo do usuário',
+  `data_hora_aceite` DATETIME NOT NULL COMMENT 'Timestamp no fuso America/Sao_Paulo',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_consentimento_usuario` (`usuario_id`),
+  KEY `idx_consentimento_agendamento` (`agendamento_id`),
+  CONSTRAINT `fk_consentimento_usuario`
+    FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_consentimento_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Termos de consentimento livre e esclarecido para telemedicina';
+
+-- =============================================================================
+-- TABELA 7C: prontuarios_atendimentos
+-- Prontuário Eletrônico de Atendimento Clínico Remoto (CFM 2.314/2022)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `prontuarios_atendimentos` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do prontuário do atendimento',
+  `agendamento_id` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK 1:1 para agendamentos(id)',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+  `queixa_principal` TEXT NOT NULL COMMENT 'Motivo e queixa relatados no atendimento',
+  `evolucao_clinica` TEXT NOT NULL COMMENT 'Anamnese remota e notas de evolução clínica',
+  `conduta_orientacoes` TEXT NOT NULL COMMENT 'Plano terapêutico, metas e orientações de rotina',
+  `encaminhamento_presencial` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Indicada consulta presencial de segurança',
+  `data_registro` DATETIME NOT NULL COMMENT 'Momento do registro oficial do prontuário',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_prontuario_perfil` (`perfil_saude_id`),
+  KEY `idx_prontuario_especialista` (`especialista_id`),
+  CONSTRAINT `fk_prontuario_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_prontuario_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_prontuario_especialista`
+    FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Prontuários eletrônicos de teleatendimento CFM 2.314/2022';
+
+-- =============================================================================
+-- TABELA 7D: avaliacoes_especialistas
+-- Avaliação e Reputação Moderada da Rede de Profissionais
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `avaliacoes_especialistas` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da avaliação',
+  `agendamento_id` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK 1:1 para agendamentos(id)',
+  `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
+  `usuario_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK para usuarios(id) do paciente/cuidador',
+  `nota` TINYINT UNSIGNED NOT NULL COMMENT 'Nota de 1 a 5 estrelas',
+  `comentario` TEXT DEFAULT NULL COMMENT 'Relato acolhedor ou elogio da família',
+  `status_moderacao` ENUM('PENDENTE', 'APROVADO', 'REJEITADO') NOT NULL DEFAULT 'APROVADO' COMMENT 'Status de moderação de reputação',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_avaliacoes_especialista` (`especialista_id`, `status_moderacao`),
+  KEY `idx_avaliacoes_usuario` (`usuario_id`),
+  CONSTRAINT `fk_avaliacao_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_avaliacao_especialista`
+    FOREIGN KEY (`especialista_id`) REFERENCES `especialistas` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_avaliacao_usuario`
+    FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Avaliações e reputação moderada de especialistas';
 
 -- =============================================================================
 -- TABELA 8: solicitacoes_exames
@@ -560,16 +658,38 @@ INSERT INTO `agendamentos` (
   `id`, `familiar_usuario_id`, `especialista_id`, `data_hora_consulta`,
   `valor_transacao_interna`, `taxa_servico_glicocare`, `repasse_especialista`,
   `comprovante_nf`, `codigo_transacao_interna`, `status_pagamento_interno`,
-  `status_agendamento`, `link_video_integrado`, `observacoes_familia`
+  `status_financeiro`, `status_agendamento`, `status_atendimento`, `sala_token_unico`,
+  `link_video_integrado`, `observacoes_familia`
 ) VALUES
 (
   1, 4, 1, '2026-11-20 14:00:00',
   320.00, 38.40, 281.60,
   'NF-GC-20261120-A1B2', 'GC-PAY-2026-0001', 'pago_retido_custodia',
-  'confirmado', '/atendimento-nativo/SALA-NATIVA-GC-HELENA-THEO',
+  'RETIDO_PLATAFORMA', 'confirmado', 'AGENDADO', 'SALA-NATIVA-GC-HELENA-THEO',
+  '/sala-consulta/SALA-NATIVA-GC-HELENA-THEO',
   'Desejo analisar a estabilidade glicêmica noturna e revisar a carta de orientações escolares.'
 )
-ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`);
+ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`), `sala_token_unico` = VALUES(`sala_token_unico`), `status_atendimento` = VALUES(`status_atendimento`);
+
+-- 5A_CONSENTIMENTO. Consentimento Livre e Esclarecido do agendamento 1
+INSERT INTO `consentimentos_teleconsulta` (
+  `id`, `usuario_id`, `agendamento_id`, `versao_termo`, `aceito`, `ip_aceite`, `data_hora_aceite`
+) VALUES
+(
+  1, 4, 1, 'v1.0-2026', 1, '127.0.0.1', '2026-11-18 10:25:00'
+)
+ON DUPLICATE KEY UPDATE `aceito` = VALUES(`aceito`);
+
+-- 5A_AVALIACOES. Avaliações moderadas da rede de especialistas
+INSERT INTO `avaliacoes_especialistas` (
+  `id`, `agendamento_id`, `especialista_id`, `usuario_id`, `nota`, `comentario`, `status_moderacao`
+) VALUES
+(
+  1, 1, 1, 4, 5,
+  'Dra. Helena foi fantástica! Analisou as curvas do sensor do Theo com paciência e ajustou a dose basal da madrugada sem nos assustar. Hoje dormimos tranquilos.',
+  'APROVADO'
+)
+ON DUPLICATE KEY UPDATE `nota` = VALUES(`nota`), `comentario` = VALUES(`comentario`);
 
 -- 5B. Pré-atendimento inicial vinculado ao agendamento 1
 INSERT INTO `pre_atendimentos` (

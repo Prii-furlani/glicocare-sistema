@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/Button';
 import CentralExames from '../components/CentralExames';
+import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoCompartilhavel';
 import { useAuth } from '../context/AuthContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import {
@@ -106,6 +107,7 @@ export default function MeuPerfil() {
   const [duracaoInsulinaHoras, setDuracaoInsulinaHoras] = useState(3);
   const [modalConfigClinicaAberta, setModalConfigClinicaAberta] = useState(false);
   const [salvandoConfigClinica, setSalvandoConfigClinica] = useState(false);
+  const [modalResumoCompartilhavelAberta, setModalResumoCompartilhavelAberta] = useState(false);
 
   // Estados do diário de glicemia
   const [registros, setRegistros] = useState([]);
@@ -647,7 +649,7 @@ export default function MeuPerfil() {
                       title={tempoJornada.mensagemAcolhedora}
                     >
                       <span>{tempoJornada.badgeIcone}</span>
-                      <span>{tempoJornada.textoJornada} de jornada</span>
+                      <span>{tempoJornada.textoJornada}</span>
                     </span>
                   ) : null;
                 })()}
@@ -655,7 +657,22 @@ export default function MeuPerfil() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setModalResumoCompartilhavelAberta(true)}
+              className="gc-btn gc-btn--primario"
+              style={{
+                fontSize: '0.88rem',
+                backgroundColor: 'var(--cor-cta)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.65rem 1.15rem',
+              }}
+            >
+              <span>📋 Gerar Resumo Histórico para Compartilhar (PDF / Impressão)</span>
+            </button>
             <Link to="/configurar-perfil" style={{ textDecoration: 'none' }}>
               <Button variante="secundario" style={{ fontSize: '0.88rem' }}>
                 ✏️ Editar Perfil de Saúde
@@ -1654,6 +1671,17 @@ export default function MeuPerfil() {
         </div>
           </>
         )}
+
+        {/* Modal de Histórico Médico Compartilhável (CFM 2.314/2022 & LGPD) */}
+        <ResumoHistoricoCompartilhavel
+          aberto={modalResumoCompartilhavelAberta}
+          onFechar={() => setModalResumoCompartilhavelAberta(false)}
+          perfilSaude={perfilSaude}
+          alergias={alergias}
+          medicamentos={medicamentos}
+          registrosGlicemia={registros}
+          usuario={usuario}
+        />
       </div>
     </div>
   );

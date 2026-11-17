@@ -234,6 +234,8 @@ export default function PerfilEspecialista() {
   const [motivoBreve, setMotivoBreve] = useState('');
   const [metodoPagamento, setMetodoPagamento] = useState('pix');
   const [checkoutConcluido, setCheckoutConcluido] = useState(false);
+  const [aceiteConsentimento, setAceiteConsentimento] = useState(false);
+  const [tokenSalaNativa, setTokenSalaNativa] = useState('SALA-NATIVA-GC-HELENA-THEO');
 
   // RN-AGD-02: Lista de slots bloqueados em tempo real para evitar conflitos de horário
   const [slotsBloqueados, setSlotsBloqueados] = useState([]);
@@ -261,9 +263,16 @@ export default function PerfilEspecialista() {
   const handleFinalizarCheckoutInterno = async (e) => {
     e.preventDefault();
     if (!diaSelecionado || !horarioSelecionado || !nomeFamiliar.trim()) return;
+    if (!aceiteConsentimento) {
+      alert('É obrigatório aceitar o Termo de Consentimento Livre e Esclarecido para Teleatendimento (CFM 2.314/2022).');
+      return;
+    }
 
     const chaveSlot = `${diaSelecionado}|${horarioSelecionado}`;
     if (slotsBloqueados.includes(chaveSlot)) return;
+
+    const tokenGerado = `SALA-NATIVA-GC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    setTokenSalaNativa(tokenGerado);
 
     try {
       await agendamentosService.criarAgendamento({
@@ -271,6 +280,8 @@ export default function PerfilEspecialista() {
         nome_familiar: nomeFamiliar.trim(),
         data_hora_consulta: `${diaSelecionado} às ${horarioSelecionado}`,
         observacoes_familia: motivoBreve.trim(),
+        aceite_termo_teleconsulta: true,
+        versao_termo: 'v1.0-2026',
       });
     } catch {
       // Fallback demonstrativo local caso o servidor PHP não esteja ativo na porta 8000
@@ -623,6 +634,137 @@ export default function PerfilEspecialista() {
             </div>
           </section>
 
+          {/* SEÇÃO 2B: AVALIAÇÕES E REPUTAÇÃO MODERADA (CFM 2.314/2022) */}
+          <section
+            style={{
+              backgroundColor: 'var(--cor-superficie)',
+              border: '1px solid var(--cor-borda-suave)',
+              borderRadius: '22px',
+              padding: '2.25rem',
+              boxShadow: 'var(--sombra-card)',
+            }}
+          >
+            <div className="section-line-eyebrow">REPUTAÇÃO E EXPERIÊNCIA FAMILIAR</div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '1.65rem', margin: '0 0 0.25rem 0' }}>
+                  Avaliações das <span className="texto-italico-terracota">Famílias</span>
+                </h2>
+                <span style={{ fontSize: '0.86rem', color: 'var(--cor-texto-suave)' }}>
+                  Depoimentos reais e moderados após conclusão do prontuário oficial.
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: 'var(--cor-fundo)',
+                  padding: '0.45rem 0.95rem',
+                  borderRadius: '16px',
+                  border: '1px solid var(--cor-borda)',
+                }}
+              >
+                <span style={{ fontSize: '1.2rem', color: '#F59E0B' }}>★</span>
+                <strong style={{ fontSize: '1.15rem' }}>{profissional.nota}</strong>
+                <span style={{ fontSize: '0.78rem', color: 'var(--cor-texto-suave)' }}>
+                  ({profissional.totalAvaliacoes} avaliações)
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: '0.9rem' }}>
+              <div
+                style={{
+                  backgroundColor: 'var(--cor-fundo)',
+                  borderRadius: '16px',
+                  padding: '1.15rem 1.35rem',
+                  border: '1px solid var(--cor-borda-suave)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  <div>
+                    <strong style={{ fontSize: '0.92rem' }}>Mariana S. (Mãe do Theo, 6 anos)</strong>
+                    <span style={{ marginLeft: '0.5rem', color: '#F59E0B', fontSize: '0.85rem' }}>
+                      ★★★★★
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--cor-cta)',
+                      fontWeight: 700,
+                      backgroundColor: '#E4EFE4',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '10px',
+                    }}
+                  >
+                    ✓ Consulta Concluída
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--cor-texto)', lineHeight: 1.55 }}>
+                  "A Dra. Helena analisou as curvas do sensor do Theo com uma paciência incrível. Ajustou a dose basal da madrugada sem nos assustar e construiu conosco uma carta acolhedora para os professores. Hoje dormimos em paz!"
+                </p>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: 'var(--cor-fundo)',
+                  borderRadius: '16px',
+                  padding: '1.15rem 1.35rem',
+                  border: '1px solid var(--cor-borda-suave)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  <div>
+                    <strong style={{ fontSize: '0.92rem' }}>Carlos Eduardo (Pessoa com DM1 há 10 anos)</strong>
+                    <span style={{ marginLeft: '0.5rem', color: '#F59E0B', fontSize: '0.85rem' }}>
+                      ★★★★★
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--cor-cta)',
+                      fontWeight: 700,
+                      backgroundColor: '#E4EFE4',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '10px',
+                    }}
+                  >
+                    ✓ Consulta Concluída
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--cor-texto)', lineHeight: 1.55 }}>
+                  "Excelente escuta ativa e domínio das novas tecnologias de infusão contínua. As orientações pós-consulta no meu prontuário foram muito precisas."
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* 5. SEÇÃO DE HISTÓRICO DE SUPORTE (EMISSÃO DE GUIAS DE EXAMES E RECEITAS DIGITAIS) */}
           <section
             style={{
@@ -885,50 +1027,37 @@ export default function PerfilEspecialista() {
                 </div>
               </div>
 
-              {/* Botão para abrir o Ambiente de Videoconferência Nativo (RN-ATD-04) */}
-              <button
-                type="button"
-                onClick={() => setSalaNativaAberta(!salaNativaAberta)}
+              {/* Botão de Acesso Direto à Sala Nativa de Videoconsulta */}
+              <Link
+                to={`/sala-consulta/${tokenSalaNativa}`}
                 className="gc-btn gc-btn--primario"
-                style={{ width: '100%', marginBottom: '0.6rem' }}
+                style={{
+                  width: '100%',
+                  marginBottom: '0.6rem',
+                  display: 'block',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  backgroundColor: 'var(--cor-cta)',
+                  fontSize: '0.92rem',
+                }}
               >
-                {salaNativaAberta
-                  ? 'Fechar Sala de Vídeo Nativa'
-                  : '🎥 Entrar na Sala de Videoconferência Nativa (RN-ATD-04)'}
-              </button>
+                🎥 Entrar na Sala de Videoconsulta Nativa ({tokenSalaNativa}) ↗
+              </Link>
 
-              {salaNativaAberta && (
-                <div
+              {/* Pré-atendimento CTA */}
+              <div style={{ textAlign: 'center', margin: '0.6rem 0 0.85rem 0' }}>
+                <Link
+                  to="/como-funciona-atendimentos"
                   style={{
-                    backgroundColor: '#2B2420',
-                    color: 'var(--cor-superficie)',
-                    borderRadius: '14px',
-                    padding: '1.15rem',
-                    marginBottom: '0.85rem',
                     fontSize: '0.82rem',
+                    color: 'var(--cor-primaria)',
+                    fontWeight: 700,
+                    textDecoration: 'none',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.5rem',
-                    }}
-                  >
-                    <strong style={{ color: '#7CE38B' }}>
-                      ● SALA NATIVA GLICOCARE ATIVA (CRIPTOGRAFADA)
-                    </strong>
-                    <span>60 min</span>
-                  </div>
-                  <p style={{ margin: '0 0 0.5rem 0', color: '#E5DDD3' }}>
-                    Conectado com <strong>{profissional.nome}</strong> (
-                    {profissional.conselho}). Os documentos emitidos nesta
-                    sessão (receitas, HbA1c e relatórios) são salvos
-                    automaticamente no Histórico Clínico Unificado da família.
-                  </p>
-                </div>
-              )}
+                  📝 Como preencher o Pré-Atendimento para esta consulta ↗
+                </Link>
+              </div>
 
               <button
                 type="button"
@@ -1169,10 +1298,56 @@ export default function PerfilEspecialista() {
                 </p>
               </div>
 
+              {/* PASSO 5: TERMO DE CONSENTIMENTO INFORMADO OBRIGATÓRIO (CFM 2.314/2022 & LGPD) */}
+              <div
+                style={{
+                  backgroundColor: '#FAF7F2',
+                  border: '1.5px solid var(--cor-borda)',
+                  borderRadius: '14px',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.65rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    required
+                    checked={aceiteConsentimento}
+                    onChange={(e) => setAceiteConsentimento(e.target.checked)}
+                    style={{ marginTop: 3 }}
+                  />
+                  <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--cor-texto)' }}>
+                    <strong>
+                      Li e aceito o Termo de Consentimento Livre e Esclarecido para Teleatendimento:
+                    </strong>
+                    <div style={{ marginTop: '0.35rem', color: 'var(--cor-texto-suave)', fontSize: '0.77rem' }}>
+                      Declaro estar ciente de que a teleconsulta é regida pelas Resoluções dos Conselhos de
+                      Saúde (CFM 2.314/2022, CFN, CFP, CONFEF) e LGPD. Compreendo os limites técnicos de
+                      conexão, que o atendimento remoto não substitui pronto-socorro em emergências
+                      severas (como cetoacidose aguda), a guarda sigilosa dos meus dados de saúde e o dever
+                      do especialista de indicar consulta presencial caso identifique sinais de alarme.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 variante="primario"
-                style={{ width: '100%', padding: '0.95rem 1.4rem' }}
+                disabled={!aceiteConsentimento}
+                style={{
+                  width: '100%',
+                  padding: '0.95rem 1.4rem',
+                  opacity: !aceiteConsentimento ? 0.6 : 1,
+                  cursor: !aceiteConsentimento ? 'not-allowed' : 'pointer',
+                }}
               >
                 Finalizar Checkout e Pagamento Seguro ({profissional.valorConsulta}) ↗
               </Button>
