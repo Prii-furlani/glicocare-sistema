@@ -195,6 +195,16 @@ export default function Navbar() {
           >
             Especialistas
           </Link>
+          <Link
+            to="/como-funciona-atendimentos"
+            className={`gc-navbar__link ${
+              location.pathname === '/como-funciona-atendimentos'
+                ? 'gc-navbar__link--ativo'
+                : ''
+            }`}
+          >
+            Como Funciona
+          </Link>
           <a
             href="/#planos"
             onClick={(e) => handleNavegarSecaoSuave(e, 'planos')}
@@ -404,6 +414,15 @@ export default function Navbar() {
                 className="gc-navbar__mobile-link"
               >
                 <span>Especialistas</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+
+              <Link
+                to="/como-funciona-atendimentos"
+                onClick={() => setDrawerOpen(false)}
+                className="gc-navbar__mobile-link"
+              >
+                <span>Como Funciona o Atendimento</span>
                 <span aria-hidden="true">→</span>
               </Link>
 

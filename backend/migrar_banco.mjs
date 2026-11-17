@@ -125,6 +125,30 @@ async function main() {
     console.log('ℹ️ Inserção do artigo educativo:', err.message);
   }
 
+  // 5. Garante a criação da tabela pre_atendimentos (Módulo de Pré-Atendimento Acolhedor)
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`pre_atendimentos\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do pré-atendimento',
+        \`agendamento_id\` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id)',
+        \`motivo_principal\` VARCHAR(255) NOT NULL COMMENT 'Razão principal da consulta sem jargões',
+        \`maiores_dores\` TEXT NOT NULL COMMENT 'Sentimentos, preocupações e dores familiares',
+        \`duvidas_prioritarias\` TEXT DEFAULT NULL COMMENT 'Dúvidas que a família não quer esquecer de perguntar',
+        \`compartilhar_perfil_saude\` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Autorização para especialista acessar histórico de saúde',
+        \`preenchido_em\` DATETIME NOT NULL COMMENT 'Momento em que o formulário foi concluído',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`atualizado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        CONSTRAINT \`fk_preatend_agendamento\`
+          FOREIGN KEY (\`agendamento_id\`) REFERENCES \`agendamentos\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Módulo de Pré-Atendimento Acolhedor';
+    `);
+    console.log('✅ Tabela pre_atendimentos verificada/criada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ Tabela pre_atendimentos:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

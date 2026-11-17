@@ -168,3 +168,41 @@
 - **Formulário com Simulação em Tempo Real:** Feedback dinâmico enquanto digita a glicemia e/ou dose de insulina.
 - **Linha do Tempo em Planilha Inteligente:** Colunas para Data/Hora, Glicemia & Tendência, Dose Aplicada, IOB no Momento, Insulina Total no Corpo, Contexto e Ação de exclusão auditada.
 - **Auditoria e Banco TiDB Cloud:** Tabela `registros_glicemia` atualizada com as colunas de IOB, taxa por minuto e tendência, auditada compulsória por `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
+
+## 8. Página Informativa de Atendimentos e Módulo de Pré-Atendimento Acolhedor (RN-ATD-05)
+
+### A. Página Informativa `/como-funciona-atendimentos`
+- **Layout Fluido & Aberto:** Concebido de ponta a ponta sobre o fundo bege acolhedor (`--cor-fundo: #EAE4D9`), utilizando cards isolados em marfim suave (`--cor-superficie: #F6F3EE`) apenas para os passos, bloco de metodologia e FAQ.
+- **Hero Acolhedor:**
+  * Eyebrow em letras maiúsculas: `— ATENDIMENTO HUMANIZADO E SEM PRESSA`.
+  * H1 em tipografia serifada `Fraunces` com palavra-chave em destaque itálico terracota: *"Consultas que acolhem, esclarecem e respeitam o tempo da sua família."*
+  * Selos de confiança: Especialistas com conselho verificado (CRM, CRN, CREF, CRP), pagamento em custódia interna protegida (RN-FIN-03) e teleconsulta nativa sem necessidade de baixar apps externos (RN-ATD-04).
+- **Os 5 Passos do Atendimento GlicoCare:**
+  * `01`: Escolha o especialista ideal para o seu momento (filtros por infância, esporte, contagem de carboidratos e diagnóstico recente).
+  * `02`: Agende com tranquilidade na agenda em tempo real (bloqueio automático de slot e confirmação imediata).
+  * `03`: Pagamento 100% seguro com custódia protegida (garantia de acolhimento e recibo para reembolso).
+  * `04`: O Pré-Atendimento Acolhedor que muda o jogo (coleta de dores, dúvidas e compartilhamento de diário).
+  * `05`: Teleconsulta nativa e plano de ação conjunto (vídeo integrado e receitas/laudos digitais).
+- **Destaque: Por que o Pré-Atendimento transforma a consulta:**
+  * Card em `#F6F3EE` com borda lateral esquerda de 6px em Verde Alívio (`#3B7E48`).
+  * 3 pilares práticos: Zero tempo perdido com perguntas repetitivas, Nenhuma dúvida importante fica para trás e Foco total nas dores e metas reais da família.
+- **FAQ Interativo em Accordion:** 4 respostas imediatas para dúvidas sobre navegadores, remarcação acolhedora, compartilhamento de diário e emissão digital de receitas.
+- **Chamada Final (CTA):** Botão em Verde Alívio (`#3B7E48`) direcionando a família para a vitrine de especialistas (`/especialistas`).
+- **Navegação Integrada:**
+  * Link *"Como Funciona"* na barra horizontal fixa do desktop e no menu hambúrguer mobile (`Navbar.jsx`).
+  * Link em destaque no topo da vitrine de profissionais (`Especialistas.jsx`): *"Entenda como funciona o atendimento humanizado na GlicoCare →"*.
+
+### B. Módulo de Pré-Atendimento e Banco de Dados (`pre_atendimentos`)
+- **Tabela `pre_atendimentos` (TiDB Cloud MySQL):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `agendamento_id`: INT UNSIGNED NOT NULL UNIQUE (FK -> `agendamentos(id)` ON DELETE CASCADE).
+  * `motivo_principal`: VARCHAR(255) NOT NULL (razão principal da consulta).
+  * `maiores_dores`: TEXT NOT NULL (preocupações e sentimentos da família).
+  * `duvidas_prioritarias`: TEXT DEFAULT NULL (perguntas que a família não quer esquecer).
+  * `compartilhar_perfil_saude`: TINYINT(1) NOT NULL DEFAULT 1 (autorização de acesso ao diário glicêmico).
+  * `preenchido_em`: DATETIME NOT NULL.
+  * `criado_em` e `atualizado_em`: TIMESTAMP.
+- **Endpoint PHP (`/backend/api/agendamentos/pre_atendimento.php`):**
+  * `GET`: Visualização autorizada para o familiar tutor, o especialista responsável e a curadoria (admin).
+  * `POST` / `PUT`: Criação e edição restrita à família tutora ou admin, capturando snapshots antes e depois para a trilha imutável `logs_auditoria` via `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
+

@@ -274,7 +274,27 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agendamentos de teleconsulta com financeiro e vídeo nativo';
 
 -- =============================================================================
--- TABELA 7: logs_auditoria
+-- TABELA 7: pre_atendimentos
+-- Módulo de Pré-Atendimento Acolhedor (Preparação humanizada para teleconsultas)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `pre_atendimentos` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID do pré-atendimento',
+  `agendamento_id` INT UNSIGNED NOT NULL UNIQUE COMMENT 'FK para agendamentos(id)',
+  `motivo_principal` VARCHAR(255) NOT NULL COMMENT 'Razão principal da consulta sem jargões',
+  `maiores_dores` TEXT NOT NULL COMMENT 'Sentimentos, preocupações e dores familiares',
+  `duvidas_prioritarias` TEXT DEFAULT NULL COMMENT 'Dúvidas que a família não quer esquecer de perguntar',
+  `compartilhar_perfil_saude` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Autorização para especialista acessar histórico de saúde',
+  `preenchido_em` DATETIME NOT NULL COMMENT 'Momento em que o formulário foi concluído',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_preatend_agendamento`
+    FOREIGN KEY (`agendamento_id`) REFERENCES `agendamentos` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Módulo de Pré-Atendimento Acolhedor';
+
+-- =============================================================================
+-- TABELA 8: logs_auditoria
 -- Trilha de auditoria imutável (append-only) para conformidade LGPD e rastreabilidade (RN-AUD-01)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `logs_auditoria` (
@@ -442,6 +462,20 @@ INSERT INTO `agendamentos` (
   'Desejo analisar a estabilidade glicêmica noturna e revisar a carta de orientações escolares.'
 )
 ON DUPLICATE KEY UPDATE `status_agendamento` = VALUES(`status_agendamento`);
+
+-- 5B. Pré-atendimento inicial vinculado ao agendamento 1
+INSERT INTO `pre_atendimentos` (
+  `id`, `agendamento_id`, `motivo_principal`, `maiores_dores`, `duvidas_prioritarias`,
+  `compartilhar_perfil_saude`, `preenchido_em`
+) VALUES (
+  1, 1,
+  'Ajuste de doses noturnas e rotina escolar',
+  'Medo constante de hipoglicemias na madrugada e insegurança com o lanche da tarde na escola.',
+  '1. Devo reduzir a Tresiba nos dias de natação? 2. Como orientar a professora sobre a seta de queda no Libre?',
+  1,
+  '2026-11-18 10:30:00'
+)
+ON DUPLICATE KEY UPDATE `motivo_principal` = VALUES(`motivo_principal`);
 
 -- 6. Logs de auditoria iniciais demonstrando conformidade com a RN-AUD-01
 INSERT INTO `logs_auditoria` (

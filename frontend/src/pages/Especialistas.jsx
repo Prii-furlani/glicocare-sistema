@@ -112,6 +112,23 @@ export default function Especialistas() {
             acolhedora, agendamento online e emissão integrada de receitas e
             guias de exames.
           </p>
+          <div style={{ marginTop: '0.85rem' }}>
+            <Link
+              to="/como-funciona-atendimentos"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                fontSize: '0.94rem',
+                fontWeight: 600,
+                color: 'var(--cor-cta)',
+                textDecoration: 'none',
+              }}
+            >
+              <span>Entenda como funciona o atendimento humanizado na GlicoCare</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
 
         <Link

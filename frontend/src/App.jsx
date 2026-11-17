@@ -19,6 +19,7 @@ import ArtigoDetalhe from './pages/ArtigoDetalhe';
 import Especialistas from './pages/Especialistas';
 import PerfilEspecialista from './pages/PerfilEspecialista';
 import Credenciamento from './pages/Credenciamento';
+import ComoFuncionaAtendimentos from './pages/ComoFuncionaAtendimentos';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import BoasVindas from './pages/BoasVindas';
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/artigo/:slug" element={<ArtigoDetalhe />} />
             <Route path="/especialistas" element={<Especialistas />} />
             <Route path="/especialistas/:id" element={<PerfilEspecialista />} />
+            <Route path="/como-funciona-atendimentos" element={<ComoFuncionaAtendimentos />} />
             <Route path="/credenciamento" element={<Credenciamento />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
