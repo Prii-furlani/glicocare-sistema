@@ -18,6 +18,44 @@
   padding: 0;
 }
 
+/* ==========================================================================
+   BARRA DE ROLAGEM GLOBAL ("PORTO SEGURO")
+   Estilização fina (6px), arredondada (999px), terracota translúcida
+   rgba(124, 83, 63, 0.32) e trilha transparente com respiro (margin-block: 8px).
+   Compatível com WebKit (Chrome/Safari/Edge) e padrão W3C/Firefox (scrollbar-width: thin).
+   ========================================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 83, 63, 0.32) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(124, 83, 63, 0.32);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color var(--transicao-padrao, 0.2s ease);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(124, 83, 63, 0.55);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* FIM DA BARRA DE ROLAGEM GLOBAL */
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 90px;

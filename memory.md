@@ -115,6 +115,16 @@
   * Coluna esquerda: card de formulário em `#F6F3EE` com campos, validação do moderador e botão verde de envio.
   * Coluna direita: coluna *"VOZES QUE JÁ PASSARAM POR AQUI"* com os depoimentos aprovados em cards limpos `#F6F3EE` com borda lateral em Verde Alívio.
 
+### D. Barra de Rolagem Global ("Porto Seguro") & Responsividade Anti-Overflow
+- **Barra de Rolagem Global Elegante (`index.css`):**
+  * Espessura fina (6px), bordas em formato de pílula (`border-radius: 999px`).
+  * Thumb em tom terracota translúcido (`rgba(124, 83, 63, 0.32)`), escurecendo no hover para `rgba(124, 83, 63, 0.55)`.
+  * Trilha 100% transparente com respiro vertical (`margin-block: 8px`).
+  * Compatibilidade universal: WebKit (`::-webkit-scrollbar`, `::-webkit-scrollbar-thumb`, `::-webkit-scrollbar-track`) e padrão Firefox / W3C (`scrollbar-width: thin; scrollbar-color: rgba(124, 83, 63, 0.32) transparent`).
+- **Eliminação de Overflow Horizontal em Modais (`CentralExames.jsx`):**
+  * No modal *"Registrar Exame Laboratorial"*, a linha de inputs dos marcadores clínicos (Nome, Valor, Unidade, Valor de Referência e Botão Lixeira) opera com `display: flex; flex-wrap: wrap; gap: 0.5rem`.
+  * Os campos utilizam `flex-grow` e `min-width` proporcionais, garantindo que em telas estreitas, smartphones ou tablets a linha quebre com naturalidade sem jamais produzir barra de rolagem horizontal no rodapé do modal (`scrollWidth <= clientWidth`).
+
 ---
 
 ## 6. Tempo de Diagnóstico, Jornada de Aprendizado e Resumo Clínico

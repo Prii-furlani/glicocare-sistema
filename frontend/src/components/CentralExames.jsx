@@ -911,8 +911,9 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1.5rem',
+            padding: '1rem',
             zIndex: 9999,
+            boxSizing: 'border-box',
           }}
           onClick={() => {
             if (!salvando) setModalAberto(false);
@@ -922,7 +923,7 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
             style={{
               backgroundColor: 'var(--cor-superficie)',
               borderRadius: '20px',
-              padding: '2.25rem',
+              padding: 'clamp(1.25rem, 3.5vw, 2.25rem)',
               maxWidth: '720px',
               width: '100%',
               maxHeight: '90vh',
@@ -930,6 +931,7 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
               overflowX: 'hidden',
               boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
               border: '1px solid rgba(124, 83, 63, 0.2)',
+              boxSizing: 'border-box',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1181,71 +1183,133 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
                   </div>
                 </div>
 
-                {/* Lista de Marcadores Digitados */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {/* ==================================================================
+                    INÍCIO DA LISTA DE MARCADORES CLÍNICOS RESPONSIVOS (FLEX-WRAP ANTI-OVERFLOW)
+                    Campos adaptáveis (Nome, Valor, Unidade, Referência e Exclusão)
+                    com quebra de linha inteligente para eliminar qualquer rolagem horizontal
+                    ================================================================== */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', boxSizing: 'border-box' }}>
                   {formMarcadores.map((item, idx) => (
                     <div
                       key={idx}
+                      className="marcador-linha-responsiva"
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(120px, 1.8fr) minmax(65px, 0.9fr) minmax(60px, 0.8fr) minmax(85px, 1.2fr) auto',
-                        gap: '0.45rem',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
                         alignItems: 'center',
                         backgroundColor: '#FFFFFF',
-                        padding: '0.55rem 0.65rem',
-                        borderRadius: '8px',
+                        padding: '0.65rem 0.75rem',
+                        borderRadius: '10px',
                         border: '1px solid #E2DBD0',
                         boxSizing: 'border-box',
+                        width: '100%',
                       }}
                     >
-                      <input
-                        type="text"
-                        placeholder="Nome (ex: HbA1c)"
-                        value={item.nome_marcador}
-                        onChange={(e) => handleAlterarMarcador(idx, 'nome_marcador', e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem' }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Valor (ex: 6.8)"
-                        value={item.valor_resultado}
-                        onChange={(e) => handleAlterarMarcador(idx, 'valor_resultado', e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem', fontWeight: 700 }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Unid. (%)"
-                        value={item.unidade}
-                        onChange={(e) => handleAlterarMarcador(idx, 'unidade', e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem' }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Ref. (< 7.0%)"
-                        value={item.valor_referencia}
-                        onChange={(e) => handleAlterarMarcador(idx, 'valor_referencia', e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.5rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem' }}
-                      />
+                      {/* Campo 1: Nome do Marcador (flex-grow generoso para acomodar títulos clínicos) */}
+                      <div style={{ flex: '2 1 140px', minWidth: '120px' }}>
+                        <input
+                          type="text"
+                          placeholder="Nome (ex: HbA1c)"
+                          value={item.nome_marcador}
+                          onChange={(e) => handleAlterarMarcador(idx, 'nome_marcador', e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.48rem 0.6rem',
+                            borderRadius: '6px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.84rem',
+                          }}
+                          aria-label="Nome do marcador clínico"
+                        />
+                      </div>
+
+                      {/* Campo 2: Valor do Resultado Clínico */}
+                      <div style={{ flex: '1 1 80px', minWidth: '70px' }}>
+                        <input
+                          type="text"
+                          placeholder="Valor (ex: 6.8)"
+                          value={item.valor_resultado}
+                          onChange={(e) => handleAlterarMarcador(idx, 'valor_resultado', e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.48rem 0.6rem',
+                            borderRadius: '6px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                          }}
+                          aria-label="Valor do resultado"
+                        />
+                      </div>
+
+                      {/* Campo 3: Unidade de Medida */}
+                      <div style={{ flex: '1 1 75px', minWidth: '65px' }}>
+                        <input
+                          type="text"
+                          placeholder="Unid. (%)"
+                          value={item.unidade}
+                          onChange={(e) => handleAlterarMarcador(idx, 'unidade', e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.48rem 0.6rem',
+                            borderRadius: '6px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.84rem',
+                          }}
+                          aria-label="Unidade de medida"
+                        />
+                      </div>
+
+                      {/* Campo 4: Valor de Referência Laboratorial */}
+                      <div style={{ flex: '1.5 1 110px', minWidth: '95px' }}>
+                        <input
+                          type="text"
+                          placeholder="Ref. (< 7.0%)"
+                          value={item.valor_referencia}
+                          onChange={(e) => handleAlterarMarcador(idx, 'valor_referencia', e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.48rem 0.6rem',
+                            borderRadius: '6px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.84rem',
+                          }}
+                          aria-label="Valor de referência laboratorial"
+                        />
+                      </div>
+
+                      {/* Botão de Exclusão do Marcador (Lixeira) */}
                       <button
                         type="button"
                         onClick={() => handleRemoverMarcador(idx)}
                         disabled={formMarcadores.length === 1}
                         style={{
+                          flex: '0 0 auto',
+                          marginLeft: 'auto',
                           background: 'none',
                           border: 'none',
                           color: '#A23B2A',
                           cursor: formMarcadores.length === 1 ? 'not-allowed' : 'pointer',
-                          fontSize: '1rem',
-                          padding: '0.2rem',
-                          opacity: formMarcadores.length === 1 ? 0.4 : 1,
+                          fontSize: '1.1rem',
+                          padding: '0.35rem 0.5rem',
+                          opacity: formMarcadores.length === 1 ? 0.35 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
-                        title="Remover este marcador"
+                        title={formMarcadores.length === 1 ? 'Mínimo de 1 marcador obrigatório' : 'Remover este marcador'}
                       >
                         🗑️
                       </button>
                     </div>
                   ))}
                 </div>
+                {/* FIM DA LISTA DE MARCADORES CLÍNICOS RESPONSIVOS */}
               </div>
 
               {/* Observações da Coleta */}
