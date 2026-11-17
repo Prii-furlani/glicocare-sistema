@@ -63,11 +63,12 @@ $db = $database->getConnection();
 
 /* INÍCIO DA BUSCA E VERIFICAÇÃO DO USUÁRIO */
 try {
-    // Busca o usuário na tabela usuarios pelo e-mail com os 4 perfis e status de configuração
+    // Busca o usuário na tabela usuarios pelo e-mail com os 4 perfis e status de configuração (com suporte a aliases de admin)
     $stmt = $db->prepare(
         'SELECT id, nome_completo, email, senha_hash, tipo_perfil, tipo_usuario, perfil_configurado, contexto_dm1, ativo
          FROM usuarios
-         WHERE email = :email
+         WHERE email = :email 
+            OR ((:email = "admin@glicocare.com.br" OR :email = "priscila@glicocare.com.br") AND email = "curadoria@glicocare.com.br")
          LIMIT 1'
     );
     $stmt->execute([':email' => $email]);

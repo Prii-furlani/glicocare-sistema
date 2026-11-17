@@ -124,6 +124,23 @@ export default function Footer() {
               <li>
                 <a href="/#faq">Perguntas frequentes</a>
               </li>
+              <li>
+                <Link
+                  to="/admin"
+                  style={{
+                    color: 'var(--cor-primaria)',
+                    fontSize: '0.88rem',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    marginTop: '0.25rem',
+                  }}
+                  title="Acesso restrito ao Painel Administrativo e CMS da Home"
+                >
+                  ⚙️ Painel Admin & CMS
+                </Link>
+              </li>
             </ul>
           </div>
 

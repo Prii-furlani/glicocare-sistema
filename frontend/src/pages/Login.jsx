@@ -57,41 +57,54 @@ export default function Login() {
   const [modalEsqueciSenha, setModalEsqueciSenha] = useState(false);
   const [emailRecuperacao, setEmailRecuperacao] = useState('');
   const [sucessoRecuperacao, setSucessoRecuperacao] = useState(false);
+
+  // Perfil de demonstração selecionado para preenchimento rápido (RN-ACC-01)
+  const [perfilDemoAtivo, setPerfilDemoAtivo] = useState(null);
   /* FIM DOS ESTADOS DO FORMULÁRIO */
 
   /**
    * Preenchimento rápido para demonstração e testes dos 4 perfis do sistema
    */
-  const handlePreencherContaTeste = (tipo) => {
+  const handlePreencherContaTeste = (tipo, autoEntrar = false) => {
     setMensagemErro('');
     setAvisoEspecialistaPendente(null);
+    setPerfilDemoAtivo(tipo);
+
+    let emailTeste = '';
+    let senhaTeste = 'glicocare123';
 
     if (tipo === 'diabetico') {
-      setEmail('carlos.pai@exemplo.com.br');
-      setSenha('glicocare123');
+      emailTeste = 'carlos.pai@exemplo.com.br';
     } else if (tipo === 'cuidador' || tipo === 'paciente') {
-      setEmail('mariana.mae@exemplo.com.br');
-      setSenha('glicocare123');
+      emailTeste = 'mariana.mae@exemplo.com.br';
     } else if (tipo === 'especialista') {
-      setEmail('helena.endo@glicocare.com.br');
-      setSenha('glicocare123');
+      emailTeste = 'helena.endo@glicocare.com.br';
     } else if (tipo === 'admin') {
-      setEmail('curadoria@glicocare.com.br');
-      setSenha('glicocare123');
+      emailTeste = 'curadoria@glicocare.com.br';
+    }
+
+    setEmail(emailTeste);
+    setSenha(senhaTeste);
+
+    if (autoEntrar) {
+      handleAutenticar(null, emailTeste, senhaTeste);
     }
   };
 
   /**
    * Processa o envio do formulário de autenticação
    */
-  const handleAutenticar = async (e) => {
-    e.preventDefault();
+  const handleAutenticar = async (e, emailSobrescrito = null, senhaSobrescrita = null) => {
+    if (e && e.preventDefault) e.preventDefault();
     setMensagemErro('');
     setMensagemSucesso('');
     setAvisoEspecialistaPendente(null);
 
+    const emailFinal = emailSobrescrito !== null ? emailSobrescrito : email;
+    const senhaFinal = senhaSobrescrita !== null ? senhaSobrescrita : senha;
+
     // Validação básica de preenchimento
-    if (!email.trim() || !senha) {
+    if (!emailFinal.trim() || !senhaFinal) {
       setMensagemErro('Por favor, informe seu e-mail e sua senha de acesso.');
       return;
     }
@@ -103,7 +116,7 @@ export default function Login() {
       let respostaDados = null;
 
       try {
-        const response = await authService.login({ email, senha });
+        const response = await authService.login({ email: emailFinal, senha: senhaFinal });
         if (response.data && response.data.sucesso) {
           respostaDados = response.data;
         }
@@ -116,24 +129,24 @@ export default function Login() {
         }
 
         // Fallback resiliente para visualização caso o servidor local PHP não esteja servido no Apache
-        if (senha === 'glicocare123' || senha === 'password') {
-          if (email.includes('curadoria') || email.includes('admin') || email.includes('priscila')) {
+        if (senhaFinal === 'glicocare123' || senhaFinal === 'password') {
+          if (emailFinal.includes('curadoria') || emailFinal.includes('admin') || emailFinal.includes('priscila')) {
             respostaDados = {
               sucesso: true,
               mensagem: 'Que bom ter você de volta, Administradora Priscila!',
               dados: {
                 token: 'mock-token-admin-12345',
-                usuario: { id: 1, nome_completo: 'Priscila Manzoni Furlani (Curadoria GlicoCare)', email, tipo_perfil: 'admin_moderador', tipo_usuario: 'admin' },
+                usuario: { id: 1, nome_completo: 'Priscila Manzoni Furlani (Curadoria GlicoCare)', email: emailFinal, tipo_perfil: 'admin_moderador', tipo_usuario: 'admin' },
                 redirecionar_para: '/admin',
               }
             };
-          } else if (email.includes('helena') || email.includes('nutri') || email.includes('especialista')) {
+          } else if (emailFinal.includes('helena') || emailFinal.includes('nutri') || emailFinal.includes('especialista')) {
             respostaDados = {
               sucesso: true,
               mensagem: 'Que bom ter você de volta, Dra. Helena!',
               dados: {
                 token: 'mock-token-esp-12345',
-                usuario: { id: 2, nome_completo: 'Dra. Helena Vasconcelos', email, tipo_perfil: 'especialista' },
+                usuario: { id: 2, nome_completo: 'Dra. Helena Vasconcelos', email: emailFinal, tipo_perfil: 'especialista' },
                 especialista: { registro_verificado: 1, especialidade: 'Endocrinologia Pediátrica' },
                 redirecionar_para: '/especialistas',
               }
@@ -144,7 +157,7 @@ export default function Login() {
               mensagem: 'Que bom ter você de volta à família GlicoCare!',
               dados: {
                 token: 'mock-token-user-12345',
-                usuario: { id: 4, nome_completo: 'Mariana Silva', email, tipo_perfil: 'familiar_paciente' },
+                usuario: { id: 4, nome_completo: 'Mariana Silva', email: emailFinal, tipo_perfil: 'familiar_paciente' },
                 redirecionar_para: '/biblioteca',
               }
             };
@@ -304,7 +317,7 @@ export default function Login() {
                 fontSize: '0.74rem',
                 fontWeight: 600,
                 color: '#7C533F',
-                marginBottom: '0.5rem',
+                marginBottom: '0.6rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
@@ -319,14 +332,15 @@ export default function Login() {
                 type="button"
                 onClick={() => handlePreencherContaTeste('diabetico')}
                 style={{
-                  background: '#F6F3EE',
+                  background: perfilDemoAtivo === 'diabetico' ? '#3B7E48' : '#F6F3EE',
                   border: '1px solid #3B7E48',
                   borderRadius: '20px',
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.35rem 0.75rem',
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  color: '#2E2824',
-                  fontWeight: 500,
+                  color: perfilDemoAtivo === 'diabetico' ? '#FFFFFF' : '#2E2824',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 🌱 Diabético
@@ -336,14 +350,15 @@ export default function Login() {
                 type="button"
                 onClick={() => handlePreencherContaTeste('cuidador')}
                 style={{
-                  background: '#F6F3EE',
+                  background: perfilDemoAtivo === 'cuidador' ? '#3B7E48' : '#F6F3EE',
                   border: '1px solid #3B7E48',
                   borderRadius: '20px',
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.35rem 0.75rem',
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  color: '#2E2824',
-                  fontWeight: 500,
+                  color: perfilDemoAtivo === 'cuidador' ? '#FFFFFF' : '#2E2824',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 🤝 Cuidador
@@ -353,14 +368,15 @@ export default function Login() {
                 type="button"
                 onClick={() => handlePreencherContaTeste('especialista')}
                 style={{
-                  background: '#F6F3EE',
+                  background: perfilDemoAtivo === 'especialista' ? '#7C533F' : '#F6F3EE',
                   border: '1px solid #7C533F',
                   borderRadius: '20px',
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.35rem 0.75rem',
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  color: '#2E2824',
-                  fontWeight: 500,
+                  color: perfilDemoAtivo === 'especialista' ? '#FFFFFF' : '#2E2824',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 🩺 Especialista
@@ -370,19 +386,146 @@ export default function Login() {
                 type="button"
                 onClick={() => handlePreencherContaTeste('admin')}
                 style={{
-                  background: '#F6F3EE',
-                  border: '1px solid #2E2824',
+                  background: perfilDemoAtivo === 'admin' ? '#2E2824' : '#F6F3EE',
+                  border: '1.5px solid #2E2824',
                   borderRadius: '20px',
-                  padding: '0.3rem 0.65rem',
+                  padding: '0.35rem 0.8rem',
                   fontSize: '0.76rem',
                   cursor: 'pointer',
-                  color: '#2E2824',
-                  fontWeight: 500,
+                  color: perfilDemoAtivo === 'admin' ? '#FFFFFF' : '#2E2824',
+                  fontWeight: 700,
+                  boxShadow: perfilDemoAtivo === 'admin' ? '0 2px 8px rgba(46, 40, 36, 0.25)' : 'none',
+                  transition: 'all 0.2s ease',
                 }}
+                title="Acesso completo ao Painel de Administração e Configurações (/admin)"
               >
-                🛡️ Curadoria
+                ⚙️ Admin (Painel & CMS)
               </button>
             </div>
+
+            {/* Painel descritivo com atalho direto de autenticação para o perfil selecionado */}
+            {perfilDemoAtivo && (
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  padding: '0.75rem 0.9rem',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(124, 83, 63, 0.2)',
+                  fontSize: '0.76rem',
+                  color: '#2E2824',
+                  lineHeight: 1.45,
+                }}
+              >
+                {perfilDemoAtivo === 'admin' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                    <div>
+                      <strong style={{ color: '#7C533F' }}>⚙️ Administradora (Priscila Manzoni Furlani):</strong>
+                      <br />
+                      Acesso completo ao <strong>Painel Admin (/admin)</strong> com CMS Dinâmico da Home, Split 35/65, Gestão de Artigos, Especialistas e Auditoria.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePreencherContaTeste('admin', true)}
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ⚡ Entrar no Painel Admin Agora
+                    </button>
+                  </div>
+                )}
+
+                {perfilDemoAtivo === 'diabetico' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                    <div>
+                      <strong style={{ color: '#3B7E48' }}>🌱 Diabético (Carlos Eduardo):</strong>
+                      <br />
+                      Acesso ao <strong>Meu Espaço (/meu-perfil)</strong> com Diário Glicêmico, Fatores de Sensibilidade e Parâmetros Clínicos.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePreencherContaTeste('diabetico', true)}
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ⚡ Entrar como Diabético
+                    </button>
+                  </div>
+                )}
+
+                {perfilDemoAtivo === 'cuidador' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                    <div>
+                      <strong style={{ color: '#3B7E48' }}>🤝 Cuidador (Mariana Silva):</strong>
+                      <br />
+                      Acesso ao <strong>Perfil Familiar (/meu-perfil)</strong>, gestão do dependente com DM1 e acompanhamento clínico.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePreencherContaTeste('cuidador', true)}
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ⚡ Entrar como Cuidador
+                    </button>
+                  </div>
+                )}
+
+                {perfilDemoAtivo === 'especialista' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+                    <div>
+                      <strong style={{ color: '#7C533F' }}>🩺 Especialista (Dra. Helena Vasconcelos):</strong>
+                      <br />
+                      Acesso ao <strong>Painel Clínico (/painel-especialista)</strong>, Agenda, Prontuário Longitudinal e Teleconsultas.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePreencherContaTeste('especialista', true)}
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.4rem 0.85rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ⚡ Entrar como Especialista
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         {/* FIM DO SELETOR DE CONTAS */}
