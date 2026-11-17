@@ -23,6 +23,8 @@ export default function CardEspecialista({
   tagsFoco = [],                          // Ex: ['Infância', 'Ajuste de Insulina']
   resumoCurto = '',                       // Descrição sintética da atuação
   valorConsulta = '',                     // Valor transparente da consulta integrada
+  ofereceRetornoIncluso = true,           // Política de retorno gratuito incluso (RN-AGD-RETORNO)
+  prazoRetornoDias = 30,                  // Janela em dias para usufruir do retorno
   textoBotao = 'Ver Perfil e Agendar',    // Rótulo do botão CTA inferior
 }) {
   return (
@@ -193,17 +195,39 @@ export default function CardEspecialista({
             </span>
           </div>
 
-          {valorConsulta && (
-            <span
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: 'var(--cor-cta)',
-              }}
-            >
-              Consulta online: {valorConsulta}
-            </span>
-          )}
+          <div style={{ textAlign: 'right' }}>
+            {valorConsulta && (
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  color: 'var(--cor-cta)',
+                }}
+              >
+                Consulta online: {valorConsulta}
+              </span>
+            )}
+            {ofereceRetornoIncluso && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#2D6337',
+                  backgroundColor: '#EDF7EE',
+                  border: '1px solid #C4E5C7',
+                  borderRadius: '12px',
+                  padding: '0.15rem 0.55rem',
+                  marginTop: '0.25rem',
+                }}
+              >
+                ✓ Inclui 1 retorno em até {prazoRetornoDias} dias
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Barra de ação em Verde Alívio (#3B7E48) */}

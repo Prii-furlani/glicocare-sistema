@@ -532,11 +532,12 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   * Barra de status superior com badge "HD • TLS 1.3" e timer regressivo de 60 minutos.
   * Controles minimalistas inferiores: Microfone, Câmera, Compartilhar Tela (`getDisplayMedia`), Chat/Anexos e Encerrar Chamada (`#C94A38`).
 - **Painel Lateral Clínico Integrado (30% no Desktop):**
-  * **Visão do Especialista:**
-    1. *Pré-Atendimento & Resumo:* Exibe motivo da consulta, dores, dúvidas prioritárias, tempo de diagnóstico, **alergias em destaque** (card em tom terracota de alerta) e últimas glicemias/IOB.
-    2. *Exames:* Linha do tempo dos exames laboratoriais do paciente e botão destacado **"+ Solicitar Exames"** (modal que grava diretamente na tabela `solicitacoes_exames` via `/backend/api/exames/solicitar_exames.php`).
-    3. *Prontuário:* Queixa Principal, Evolução Clínica, Conduta/Orientações e checkbox obrigatório CFM 2.314/2022 sobre orientações presenciais. Botão de salvar conclui o atendimento e libera o repasse financeiro (`RN-FIN-03`).
-    4. *Chat & Anexos:* Troca de mensagens em tempo real e envio rápido de fotos/relatórios.
+  * **Ocultação do Assistente Flutuante:** O widget flutuante do Lufy (`LufyChatbot.jsx`) é ocultado automaticamente nas rotas `/sala-consulta/*` e `/atendimento-nativo/*` via hook `useLocation()`, mantendo o foco exclusivo no ato médico.
+  * **Visão do Especialista (4 Abas Estruturadas):**
+    1. *Aba 1 — Prontuário & Conduta:* Queixa Principal, Evolução Clínica, Conduta & Orientações, bloco destacado de **`🔒 Anotações Privadas da Médica / Especialista`** (caixa de rascunho com fundo marfim suave `#F6F3EE`, badge de privacidade *"Visível apenas para você no prontuário"* persistida em `prontuarios_atendimentos.anotacoes_privadas_especialista`), checkbox obrigatório de consentimento presencial CFM 2.314/2022 e botão de ação *"Salvar Prontuário e Concluir Consulta"*.
+    2. *Aba 2 — 🧪 Exames & Guias:* Emissão rápida de pedidos em tempo real com chips de atalho para DM1 (HbA1c, Glicemia em Jejum, Vitamina D 25-OH, Vitamina B12, Creatinina, Microalbuminúria, TSH e T4 Livre, Perfil Lipídico, Hemograma Completo), campo de justificativa clínica, botão de emissão com geração de link PDF da guia e painel inferior com a lista dos últimos laudos laboratoriais do paciente para visualização rápida sem trocar de tela.
+    3. *Aba 3 — Pré-Atendimento:* Exibição acolhedora do motivo principal da consulta, maiores dores e dúvidas prioritárias cadastradas previamente pela família tutora.
+    4. *Aba 4 — Resumo DM1:* Tempo de aprendizado em anos/meses, alerta visual de alergias em terracota (`#C94A38`), medicamentos ativos com dosagem/horários e últimas glicemias registradas com insulina ativa (IOB).
   * **Visão do Paciente / Cuidador:**
     1. *Meu Roteiro:* Checklist com as dúvidas pré-cadastradas no pré-atendimento para marcar à medida que forem respondidas.
     2. *Chat & Enviar Exame:* Canal direto para enviar fotos ou documentos na hora para o médico.
@@ -605,6 +606,47 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
        * *Ações do Prontuário:* Botão de impressão limpa / exportação para PDF (`window.print()`) e botão destacado **"+ Adicionar Adendo Clínico"** (modal para inclusão de notas complementares datadas sem alterar a evolução original).
   3. **Aba 3 — Minha Disponibilidade & Horários:**
      - Grade visual semanal (`RN-AGD-02`), permitindo ativar/desativar dias da semana, visualizar horários configurados e editar slots de atendimento.
+     - Bloco integrado de **Configuração de Honorários & Política de Retorno (`RN-FIN-03` / `RN-AGD-RETORNO`)**:
+       * Edição do valor bruto da consulta pelo especialista (`valor_consulta`).
+       * Simulação visual do repasse líquido do especialista (**65%**) e da taxa de sustentabilidade da plataforma GlicoCare (**35%**).
+       * Comutador de ativação de retorno incluso (`oferece_retorno_incluso`) e definição do prazo em dias (`prazo_retorno_dias`, padrão 30 dias).
+
+## 15. Precificação pelo Especialista (Split 65% / 35%) e Sistema Automático de Retorno Incluso em até 30 Dias (RN-FIN-03 & RN-AGD-RETORNO)
+
+### A. Regras de Negócio de Precificação e Split (`RN-FIN-03`)
+- **Precificação Autônoma Curada:**
+  * O especialista define livremente o valor de sua consulta (`especialistas.valor_consulta`), submetido à curadoria e aprovação do Admin (`RN-ESP-01`).
+  * O percentual de repasse fixo é de **65% para o Especialista** e **35% para a Plataforma GlicoCare** (`percentual_repasse = 65.00`).
+  * No Painel do Especialista (`PainelEspecialista.jsx`), o KPI superior de repasse exibe: `Repasse Líquido (65%) • Split 65% Especialista / 35% GlicoCare`.
+  * Na vitrine pública de especialistas (`/especialistas`), o valor final é exibido com transparência total juntamente com os selos de especialidade e retorno.
+
+### B. Sistema Automático de Direito a Retorno Incluso (`RN-AGD-RETORNO`)
+- **Elegibilidade Automática:**
+  * Se o especialista oferecer retorno (`oferece_retorno_incluso = TRUE`), o paciente que concluiu uma consulta anterior no prazo regulamentar (`prazo_retorno_dias`, padrão 30 dias) tem direito garantido a 1 retorno sem novo custo.
+  * O endpoint `/backend/api/agendamentos/verificar_direito_retorno.php`:
+    1. `GET`: Verifica se existe consulta concluída com o especialista dentro de 30 dias que ainda não tenha sido utilizada como origem para outro retorno (`agendamentos.agendamento_origem_id`).
+    2. Retorna banner acolhedor: *"Você possui 1 retorno incluso referente à sua consulta de [DD/MM/AAAA] (válido até [DD/MM/AAAA]). Agende sem custo adicional."*
+    3. `POST`: Caso elegível, registra o agendamento como `tipo_agendamento = 'RETORNO_INCLUSO'`, `status_pagamento_interno = 'isento_retorno'`, `valor_consulta = 0.00` e vincula o `agendamento_origem_id`. Pula o checkout financeiro e desbloqueia diretamente o pré-atendimento e a confirmação do TCLE.
+  * Caso não haja consulta concluída elegível, o agendamento segue o fluxo normal de `CONSULTA_AVULSA` com split 65/35.
+- **Identificação Visual na Agenda e Vitrine:**
+  * **Na Vitrine de Especialistas (`CardEspecialista.jsx`):** Badge verde suave destacado: **`✓ Inclui 1 retorno em até 30 dias`**.
+  * **No Painel do Especialista (`PainelEspecialista.jsx`):** Na lista de atendimentos, exibição de chips distintos: **`🎁 Retorno Incluso (R$ 0,00)`** versus **`💳 Consulta Avulsa (Split 65%)`**.
+
+### C. Estrutura de Banco de Dados e Migrações (TiDB Cloud MySQL)
+- **Tabela `especialistas`:**
+  * `valor_consulta`: DECIMAL(10,2) NOT NULL DEFAULT 320.00.
+  * `percentual_repasse`: DECIMAL(5,2) NOT NULL DEFAULT 65.00.
+  * `oferece_retorno_incluso`: BOOLEAN NOT NULL DEFAULT TRUE.
+  * `prazo_retorno_dias`: INT NOT NULL DEFAULT 30.
+- **Tabela `agendamentos`:**
+  * `tipo_agendamento`: ENUM('CONSULTA_AVULSA', 'RETORNO_INCLUSO') NOT NULL DEFAULT 'CONSULTA_AVULSA'.
+  * `agendamento_origem_id`: INT UNSIGNED DEFAULT NULL (FK -> `agendamentos(id)` ON DELETE SET NULL).
+- **Tabela `prontuarios_atendimentos`:**
+  * `anotacoes_privadas_especialista`: TEXT DEFAULT NULL (visível estritamente ao especialista autor no prontuário longitudinal, omitido do resumo e das APIs de pacientes).
+- **Tabela `solicitacoes_exames`:**
+  * `justificativa_clinica`: TEXT DEFAULT NULL (justificativa técnica vinculada à emissão em tempo real na teleconsulta).
+- **Auditoria Imutável:** Todas as alterações de honorários, agendamentos de retorno isento e salvamentos de prontuário com anotações privadas são registradas no `AuditLogger` em `America/Sao_Paulo`.
+
 
 
 

@@ -182,6 +182,9 @@ foreach ($agendamentosBrutos as $agd) {
         'status_agendamento' => $agd['status_agendamento'],
         'status_atendimento' => $agd['status_atendimento'] ?? 'AGENDADO',
         'status_financeiro'  => $agd['status_financeiro'] ?? 'RETIDO_PLATAFORMA',
+        'tipo_agendamento'   => $agd['tipo_agendamento'] ?? 'CONSULTA_AVULSA',
+        'agendamento_origem_id' => $agd['agendamento_origem_id'] ?? null,
+        'is_retorno_incluso' => ($agd['tipo_agendamento'] ?? '') === 'RETORNO_INCLUSO',
         'valor_transacao'    => (float)$agd['valor_transacao_interna'],
         'repasse_liquido'    => (float)$agd['repasse_especialista'],
         'sala_token_unico'   => $agd['sala_token_unico'],
@@ -276,6 +279,11 @@ echo json_encode([
         'especialidade' => $especialista['especialidade'] ?? 'Endocrinologia Pediátrica',
         'conselho' => ($especialista['conselho_sigla'] ?? 'CRM') . '-' . ($especialista['conselho_uf'] ?? 'SP') . ' ' . ($especialista['conselho_numero'] ?? '148290'),
         'foto_url' => $especialista['foto_perfil_url'] ?? 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80',
+        'valor_consulta'          => (float)($especialista['valor_consulta'] ?? 320.00),
+        'percentual_repasse'      => (float)($especialista['percentual_repasse'] ?? 65.00),
+        'repasse_liquido_consulta'=> round((float)($especialista['valor_consulta'] ?? 320.00) * ((float)($especialista['percentual_repasse'] ?? 65.00) / 100), 2),
+        'oferece_retorno_incluso' => (bool)($especialista['oferece_retorno_incluso'] ?? true),
+        'prazo_retorno_dias'      => (int)($especialista['prazo_retorno_dias'] ?? 30),
     ],
     'kpis' => [
         'consultas_agendadas'         => $totalConsultasAtivas,
@@ -283,7 +291,7 @@ echo json_encode([
         'retornos'                    => $totalRetornos,
         'pre_atendimentos_prontos'    => $totalPreAtendimentosProntos,
         'repasse_liquido_total'       => round($repasseLiquidoEstimadoTotal, 2),
-        'percentual_repasse'          => 88, // RN-FIN-03
+        'percentual_repasse'          => (float)($especialista['percentual_repasse'] ?? 65.00), // Split 65% Especialista / 35% GlicoCare
     ],
     'agenda' => $agendaEnriquecida,
     'pacientes' => array_values($pacientesMap),

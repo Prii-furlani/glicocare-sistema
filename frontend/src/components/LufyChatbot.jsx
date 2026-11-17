@@ -15,7 +15,7 @@
    ========================================================================== */
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 
 /* INÍCIO DOS 4 CENÁRIOS DE TRIAGEM E RESPOSTAS ESTRUTURADAS DO LUFY */
@@ -101,6 +101,17 @@ const CENARIOS_LUFY = [
 
 /* INÍCIO DO COMPONENTE LUFY CHATBOT */
 export default function LufyChatbot() {
+  const location = useLocation();
+
+  // INÍCIO: OCULTA O BOTÃO DO LUFY NA SALA DE TELECONSULTA PARA EVITAR POLUIÇÃO VISUAL
+  if (
+    location.pathname.startsWith('/sala-consulta') ||
+    location.pathname.startsWith('/atendimento-nativo')
+  ) {
+    return null;
+  }
+  // FIM: OCULTA O BOTÃO DO LUFY NA SALA DE TELECONSULTA
+
   // Controla se a janela do chat está aberta ou recolhida no botão flutuante
   const [aberto, setAberto] = useState(false);
 

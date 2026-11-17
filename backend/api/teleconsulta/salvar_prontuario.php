@@ -50,6 +50,14 @@ $evolucaoClinica = trim($payload['evolucao_clinica'] ?? '');
 $condutaOrientacoes = trim($payload['conduta_orientacoes'] ?? '');
 $encaminhamentoPresencial = !empty($payload['encaminhamento_presencial']) ? 1 : 0;
 
+/* INÍCIO: ANOTAÇÕES PRIVADAS DO ESPECIALISTA (RASCUNHO CLÍNICO)
+ * Campo exclusivo do profissional: gravado em coluna própria e NUNCA devolvido
+ * nos endpoints de resumo do paciente. Na auditoria, registramos apenas metadados
+ * (presença e tamanho) para não replicar conteúdo sigiloso na trilha de logs. */
+$anotacoesPrivadas = trim($payload['anotacoes_privadas_especialista'] ?? '');
+$anotacoesPrivadas = $anotacoesPrivadas !== '' ? $anotacoesPrivadas : null;
+/* FIM: ANOTAÇÕES PRIVADAS DO ESPECIALISTA */
+
 if (!$agendamentoId || empty($queixaPrincipal) || empty($condutaOrientacoes)) {
     http_response_code(400);
     echo json_encode([
@@ -85,14 +93,15 @@ $dataHoraLocal = (new DateTime('now', new DateTimeZone('America/Sao_Paulo')))->f
 $stmtPront = $db->prepare(
     'INSERT INTO prontuarios_atendimentos
      (agendamento_id, perfil_saude_id, especialista_id, queixa_principal, evolucao_clinica,
-      conduta_orientacoes, encaminhamento_presencial, data_registro)
+      conduta_orientacoes, encaminhamento_presencial, anotacoes_privadas_especialista, data_registro)
      VALUES
-     (:aid, :pid, :eid, :queixa, :evolucao, :conduta, :encaminha, :data_reg)
+     (:aid, :pid, :eid, :queixa, :evolucao, :conduta, :encaminha, :privadas, :data_reg)
      ON DUPLICATE KEY UPDATE
       queixa_principal = VALUES(queixa_principal),
       evolucao_clinica = VALUES(evolucao_clinica),
       conduta_orientacoes = VALUES(conduta_orientacoes),
       encaminhamento_presencial = VALUES(encaminhamento_presencial),
+      anotacoes_privadas_especialista = VALUES(anotacoes_privadas_especialista),
       atualizado_em = CURRENT_TIMESTAMP'
 );
 $stmtPront->execute([
@@ -103,6 +112,7 @@ $stmtPront->execute([
     ':evolucao'  => $evolucaoClinica,
     ':conduta'   => $condutaOrientacoes,
     ':encaminha' => $encaminhamentoPresencial,
+    ':privadas'  => $anotacoesPrivadas,
     ':data_reg'  => $dataHoraLocal,
 ]);
 $prontuarioId = (int) $db->lastInsertId() ?: $agendamentoId;
@@ -143,6 +153,30 @@ AuditLogger::registrar(
     $usuarioId,
     $usuarioNome
 );
+
+/* INÍCIO: AUDITORIA DAS ANOTAÇÕES PRIVADAS (RN-AUD-01 — fuso America/Sao_Paulo)
+ * Evento dedicado e append-only; registra somente metadados, preservando o sigilo. */
+if ($anotacoesPrivadas !== null) {
+    AuditLogger::registrar(
+        $db,
+        'EDICAO',
+        'prontuarios_atendimentos.anotacoes_privadas_especialista',
+        $prontuarioId,
+        '/sala-consulta/anotacoes-privadas',
+        null,
+        [
+            'agendamento_id'      => $agendamentoId,
+            'especialista_id'     => $especialistaId,
+            'possui_anotacoes'    => true,
+            'tamanho_caracteres'  => mb_strlen($anotacoesPrivadas),
+            'visibilidade'        => 'SOMENTE_ESPECIALISTA',
+            'data_hora_local'     => $dataHoraLocal,
+        ],
+        $usuarioId,
+        $usuarioNome
+    );
+}
+/* FIM: AUDITORIA DAS ANOTAÇÕES PRIVADAS */
 
 AuditLogger::registrar(
     $db,

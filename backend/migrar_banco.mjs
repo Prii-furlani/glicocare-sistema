@@ -466,6 +466,68 @@ async function main() {
     console.log('ℹ️ Tabela prontuarios_adendos:', err.message);
   }
 
+  // ==========================================================================
+  // INÍCIO — 16. ANOTAÇÕES PRIVADAS DO ESPECIALISTA E JUSTIFICATIVA DE EXAMES (SALA)
+  // ==========================================================================
+  try {
+    await connection.query(`
+      ALTER TABLE \`prontuarios_atendimentos\`
+      ADD COLUMN IF NOT EXISTS \`anotacoes_privadas_especialista\` TEXT NULL
+        COMMENT 'Hipóteses e observações internas visíveis apenas ao próprio especialista';
+    `);
+    console.log('✅ Coluna prontuarios_atendimentos.anotacoes_privadas_especialista verificada.');
+  } catch (err) {
+    console.log('ℹ️ anotacoes_privadas_especialista:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`solicitacoes_exames\`
+      ADD COLUMN IF NOT EXISTS \`justificativa_clinica\` TEXT NULL
+        COMMENT 'Justificativa clínica / observação ao laboratório (emitida na sala)';
+    `);
+    console.log('✅ Coluna solicitacoes_exames.justificativa_clinica verificada.');
+  } catch (err) {
+    console.log('ℹ️ justificativa_clinica:', err.message);
+  }
+  // ==========================================================================
+  // FIM — 16. ANOTAÇÕES PRIVADAS DO ESPECIALISTA E JUSTIFICATIVA DE EXAMES
+  // ==========================================================================
+
+  // ==========================================================================
+  // INÍCIO — 17. PRECIFICAÇÃO DO ESPECIALISTA (SPLIT 65/35) & RETORNO INCLUSO EM 30 DIAS
+  // ==========================================================================
+  try {
+    await connection.query(`
+      ALTER TABLE \`especialistas\`
+      ADD COLUMN IF NOT EXISTS \`percentual_repasse\` DECIMAL(5, 2) NOT NULL DEFAULT 65.00
+        COMMENT 'Percentual líquido repassado ao especialista (RN-FIN-03)',
+      ADD COLUMN IF NOT EXISTS \`oferece_retorno_incluso\` TINYINT(1) NOT NULL DEFAULT 1
+        COMMENT '1 = Consulta inclui 1 retorno gratuito em até 30 dias (RN-AGD-RETORNO)',
+      ADD COLUMN IF NOT EXISTS \`prazo_retorno_dias\` INT NOT NULL DEFAULT 30
+        COMMENT 'Janela máxima em dias para retorno incluso sem nova cobrança';
+    `);
+    console.log('✅ Colunas especialistas (percentual_repasse, oferece_retorno_incluso, prazo_retorno_dias) verificadas.');
+  } catch (err) {
+    console.log('ℹ️ especialistas (honorários/retorno):', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`agendamentos\`
+      ADD COLUMN IF NOT EXISTS \`tipo_agendamento\` ENUM('CONSULTA_AVULSA', 'RETORNO_INCLUSO') NOT NULL DEFAULT 'CONSULTA_AVULSA'
+        COMMENT 'Tipo da teleconsulta (avulsa paga ou retorno incluso gratuito)',
+      ADD COLUMN IF NOT EXISTS \`agendamento_origem_id\` INT UNSIGNED DEFAULT NULL
+        COMMENT 'FK para agendamentos(id) — consulta original que deu direito ao retorno';
+    `);
+    console.log('✅ Colunas agendamentos (tipo_agendamento, agendamento_origem_id) verificadas.');
+  } catch (err) {
+    console.log('ℹ️ agendamentos (tipo_agendamento):', err.message);
+  }
+  // ==========================================================================
+  // FIM — 17. PRECIFICAÇÃO DO ESPECIALISTA & RETORNO INCLUSO
+  // ==========================================================================
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

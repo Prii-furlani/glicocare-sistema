@@ -74,20 +74,30 @@ export default function SalaTeleconsulta() {
   const [queixaPrincipal, setQueixaPrincipal] = useState('');
   const [evolucaoClinica, setEvolucaoClinica] = useState('');
   const [condutaOrientacoes, setCondutaOrientacoes] = useState('');
-  const [orientadoPresencial, setOrientadoPresencial] = useState(true);
+  // Checkbox "Recomendar avaliação presencial" (CFM 2.314/2022) — desmarcado por padrão
+  const [orientadoPresencial, setOrientadoPresencial] = useState(false);
   const [salvandoProntuario, setSalvandoProntuario] = useState(false);
   const [prontuarioSalvoSucesso, setProntuarioSalvoSucesso] = useState(false);
 
-  // Solicitação de Exames pelo Especialista (+ Solicitar Exames)
+  /* INÍCIO: ANOTAÇÕES PRIVADAS DO ESPECIALISTA (RASCUNHO CLÍNICO — NUNCA EXIBIDO AO PACIENTE) */
+  const [anotacoesPrivadas, setAnotacoesPrivadas] = useState('');
+  /* FIM: ANOTAÇÕES PRIVADAS DO ESPECIALISTA */
+
+  // Solicitação de Exames pelo Especialista (Aba "🧪 Exames & Guias")
   const [modalSolicitarExameAberta, setModalSolicitarExameAberta] = useState(false);
-  const [tituloPedidoExame, setTituloPedidoExame] = useState('Rotina Trimestral DM1');
+  const [tituloPedidoExame, setTituloPedidoExame] = useState('Rotina Trimestral DM1 + Perfil Vitamínico');
   const [examesSelecionados, setExamesSelecionados] = useState([
     'Hemoglobina Glicada (HbA1c)',
     'Glicemia em Jejum',
-    'Microalbuminúria em Amostra Isolada',
   ]);
   const [salvandoExame, setSalvandoExame] = useState(false);
   const [solicitacaoSucesso, setSolicitacaoSucesso] = useState(null);
+
+  /* INÍCIO: ESTADOS DA EMISSÃO DE GUIAS EM TEMPO REAL DENTRO DA SALA */
+  const [justificativaExame, setJustificativaExame] = useState('');
+  const [outroExameSala, setOutroExameSala] = useState('');
+  const [guiasEmitidasSala, setGuiasEmitidasSala] = useState([]);
+  /* FIM: ESTADOS DA EMISSÃO DE GUIAS EM TEMPO REAL */
 
   // Meu Roteiro Interativo (Paciente / Cuidador)
   const [roteiroChecklist, setRoteiroChecklist] = useState([]);
@@ -149,6 +159,7 @@ export default function SalaTeleconsulta() {
           setEvolucaoClinica(json.dados.prontuario.evolucao_clinica || '');
           setCondutaOrientacoes(json.dados.prontuario.conduta_orientacoes || '');
           setOrientadoPresencial(Boolean(json.dados.prontuario.encaminhamento_presencial));
+          setAnotacoesPrivadas(json.dados.prontuario.anotacoes_privadas_especialista || '');
           setProntuarioSalvoSucesso(true);
         } else if (json.dados.pre_atendimento) {
           setQueixaPrincipal(json.dados.pre_atendimento.motivo_principal || '');
@@ -577,6 +588,8 @@ export default function SalaTeleconsulta() {
           evolucao_clinica: evolucaoClinica,
           conduta_orientacoes: condutaOrientacoes,
           encaminhamento_presencial: orientadoPresencial ? 1 : 0,
+          // Rascunho clínico interno — gravado em coluna própria e auditado (RN-AUD-01)
+          anotacoes_privadas_especialista: anotacoesPrivadas.trim(),
         }),
       });
       const data = await resp.json();
@@ -600,49 +613,78 @@ export default function SalaTeleconsulta() {
     }
   };
 
+  /* INÍCIO: EMISSÃO DE GUIA DE EXAMES EM TEMPO REAL (ABA "🧪 EXAMES & GUIAS")
+   * Grava em solicitacoes_exames via /backend/api/exames/solicitar_exames.php,
+   * que registra o evento no AuditLogger (fuso America/Sao_Paulo) e devolve o
+   * caminho do PDF disponibilizado imediatamente na área do paciente. */
   const handleSalvarSolicitacaoExames = async (e) => {
     e.preventDefault();
     if (!tituloPedidoExame.trim() || examesSelecionados.length === 0) {
-      alert('Selecione pelo menos um exame para compor a guia médica.');
+      alert('Informe o título do pedido e selecione pelo menos um exame para compor a guia médica.');
       return;
     }
 
     setSalvandoExame(true);
+    setSolicitacaoSucesso(null);
+
+    const tokenAuth = localStorage.getItem('glicocare_token') || sessionStorage.getItem('glicocare_token');
+    const agoraLocal = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const registrarGuiaLocal = (id, pdf, real) => {
+      setGuiasEmitidasSala((prev) => [
+        {
+          id: id || Date.now(),
+          titulo: tituloPedidoExame.trim(),
+          exames: [...examesSelecionados],
+          justificativa: justificativaExame.trim(),
+          emitida_em: agoraLocal,
+          guia_pdf_path: pdf,
+          sincronizada: real,
+        },
+        ...prev,
+      ]);
+      setJustificativaExame('');
+    };
+
     try {
       const resp = await fetch('/backend/api/exames/solicitar_exames.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(tokenAuth ? { Authorization: `Bearer ${tokenAuth}` } : {}),
+        },
         body: JSON.stringify({
           agendamento_id: dadosSala?.agendamento?.id || 1,
           perfil_saude_id: dadosSala?.perfil_saude?.id || 1,
-          titulo_pedido: tituloPedidoExame,
+          titulo_pedido: tituloPedidoExame.trim(),
           lista_exames_solicitados: examesSelecionados,
+          justificativa_clinica: justificativaExame.trim(),
+          origem: 'sala_teleconsulta',
         }),
       });
       const data = await resp.json();
       if (data.sucesso) {
-        setSolicitacaoSucesso('Guia médica gerada e vinculada ao prontuário do paciente com sucesso!');
-        setTimeout(() => {
-          setModalSolicitarExameAberta(false);
-          setSolicitacaoSucesso(null);
-        }, 1800);
+        registrarGuiaLocal(data.solicitacao_id, data.guia_pdf_path, true);
+        setSolicitacaoSucesso('✓ Guia emitida, auditada e já disponível na área do paciente.');
       } else {
-        setSolicitacaoSucesso('Guia salva com sucesso no histórico da teleconsulta!');
-        setTimeout(() => {
-          setModalSolicitarExameAberta(false);
-          setSolicitacaoSucesso(null);
-        }, 1800);
+        registrarGuiaLocal(null, null, false);
+        setSolicitacaoSucesso('Guia registrada em modo demonstração (servidor PHP indisponível).');
       }
     } catch {
-      setSolicitacaoSucesso('Guia demonstrativa criada com sucesso!');
-      setTimeout(() => {
-        setModalSolicitarExameAberta(false);
-        setSolicitacaoSucesso(null);
-      }, 1800);
+      registrarGuiaLocal(null, null, false);
+      setSolicitacaoSucesso('Guia registrada em modo demonstração (servidor PHP indisponível).');
     } finally {
       setSalvandoExame(false);
+      setTimeout(() => setSolicitacaoSucesso(null), 4000);
     }
   };
+
+  const handleAdicionarExameLivre = () => {
+    const nome = outroExameSala.trim();
+    if (!nome) return;
+    setExamesSelecionados((prev) => (prev.includes(nome) ? prev : [...prev, nome]));
+    setOutroExameSala('');
+  };
+  /* FIM: EMISSÃO DE GUIA DE EXAMES EM TEMPO REAL */
 
   const toggleExameSelecionado = (nomeExame) => {
     setExamesSelecionados((prev) =>
@@ -1617,80 +1659,56 @@ export default function SalaTeleconsulta() {
               }}
             >
               {ehEspecialista ? (
+                /* INÍCIO: 4 ABAS DO PAINEL CLÍNICO DO ESPECIALISTA
+                 * (o Chat continua acessível pelo botão 💬 da barra de controles do vídeo) */
                 <>
-                  <button
-                    type="button"
-                    onClick={() => setAbaAtiva('prontuario')}
-                    style={{
-                      flex: 1,
-                      padding: '0.8rem 0.5rem',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: abaAtiva === 'prontuario' ? '2.5px solid #3B7E48' : 'none',
-                      color: abaAtiva === 'prontuario' ? '#FFF' : '#BBAE9F',
-                      fontWeight: abaAtiva === 'prontuario' ? 700 : 500,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    📝 Prontuário
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAbaAtiva('resumo')}
-                    style={{
-                      flex: 1,
-                      padding: '0.8rem 0.5rem',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: abaAtiva === 'resumo' ? '2.5px solid #3B7E48' : 'none',
-                      color: abaAtiva === 'resumo' ? '#FFF' : '#BBAE9F',
-                      fontWeight: abaAtiva === 'resumo' ? 700 : 500,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    🩺 Pré-Atendimento
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAbaAtiva('exames')}
-                    style={{
-                      flex: 1,
-                      padding: '0.8rem 0.5rem',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: abaAtiva === 'exames' ? '2.5px solid #3B7E48' : 'none',
-                      color: abaAtiva === 'exames' ? '#FFF' : '#BBAE9F',
-                      fontWeight: abaAtiva === 'exames' ? 700 : 500,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    🧪 Exames
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAbaAtiva('chat')}
-                    style={{
-                      flex: 1,
-                      padding: '0.8rem 0.5rem',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: abaAtiva === 'chat' ? '2.5px solid #3B7E48' : 'none',
-                      color: abaAtiva === 'chat' ? '#FFF' : '#BBAE9F',
-                      fontWeight: abaAtiva === 'chat' ? 700 : 500,
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    💬 Chat
-                  </button>
+                  {[
+                    { id: 'prontuario', label: '📝 Prontuário & Conduta' },
+                    { id: 'exames', label: '🧪 Exames & Guias' },
+                    { id: 'pre', label: '🩺 Pré-Atendimento' },
+                    { id: 'resumo', label: '📊 Resumo DM1' },
+                  ].map((aba) => (
+                    <button
+                      key={aba.id}
+                      type="button"
+                      onClick={() => setAbaAtiva(aba.id)}
+                      style={{
+                        flex: '1 0 auto',
+                        padding: '0.8rem 0.6rem',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: abaAtiva === aba.id ? '2.5px solid #3B7E48' : '2.5px solid transparent',
+                        color: abaAtiva === aba.id ? '#FFF' : '#BBAE9F',
+                        fontWeight: abaAtiva === aba.id ? 700 : 500,
+                        fontSize: '0.76rem',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {aba.label}
+                    </button>
+                  ))}
+                  {abaAtiva === 'chat' && (
+                    <button
+                      type="button"
+                      onClick={() => setAbaAtiva('chat')}
+                      style={{
+                        flex: '1 0 auto',
+                        padding: '0.8rem 0.6rem',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: '2.5px solid #3B7E48',
+                        color: '#FFF',
+                        fontWeight: 700,
+                        fontSize: '0.76rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      💬 Chat
+                    </button>
+                  )}
                 </>
+                /* FIM: 4 ABAS DO PAINEL CLÍNICO DO ESPECIALISTA */
               ) : (
                 <>
                   <button
@@ -1839,8 +1857,8 @@ export default function SalaTeleconsulta() {
                     </div>
                   </div>
 
-                  {/* Pré-Atendimento Preenchido */}
-                  {dadosSala?.pre_atendimento && (
+                  {/* Pré-Atendimento Preenchido (na visão do especialista fica na aba própria "🩺 Pré-Atendimento") */}
+                  {!ehEspecialista && dadosSala?.pre_atendimento && (
                     <div
                       style={{
                         backgroundColor: '#2C2420',
@@ -1925,87 +1943,503 @@ export default function SalaTeleconsulta() {
                       </div>
                     </div>
                   )}
+
+                  {/* INÍCIO: MEDICAMENTOS E INSULINAS ATIVAS (RESUMO DM1) */}
+                  {dadosSala?.medicamentos && dadosSala.medicamentos.length > 0 && (
+                    <div
+                      style={{
+                        backgroundColor: '#2C2420',
+                        borderRadius: '14px',
+                        padding: '1rem',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.72rem', color: '#BBAE9F', textTransform: 'uppercase', fontWeight: 700 }}>
+                        Medicamentos & Insulinas em Uso
+                      </span>
+                      <div style={{ display: 'grid', gap: '0.45rem', marginTop: '0.5rem' }}>
+                        {dadosSala.medicamentos.map((med) => (
+                          <div
+                            key={med.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              gap: '0.5rem',
+                              flexWrap: 'wrap',
+                              backgroundColor: '#231D19',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            <strong style={{ color: '#FFF' }}>{med.nome_medicamento}</strong>
+                            <span style={{ color: '#D8C6B6', fontSize: '0.76rem' }}>
+                              {med.dose} • {med.horario}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* FIM: MEDICAMENTOS E INSULINAS ATIVAS */}
                 </div>
               )}
 
               {/* ------------------------------------------------------------
-                  ABA 2: EXAMES & GUIA MÉDICA (ESPECIALISTA)
+                  INÍCIO — ABA "🩺 PRÉ-ATENDIMENTO" (ESPECIALISTA)
+                  Motivo, dores e dúvidas enviadas previamente pela família.
                   ------------------------------------------------------------ */}
-              {abaAtiva === 'exames' && (
+              {abaAtiva === 'pre' && (
                 <div style={{ display: 'grid', gap: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.74rem', color: '#BBAE9F', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Histórico Laboratorial
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setModalSolicitarExameAberta(true)}
-                      style={{
-                        backgroundColor: '#3B7E48',
-                        border: 'none',
-                        color: '#FFF',
-                        borderRadius: '16px',
-                        padding: '0.35rem 0.8rem',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      + Solicitar Exames
-                    </button>
-                  </div>
-
-                  {dadosSala?.exames && dadosSala.exames.length > 0 ? (
-                    dadosSala.exames.map((ex) => (
+                  {dadosSala?.pre_atendimento ? (
+                    [
+                      { rotulo: 'Motivo Principal', valor: dadosSala.pre_atendimento.motivo_principal, cor: '#8FE39C' },
+                      { rotulo: 'Maiores Dores Relatadas', valor: dadosSala.pre_atendimento.maiores_dores, cor: '#FCA5A5' },
+                      { rotulo: 'Dúvidas Prioritárias', valor: dadosSala.pre_atendimento.duvidas_prioritarias, cor: '#F3D9A4' },
+                    ].map((bloco) => (
                       <div
-                        key={ex.id}
+                        key={bloco.rotulo}
                         style={{
                           backgroundColor: '#2C2420',
-                          borderRadius: '12px',
-                          padding: '0.85rem',
+                          borderRadius: '14px',
+                          padding: '1rem',
                           border: '1px solid rgba(255,255,255,0.06)',
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                          <strong style={{ fontSize: '0.84rem', color: '#FFF' }}>{ex.laboratorio}</strong>
-                          <span style={{ fontSize: '0.74rem', color: '#BBAE9F' }}>{ex.data_realizacao}</span>
-                        </div>
-                        <div style={{ display: 'grid', gap: '0.35rem' }}>
-                          {ex.marcadores?.map((m, idx) => (
-                            <div
-                              key={idx}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                fontSize: '0.78rem',
-                                color: '#D8C6B6',
-                              }}
-                            >
-                              <span>{m.nome_marcador}:</span>
-                              <strong style={{ color: '#FFF' }}>
-                                {m.valor_resultado} {m.unidade}
-                              </strong>
-                            </div>
-                          ))}
-                        </div>
+                        <span style={{ fontSize: '0.72rem', color: bloco.cor, textTransform: 'uppercase', fontWeight: 700 }}>
+                          {bloco.rotulo}
+                        </span>
+                        <p
+                          style={{
+                            color: '#EAE4D9',
+                            fontSize: '0.84rem',
+                            margin: '0.4rem 0 0 0',
+                            lineHeight: 1.5,
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
+                          {bloco.valor || 'Não informado pela família.'}
+                        </p>
                       </div>
                     ))
                   ) : (
                     <p style={{ color: '#BBAE9F', fontSize: '0.82rem', textAlign: 'center', padding: '1.5rem 0' }}>
-                      Nenhum exame recente anexado pelo paciente.
+                      O paciente ainda não respondeu ao roteiro de pré-atendimento.
                     </p>
+                  )}
+                  {dadosSala?.pre_atendimento?.preenchido_em && (
+                    <small style={{ color: '#8C7F74', fontSize: '0.72rem' }}>
+                      Enviado em {dadosSala.pre_atendimento.preenchido_em}
+                    </small>
                   )}
                 </div>
               )}
+              {/* FIM — ABA "🩺 PRÉ-ATENDIMENTO" */}
 
               {/* ------------------------------------------------------------
-                  ABA 3: PRONTUÁRIO CLÍNICO CFM 2.314/2022 (ESPECIALISTA)
+                  INÍCIO — ABA 2: 🧪 EXAMES & GUIAS MÉDICAS (ESPECIALISTA)
+                  Bloco Superior: Emissão em tempo real com chips de exames DM1
+                  Bloco Inferior: Últimos exames e laudos anexados pelo paciente
+                  ------------------------------------------------------------ */}
+              {abaAtiva === 'exames' && (
+                <div style={{ display: 'grid', gap: '1.25rem' }}>
+                  {/* BLOCO SUPERIOR: EMITIR NOVA SOLICITAÇÃO DE EXAMES */}
+                  <form
+                    onSubmit={handleSalvarSolicitacaoExames}
+                    style={{
+                      backgroundColor: '#2C2420',
+                      borderRadius: '16px',
+                      padding: '1.15rem',
+                      border: '1.5px solid rgba(59, 126, 72, 0.35)',
+                      display: 'grid',
+                      gap: '0.85rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <span style={{ fontSize: '1.1rem' }}>🧪</span>
+                        <strong style={{ color: '#8FE39C', fontSize: '0.86rem', textTransform: 'uppercase' }}>
+                          Emitir Nova Guia de Exames
+                        </strong>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#BBAE9F' }}>Disponível em tempo real</span>
+                    </div>
+
+                    {/* Título do Pedido */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#EAE4D9', marginBottom: '0.3rem' }}>
+                        Título do Pedido Clínico:
+                      </label>
+                      <input
+                        type="text"
+                        value={tituloPedidoExame}
+                        onChange={(e) => setTituloPedidoExame(e.target.value)}
+                        placeholder="Ex: Rotina Trimestral DM1 + Perfil Vitamínico"
+                        required
+                        style={{
+                          width: '100%',
+                          fontSize: '0.82rem',
+                          backgroundColor: '#231D19',
+                          color: '#FFF',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '8px',
+                          padding: '7px 10px',
+                        }}
+                      />
+                    </div>
+
+                    {/* Chips Clicáveis de Seleção Rápida */}
+                    <div>
+                      <span style={{ display: 'block', fontSize: '0.74rem', color: '#BBAE9F', marginBottom: '0.45rem', fontWeight: 600 }}>
+                        Exames Comuns no Acompanhamento de DM1 (Clique para selecionar):
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        {[
+                          'Hemoglobina Glicada (HbA1c)',
+                          'Glicemia em Jejum',
+                          'Vitamina D (25-OH)',
+                          'Vitamina B12',
+                          'Creatinina Sérica',
+                          'Microalbuminúria em Amostra Isolada',
+                          'TSH e T4 Livre',
+                          'Perfil Lipídico Completo',
+                          'Hemograma Completo',
+                        ].map((nomeExame) => {
+                          const selecionado = examesSelecionados.includes(nomeExame);
+                          return (
+                            <button
+                              key={nomeExame}
+                              type="button"
+                              onClick={() => toggleExameSelecionado(nomeExame)}
+                              style={{
+                                backgroundColor: selecionado ? 'rgba(59, 126, 72, 0.35)' : '#231D19',
+                                color: selecionado ? '#A3F5B0' : '#D8C6B6',
+                                border: selecionado ? '1.5px solid #3B7E48' : '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '16px',
+                                padding: '0.28rem 0.65rem',
+                                fontSize: '0.74rem',
+                                fontWeight: selecionado ? 700 : 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {selecionado ? '✓ ' : '+ '}
+                              {nomeExame}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Adicionar Outro Exame Livre */}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <input
+                        type="text"
+                        value={outroExameSala}
+                        onChange={(e) => setOutroExameSala(e.target.value)}
+                        placeholder="Outro exame específico (ex: Curva de Insulina, Ferritina)..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAdicionarExameLivre();
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          fontSize: '0.78rem',
+                          backgroundColor: '#231D19',
+                          color: '#FFF',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '8px',
+                          padding: '6px 10px',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAdicionarExameLivre}
+                        style={{
+                          backgroundColor: '#3B7E48',
+                          color: '#FFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0 0.85rem',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
+
+                    {/* Lista dos Selecionados no Pedido */}
+                    {examesSelecionados.length > 0 && (
+                      <div
+                        style={{
+                          backgroundColor: '#231D19',
+                          borderRadius: '10px',
+                          padding: '0.65rem',
+                          border: '1px dashed rgba(59, 126, 72, 0.35)',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.7rem', color: '#8FE39C', fontWeight: 700, textTransform: 'uppercase' }}>
+                          Exames Incluídos na Guia ({examesSelecionados.length}):
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                          {examesSelecionados.map((item) => (
+                            <span
+                              key={item}
+                              style={{
+                                backgroundColor: 'rgba(59, 126, 72, 0.2)',
+                                color: '#FFF',
+                                border: '1px solid #3B7E48',
+                                borderRadius: '6px',
+                                padding: '0.15rem 0.45rem',
+                                fontSize: '0.72rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                              }}
+                            >
+                              {item}
+                              <button
+                                type="button"
+                                onClick={() => toggleExameSelecionado(item)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#FCA5A5',
+                                  cursor: 'pointer',
+                                  fontSize: '0.75rem',
+                                  padding: 0,
+                                }}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Justificativa Clínica / Observação */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', color: '#EAE4D9', marginBottom: '0.25rem', fontWeight: 600 }}>
+                        Justificativa Clínica / Observações ao Laboratório:
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={justificativaExame}
+                        onChange={(e) => setJustificativaExame(e.target.value)}
+                        placeholder="Ex: Paciente com DM1 em ajuste de doses basais; controle metabólico trimestral e checagem de micronutrientes..."
+                        style={{
+                          width: '100%',
+                          fontSize: '0.78rem',
+                          backgroundColor: '#231D19',
+                          color: '#FFF',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '8px',
+                          padding: '6px 10px',
+                        }}
+                      />
+                    </div>
+
+                    {solicitacaoSucesso && (
+                      <div
+                        style={{
+                          backgroundColor: 'rgba(59, 126, 72, 0.2)',
+                          border: '1px solid #3B7E48',
+                          borderRadius: '8px',
+                          padding: '0.5rem 0.75rem',
+                          color: '#8FE39C',
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {solicitacaoSucesso}
+                      </div>
+                    )}
+
+                    <Button
+                      variante="cta"
+                      tipo="submit"
+                      disabled={salvandoExame || examesSelecionados.length === 0}
+                      style={{
+                        padding: '0.7rem',
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        backgroundColor: '#3B7E48',
+                      }}
+                    >
+                      {salvandoExame ? 'Gerando Guia Médica...' : 'Emitir Guia e Enviar ao Paciente →'}
+                    </Button>
+                  </form>
+
+                  {/* GUIAS EMITIDAS NESTA SESSÃO */}
+                  {guiasEmitidasSala.length > 0 && (
+                    <div
+                      style={{
+                        backgroundColor: '#231D19',
+                        borderRadius: '12px',
+                        padding: '0.85rem',
+                        border: '1px solid rgba(59, 126, 72, 0.3)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.72rem', color: '#8FE39C', fontWeight: 700, textTransform: 'uppercase' }}>
+                        Guias Emitidas Nesta Chamada ({guiasEmitidasSala.length}):
+                      </span>
+                      <div style={{ display: 'grid', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        {guiasEmitidasSala.map((g) => (
+                          <div
+                            key={g.id}
+                            style={{
+                              backgroundColor: '#2C2420',
+                              borderRadius: '8px',
+                              padding: '0.6rem 0.75rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <div>
+                              <strong style={{ color: '#FFF', fontSize: '0.8rem', display: 'block' }}>
+                                📄 {g.titulo}
+                              </strong>
+                              <small style={{ color: '#BBAE9F', fontSize: '0.72rem' }}>
+                                {g.exames.length} exame(s) • {g.emitida_em}
+                              </small>
+                            </div>
+                            {g.guia_pdf_path && (
+                              <a
+                                href={g.guia_pdf_path}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  backgroundColor: '#3B7E48',
+                                  color: '#FFF',
+                                  padding: '0.25rem 0.65rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                Abrir PDF ↗
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* BLOCO INFERIOR: ÚLTIMOS EXAMES ANEXADOS PELO PACIENTE */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#BBAE9F', textTransform: 'uppercase', fontWeight: 700 }}>
+                        Últimos Exames Anexados pelo Paciente
+                      </span>
+                      <small style={{ color: '#8C7F74', fontSize: '0.7rem' }}>
+                        {dadosSala?.exames?.length || 0} registro(s)
+                      </small>
+                    </div>
+
+                    {dadosSala?.exames && dadosSala.exames.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '0.75rem' }}>
+                        {dadosSala.exames.map((ex) => (
+                          <div
+                            key={ex.id}
+                            style={{
+                              backgroundColor: '#2C2420',
+                              borderRadius: '12px',
+                              padding: '0.85rem',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                              <div>
+                                <strong style={{ fontSize: '0.84rem', color: '#FFF' }}>
+                                  🏥 {ex.laboratorio}
+                                </strong>
+                                <span style={{ fontSize: '0.72rem', color: '#BBAE9F', display: 'block' }}>
+                                  Realizado em: {ex.data_realizacao}
+                                </span>
+                              </div>
+                              {ex.laudo_pdf ? (
+                                <a
+                                  href={ex.laudo_pdf}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    backgroundColor: '#7C533F',
+                                    color: '#FFF',
+                                    padding: '0.25rem 0.65rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    textDecoration: 'none',
+                                  }}
+                                >
+                                  Ver Laudo PDF ↗
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: '0.7rem', color: '#888' }}>Laudo digital</span>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'grid', gap: '0.35rem', marginTop: '0.35rem' }}>
+                              {ex.marcadores?.map((m, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontSize: '0.76rem',
+                                    color: '#D8C6B6',
+                                    backgroundColor: '#231D19',
+                                    padding: '0.35rem 0.55rem',
+                                    borderRadius: '6px',
+                                  }}
+                                >
+                                  <span>{m.nome_marcador}:</span>
+                                  <strong style={{ color: '#FFF' }}>
+                                    {m.valor_resultado} {m.unidade}
+                                  </strong>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          backgroundColor: '#231D19',
+                          borderRadius: '10px',
+                          padding: '1.5rem',
+                          textAlign: 'center',
+                          color: '#BBAE9F',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        Nenhum exame recente anexado pelo paciente até o momento.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* FIM — ABA 2: 🧪 EXAMES & GUIAS MÉDICAS */}
+
+              {/* ------------------------------------------------------------
+                  INÍCIO — ABA 1: PRONTUÁRIO & CONDUTA CLÍNICA (ESPECIALISTA)
                   ------------------------------------------------------------ */}
               {abaAtiva === 'prontuario' && (
                 <form onSubmit={handleSalvarProntuario} style={{ display: 'grid', gap: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.74rem', color: '#8FE39C', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Prontuário Eletrônico
+                      Prontuário & Conduta (CFM 2.314/2022)
                     </span>
                     {prontuarioSalvoSucesso && (
                       <span
@@ -2032,7 +2466,7 @@ export default function SalaTeleconsulta() {
                       rows={2}
                       value={queixaPrincipal}
                       onChange={(e) => setQueixaPrincipal(e.target.value)}
-                      placeholder="Motivo da consulta..."
+                      placeholder="Motivo da consulta relatado pelo paciente ou família..."
                       required
                     />
                   </div>
@@ -2046,23 +2480,67 @@ export default function SalaTeleconsulta() {
                       rows={4}
                       value={evolucaoClinica}
                       onChange={(e) => setEvolucaoClinica(e.target.value)}
-                      placeholder="Histórico, avaliação de hipoglicemias noturnas, rotina alimentar..."
+                      placeholder="Histórico clínico, avaliação dos gráficos do sensor, episódios de hipoglicemia e rotina alimentar..."
                     />
                   </div>
 
                   {/* Conduta & Orientações */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.3rem', color: '#EAE4D9' }}>
-                      3. Conduta e Orientações para a Família:
+                      3. Conduta e Orientações para a Família (Disponibilizado ao Paciente):
                     </label>
                     <textarea
                       rows={4}
                       value={condutaOrientacoes}
                       onChange={(e) => setCondutaOrientacoes(e.target.value)}
-                      placeholder="Ajustes nas doses basais/bolus, carta escolar, metas de tempo no alvo..."
+                      placeholder="Ajustes nas doses basais/bolus, carta escolar, metas de tempo no alvo (TIR)..."
                       required
                     />
                   </div>
+
+                  {/* INÍCIO: BLOCO DE ANOTAÇÕES PRIVADAS DO ESPECIALISTA (RASCUNHO CLÍNICO) */}
+                  <div
+                    style={{
+                      backgroundColor: '#F6F3EE',
+                      border: '1px solid rgba(124, 83, 63, 0.22)',
+                      borderRadius: '12px',
+                      padding: '0.9rem',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#7C533F' }}>
+                        🔒 Anotações Privadas da Médica / Especialista
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          backgroundColor: '#EAE4D9',
+                          color: '#2E2824',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Visível apenas para você no prontuário
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={anotacoesPrivadas}
+                      onChange={(e) => setAnotacoesPrivadas(e.target.value)}
+                      placeholder="Hipóteses preliminares, observações de comportamento ou pontos de atenção para o retorno (nunca exibido no resumo entregue ao paciente)..."
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        color: '#2E2824',
+                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        fontSize: '0.82rem',
+                        lineHeight: 1.45,
+                        width: '100%',
+                      }}
+                    />
+                  </div>
+                  {/* FIM: BLOCO DE ANOTAÇÕES PRIVADAS DO ESPECIALISTA */}
 
                   {/* Checkbox Obrigatório CFM */}
                   <div
@@ -2083,8 +2561,7 @@ export default function SalaTeleconsulta() {
                       style={{ marginTop: '0.15rem' }}
                     />
                     <label htmlFor="checkPresencial" style={{ fontSize: '0.74rem', color: '#D8C6B6', lineHeight: 1.4 }}>
-                      Declaro que o paciente/responsável foi orientado sobre a necessidade de avaliação médica presencial
-                      caso haja intercorrências graves (CFM 2.314/2022).
+                      Recomendar avaliação médica presencial caso haja intercorrências graves ou necessidade de exame físico (CFM 2.314/2022).
                     </label>
                   </div>
 
@@ -2094,10 +2571,11 @@ export default function SalaTeleconsulta() {
                     disabled={salvandoProntuario}
                     style={{ width: '100%', padding: '0.85rem', fontSize: '0.88rem', fontWeight: 700 }}
                   >
-                    {salvandoProntuario ? 'Gravando Prontuário...' : 'Salvar Prontuário e Liberar Consulta →'}
+                    {salvandoProntuario ? 'Gravando Prontuário...' : 'Salvar Prontuário e Concluir Consulta →'}
                   </Button>
                 </form>
               )}
+              {/* FIM — ABA 1: PRONTUÁRIO & CONDUTA CLÍNICA */}
 
               {/* ------------------------------------------------------------
                   ABA 4: MEU ROTEIRO COM CHECKLIST (PACIENTE / CUIDADOR)

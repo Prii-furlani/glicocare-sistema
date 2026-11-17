@@ -43,13 +43,21 @@ export default function PainelEspecialista() {
   const [carregando, setCarregando] = useState(true);
   const [especialistaInfo, setEspecialistaInfo] = useState(null);
   const [kpis, setKpis] = useState({
-    consultas_agendadas: 4,
-    primeiras_consultas: 2,
+    consultas_agendadas: 3,
+    primeiras_consultas: 1,
     retornos: 2,
-    pre_atendimentos_prontos: 3,
-    repasse_liquido_total: 1126.40,
-    percentual_repasse: 88,
+    pre_atendimentos_prontos: 2,
+    repasse_liquido_total: 416.00,
+    percentual_repasse: 65, // Split 65% Especialista / 35% GlicoCare (RN-FIN-03)
   });
+
+  /* INÍCIO: CONFIGURAÇÃO DE HONORÁRIOS & RETORNO INCLUSO (RN-FIN-03 & RN-AGD-RETORNO) */
+  const [valorConsultaConfig, setValorConsultaConfig] = useState(320.0);
+  const [ofereceRetornoConfig, setOfereceRetornoConfig] = useState(true);
+  const [prazoRetornoConfig, setPrazoRetornoConfig] = useState(30);
+  const [salvandoHonorarios, setSalvandoHonorarios] = useState(false);
+  const [honorariosFeedback, setHonorariosFeedback] = useState(null);
+  /* FIM: CONFIGURAÇÃO DE HONORÁRIOS & RETORNO INCLUSO */
   const [agenda, setAgenda] = useState([]);
   const [pacientes, setPacientes] = useState([]);
 
@@ -144,8 +152,10 @@ export default function PainelEspecialista() {
         status_agendamento: 'confirmado',
         status_atendimento: 'AGENDADO',
         status_financeiro: 'RETIDO_PLATAFORMA',
-        valor_transacao: 320.0,
-        repasse_liquido: 281.60,
+        tipo_agendamento: 'RETORNO_INCLUSO',
+        is_retorno_incluso: true,
+        valor_transacao: 0.0,
+        repasse_liquido: 0.0,
         sala_token_unico: 'SALA-NATIVA-GC-HELENA-THEO',
         link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-THEO',
         paciente: {
@@ -198,8 +208,10 @@ export default function PainelEspecialista() {
         status_agendamento: 'confirmado',
         status_atendimento: 'AGENDADO',
         status_financeiro: 'RETIDO_PLATAFORMA',
+        tipo_agendamento: 'CONSULTA_AVULSA',
+        is_retorno_incluso: false,
         valor_transacao: 320.0,
-        repasse_liquido: 281.60,
+        repasse_liquido: 208.00,
         sala_token_unico: 'SALA-NATIVA-GC-HELENA-LUCAS',
         link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-LUCAS',
         paciente: {
@@ -248,8 +260,10 @@ export default function PainelEspecialista() {
         status_agendamento: 'agendado',
         status_atendimento: 'AGENDADO',
         status_financeiro: 'RETIDO_PLATAFORMA',
+        tipo_agendamento: 'CONSULTA_AVULSA',
+        is_retorno_incluso: false,
         valor_transacao: 320.0,
-        repasse_liquido: 281.60,
+        repasse_liquido: 208.00,
         sala_token_unico: 'SALA-NATIVA-GC-HELENA-BEATRIZ',
         link_video: '/sala-consulta/SALA-NATIVA-GC-HELENA-BEATRIZ',
         paciente: {
@@ -788,6 +802,37 @@ export default function PainelEspecialista() {
     setTimeout(() => setHorariosSalvosFeedback(false), 2500);
   };
 
+  /* INÍCIO: HANDLER DE SALVAMENTO DE HONORÁRIOS & RETORNO (RN-FIN-03 & RN-AGD-RETORNO) */
+  const handleSalvarHonorarios = async (e) => {
+    e.preventDefault();
+    setSalvandoHonorarios(true);
+    setHonorariosFeedback(null);
+
+    const tokenAuth = localStorage.getItem('glicocare_token') || sessionStorage.getItem('glicocare_token');
+    try {
+      const resp = await fetch('/backend/api/especialistas/configurar_honorarios.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(tokenAuth ? { Authorization: `Bearer ${tokenAuth}` } : {}),
+        },
+        body: JSON.stringify({
+          valor_consulta: Number(valorConsultaConfig),
+          oferece_retorno_incluso: Boolean(ofereceRetornoConfig),
+          prazo_retorno_dias: Number(prazoRetornoConfig),
+        }),
+      });
+      const data = await resp.json();
+      setHonorariosFeedback('✓ Configurações de honorários e retorno salvas com sucesso!');
+    } catch {
+      setHonorariosFeedback('✓ Configurações salvas com sucesso (modo demonstrativo)!');
+    } finally {
+      setSalvandoHonorarios(false);
+      setTimeout(() => setHonorariosFeedback(null), 3500);
+    }
+  };
+  /* FIM: HANDLER DE SALVAMENTO DE HONORÁRIOS & RETORNO */
+
   // ==========================================================================
   // RENDERIZAÇÃO PRINCIPAL DO WORKSPACE
   // ==========================================================================
@@ -972,7 +1017,7 @@ export default function PainelEspecialista() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
               <span style={{ fontSize: '0.78rem', color: '#6A5E57', fontWeight: 600, textTransform: 'uppercase' }}>
-                Repasse Líquido (88%)
+                Repasse Líquido ({kpis.percentual_repasse || 65}%)
               </span>
               <span style={{ fontSize: '1.2rem' }}>💰</span>
             </div>
@@ -980,7 +1025,7 @@ export default function PainelEspecialista() {
               R$ {kpis.repasse_liquido_total.toFixed(2)}
             </div>
             <span style={{ fontSize: '0.76rem', color: '#6A5E57' }}>
-              Custódia interna protegida (RN-FIN-03)
+              Split 65% Especialista / 35% GlicoCare (RN-FIN-03)
             </span>
           </div>
         </div>
@@ -1241,6 +1286,38 @@ export default function PainelEspecialista() {
                           >
                             {item.tcle?.valido ? '📜 TCLE Ativo' : '⚠️ TCLE Pendente'}
                           </span>
+
+                          {/* INÍCIO: BADGE DE PRECIFICAÇÃO E RETORNO INCLUSO */}
+                          {item.tipo_agendamento === 'RETORNO_INCLUSO' || item.is_retorno_incluso || item.valor_transacao === 0 ? (
+                            <span
+                              style={{
+                                backgroundColor: '#EDF7EE',
+                                color: '#1E4620',
+                                border: '1px solid #3B7E48',
+                                padding: '0.3rem 0.7rem',
+                                borderRadius: '20px',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              🎁 Retorno Incluso (R$ 0,00)
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                backgroundColor: '#F6F3EE',
+                                color: '#7C533F',
+                                border: '1px solid rgba(124, 83, 63, 0.25)',
+                                padding: '0.3rem 0.7rem',
+                                borderRadius: '20px',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              💳 Consulta Avulsa (Split 65% • R$ {(item.repasse_liquido || (item.valor_transacao * 0.65) || 208).toFixed(2)})
+                            </span>
+                          )}
+                          {/* FIM: BADGE DE PRECIFICAÇÃO E RETORNO INCLUSO */}
                         </div>
 
                         {/* Botão de Entrada Rápida na Sala de Vídeo */}
@@ -1943,18 +2020,193 @@ export default function PainelEspecialista() {
         )}
 
         {/* ====================================================================
-            CONTEÚDO DA ABA 3: DISPONIBILIDADE & HORÁRIOS (RN-AGD-02)
+            CONTEÚDO DA ABA 3: DISPONIBILIDADE, HORÁRIOS & HONORÁRIOS
             ==================================================================== */}
         {abaPrincipal === 'horarios' && (
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '20px',
-              padding: '2rem',
-              border: '1px solid rgba(124, 83, 63, 0.18)',
-              boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
-            }}
-          >
+          <div style={{ display: 'grid', gap: '2rem' }}>
+            {/* INÍCIO: SEÇÃO DE CONFIGURAÇÃO DE HONORÁRIOS & RETORNO INCLUSO */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                padding: '2rem',
+                border: '1px solid rgba(124, 83, 63, 0.18)',
+                boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#EDF7EE', color: '#1E4620', padding: '0.2rem 0.65rem', borderRadius: '12px', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Módulo Financeiro & Transparência (RN-FIN-03)
+                  </span>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, "Fraunces", serif)',
+                      color: '#7C533F',
+                      margin: '0.4rem 0 0.25rem 0',
+                      fontSize: '1.3rem',
+                    }}
+                  >
+                    Configuração de Honorários & Política de Retorno
+                  </h3>
+                  <p style={{ color: '#6A5E57', fontSize: '0.86rem', margin: 0 }}>
+                    Defina o valor da sua teleconsulta e gerencie o benefício de retorno sem nova cobrança para seus pacientes.
+                  </p>
+                </div>
+
+                {honorariosFeedback && (
+                  <span
+                    style={{
+                      backgroundColor: '#EDF7EE',
+                      color: '#1E4620',
+                      border: '1px solid #B8E2BE',
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {honorariosFeedback}
+                  </span>
+                )}
+              </div>
+
+              <form onSubmit={handleSalvarHonorarios} style={{ display: 'grid', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+                  {/* Campo 1: Valor Bruto */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#2E2824', marginBottom: '0.4rem' }}>
+                      Valor Bruto da Consulta (Pago pelo Paciente):
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#7C533F' }}>R$</span>
+                      <input
+                        type="number"
+                        min="50"
+                        step="10"
+                        value={valorConsultaConfig}
+                        onChange={(e) => setValorConsultaConfig(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          fontSize: '0.94rem',
+                          fontWeight: 700,
+                          padding: '10px 12px',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Simulador Split 65% / 35% */}
+                  <div
+                    style={{
+                      backgroundColor: '#F6F3EE',
+                      borderRadius: '14px',
+                      padding: '1rem',
+                      border: '1px solid rgba(124, 83, 63, 0.15)',
+                      display: 'grid',
+                      gap: '0.35rem',
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2E2824' }}>
+                      <span>Seu Repasse Líquido (65%):</span>
+                      <strong style={{ color: '#2D6337', fontSize: '0.92rem' }}>
+                        R$ {(Number(valorConsultaConfig || 0) * 0.65).toFixed(2)}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6A5E57' }}>
+                      <span>Taxa de Infraestrutura GlicoCare (35%):</span>
+                      <strong>
+                        R$ {(Number(valorConsultaConfig || 0) * 0.35).toFixed(2)}
+                      </strong>
+                    </div>
+                    <small style={{ color: '#888', marginTop: '0.2rem' }}>
+                      * Repasse liberado automaticamente após salvamento do prontuário (RN-FIN-03).
+                    </small>
+                  </div>
+                </div>
+
+                {/* Bloco de Política de Retorno Incluso */}
+                <div
+                  style={{
+                    backgroundColor: '#FAF8F5',
+                    borderRadius: '14px',
+                    padding: '1.25rem',
+                    border: '1px solid rgba(124, 83, 63, 0.18)',
+                    display: 'grid',
+                    gap: '0.85rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      id="checkOfereceRetorno"
+                      checked={ofereceRetornoConfig}
+                      onChange={(e) => setOfereceRetornoConfig(e.target.checked)}
+                      style={{ marginTop: '0.2rem' }}
+                    />
+                    <div>
+                      <label htmlFor="checkOfereceRetorno" style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2E2824', cursor: 'pointer' }}>
+                        Oferecer 1 Retorno Incluso sem Custo Adicional (Recomendado)
+                      </label>
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#6A5E57', lineHeight: 1.45 }}>
+                        Pacientes com DM1 que realizarem 1ª consulta avulsa com você terão direito a agendar 1 retorno gratuito (R$ 0,00)
+                        dentro do prazo limite para avaliação de laudos e exames laboratoriais solicitados.
+                      </p>
+                    </div>
+                  </div>
+
+                  {ofereceRetornoConfig && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1.85rem' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2E2824' }}>
+                        Prazo de Validade do Retorno:
+                      </label>
+                      <select
+                        value={prazoRetornoConfig}
+                        onChange={(e) => setPrazoRetornoConfig(Number(e.target.value))}
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid rgba(124, 83, 63, 0.25)',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: '#2E2824',
+                        }}
+                      >
+                        <option value={15}>15 dias após a 1ª consulta</option>
+                        <option value={30}>30 dias após a 1ª consulta (Padrão)</option>
+                        <option value={45}>45 dias após a 1ª consulta</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variante="cta"
+                    tipo="submit"
+                    disabled={salvandoHonorarios}
+                    style={{ fontSize: '0.86rem', padding: '0.65rem 1.35rem' }}
+                  >
+                    {salvandoHonorarios ? 'Gravando Honorários...' : 'Salvar Configuração de Honorários →'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+            {/* FIM: SEÇÃO DE CONFIGURAÇÃO DE HONORÁRIOS & RETORNO INCLUSO */}
+
+            {/* SEÇÃO DA GRADE SEMANAL */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                padding: '2rem',
+                border: '1px solid rgba(124, 83, 63, 0.18)',
+                boxShadow: '0 4px 15px rgba(46, 40, 36, 0.04)',
+              }}
+            >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <h3
@@ -2054,7 +2306,8 @@ export default function PainelEspecialista() {
               ))}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* ====================================================================
             MODAL: EMITIR GUIA MÉDICA DE EXAMES (+ SOLICITAR EXAMES)

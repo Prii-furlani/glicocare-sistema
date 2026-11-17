@@ -136,6 +136,8 @@ export const REDE_ESPECIALISTAS = [
     resumoCurto:
       'Nutrição afetiva, lancheiras escolares seguras e contagem de carboidratos descomplicada.',
     valorConsulta: 'R$ 220,00',
+    ofereceRetornoIncluso: true,
+    prazoRetornoDias: 30,
     fotoUrl:
       'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=300&q=80',
   },
@@ -150,6 +152,8 @@ export const REDE_ESPECIALISTAS = [
     resumoCurto:
       'Endocrinologia pediátrica e do adulto com foco em leitura de sensores e plano de ação personalizado.',
     valorConsulta: 'R$ 340,00',
+    ofereceRetornoIncluso: true,
+    prazoRetornoDias: 30,
     fotoUrl:
       'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=300&q=80',
   },
@@ -988,6 +992,9 @@ export default function Home() {
                 nota={prof.nota}
                 totalAvaliacoes={prof.totalAvaliacoes}
                 fotoUrl={prof.fotoUrl}
+                valorConsulta={prof.valorConsulta}
+                ofereceRetornoIncluso={prof.ofereceRetornoIncluso}
+                prazoRetornoDias={prof.prazoRetornoDias}
               />
             ))}
           </div>

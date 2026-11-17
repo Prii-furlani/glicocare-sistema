@@ -47,6 +47,12 @@ try {
     $tituloPedido = trim($input['titulo_pedido'] ?? '');
     $listaExames = $input['lista_exames_solicitados'] ?? [];
 
+    /* INÍCIO: CAMPOS DA EMISSÃO EM TEMPO REAL DENTRO DA SALA DE TELECONSULTA */
+    $justificativaClinica = trim($input['justificativa_clinica'] ?? '');
+    $justificativaClinica = $justificativaClinica !== '' ? mb_substr($justificativaClinica, 0, 2000) : null;
+    $origemEmissao = ($input['origem'] ?? '') === 'sala_teleconsulta' ? '/sala-consulta/exames' : '/especialistas/atendimento';
+    /* FIM: CAMPOS DA EMISSÃO EM TEMPO REAL */
+
     if (is_string($listaExames)) {
         $decoded = json_decode($listaExames, true);
         if (is_array($decoded)) {
@@ -118,11 +124,11 @@ try {
     $stmtInsert = $db->prepare('
         INSERT INTO solicitacoes_exames (
             agendamento_id, especialista_id, perfil_saude_id,
-            titulo_pedido, lista_exames_solicitados, guia_pdf_path,
+            titulo_pedido, lista_exames_solicitados, justificativa_clinica, guia_pdf_path,
             status, data_solicitacao
         ) VALUES (
             :aid, :eid, :pid,
-            :titulo, :exames, NULL,
+            :titulo, :exames, :justificativa, NULL,
             "PENDENTE", :agora
         )
     ');
@@ -133,6 +139,7 @@ try {
         ':pid'    => $perfilSaudeId,
         ':titulo' => $tituloPedido,
         ':exames' => $jsonExames,
+        ':justificativa' => $justificativaClinica,
         ':agora'  => $agoraSp
     ]);
 
@@ -148,14 +155,16 @@ try {
         'CRIACAO',
         'solicitacoes_exames',
         $solicitacaoId,
-        '/especialistas/atendimento',
+        $origemEmissao,
         null,
         [
             'agendamento_id' => $agendamentoId,
             'especialista_id' => $especialistaId,
             'perfil_saude_id' => $perfilSaudeId,
             'titulo_pedido' => $tituloPedido,
-            'total_exames' => count($listaExames)
+            'total_exames' => count($listaExames),
+            'possui_justificativa' => $justificativaClinica !== null,
+            'data_hora_local' => $agoraSp
         ],
         $usuarioId,
         $usuarioNome

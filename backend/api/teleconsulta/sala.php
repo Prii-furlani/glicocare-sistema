@@ -152,6 +152,11 @@ if ($perfilSaude) {
 $stmtPront = $db->prepare('SELECT * FROM prontuarios_atendimentos WHERE agendamento_id = :aid LIMIT 1');
 $stmtPront->execute([':aid' => $agendamento['id']]);
 $prontuario = $stmtPront->fetch() ?: null;
+/* INÍCIO: SIGILO DAS ANOTAÇÕES PRIVADAS — removidas para qualquer papel que não seja o especialista */
+if ($prontuario && !$ehEspecialista) {
+    unset($prontuario['anotacoes_privadas_especialista']);
+}
+/* FIM: SIGILO DAS ANOTAÇÕES PRIVADAS */
 
 // 6. Busca Avaliação se já realizada
 $stmtAv = $db->prepare('SELECT * FROM avaliacoes_especialistas WHERE agendamento_id = :aid LIMIT 1');

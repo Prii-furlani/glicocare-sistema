@@ -59,7 +59,10 @@ CREATE TABLE IF NOT EXISTS `especialistas` (
   `foco_atuacao` VARCHAR(255) NOT NULL COMMENT 'Focos (ex: Ajuste de Insulina, Contagem de Carboidratos)',
   `biografia_metodo` TEXT NOT NULL COMMENT 'Apresentação da metodologia de acolhimento',
   `resumo_card` VARCHAR(255) DEFAULT NULL COMMENT 'Texto curto para o card da vitrine',
-  `valor_consulta` DECIMAL(10, 2) NOT NULL DEFAULT 240.00 COMMENT 'Valor em R$ da teleconsulta integrada',
+  `valor_consulta` DECIMAL(10, 2) NOT NULL DEFAULT 240.00 COMMENT 'Valor em R$ da teleconsulta integrada definido pelo profissional (RN-ESP-01)',
+  `percentual_repasse` DECIMAL(5, 2) NOT NULL DEFAULT 65.00 COMMENT 'Percentual líquido repassado ao especialista (65% Especialista / 35% GlicoCare - RN-FIN-03)',
+  `oferece_retorno_incluso` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Consulta inclui 1 retorno sem nova cobrança (RN-AGD-RETORNO)',
+  `prazo_retorno_dias` INT NOT NULL DEFAULT 30 COMMENT 'Janela máxima em dias para usufruir do retorno incluso sem custo',
   `duracao_consulta_min` SMALLINT UNSIGNED NOT NULL DEFAULT 60 COMMENT 'Duração da consulta em minutos (30, 50 ou 60)',
   `slug` VARCHAR(150) DEFAULT NULL COMMENT 'Slug amigável para URL do perfil público',
   `foto_perfil_url` VARCHAR(255) DEFAULT NULL COMMENT 'URL da foto do profissional',
@@ -293,6 +296,11 @@ CREATE TABLE IF NOT EXISTS `agendamentos` (
     'CONCLUIDO',
     'CANCELADO'
   ) NOT NULL DEFAULT 'AGENDADO' COMMENT 'Estado clínico e teleconsulta integrada',
+  `tipo_agendamento` ENUM(
+    'CONSULTA_AVULSA',
+    'RETORNO_INCLUSO'
+  ) NOT NULL DEFAULT 'CONSULTA_AVULSA' COMMENT 'Tipo do agendamento (avulso pago ou retorno gratuito incluso em 30 dias)',
+  `agendamento_origem_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK para agendamentos(id) — consulta original que deu direito ao retorno',
   `sala_token_unico` VARCHAR(120) DEFAULT NULL COMMENT 'Token criptográfico único da sala de teleconsulta nativa',
   `iniciado_em` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de início da videochamada',
   `encerrado_em` DATETIME DEFAULT NULL COMMENT 'Data e hora exata de encerramento da videochamada',
@@ -410,6 +418,9 @@ CREATE TABLE IF NOT EXISTS `prontuarios_atendimentos` (
   `evolucao_clinica` TEXT NOT NULL COMMENT 'Anamnese remota e notas de evolução clínica',
   `conduta_orientacoes` TEXT NOT NULL COMMENT 'Plano terapêutico, metas e orientações de rotina',
   `encaminhamento_presencial` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Indicada consulta presencial de segurança',
+  -- INÍCIO: ANOTAÇÕES PRIVADAS DO ESPECIALISTA (RASCUNHO CLÍNICO — NUNCA EXIBIDO AO PACIENTE)
+  `anotacoes_privadas_especialista` TEXT NULL COMMENT 'Hipóteses e observações internas visíveis apenas ao próprio especialista',
+  -- FIM: ANOTAÇÕES PRIVADAS DO ESPECIALISTA
   `data_registro` DATETIME NOT NULL COMMENT 'Momento do registro oficial do prontuário',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -487,6 +498,7 @@ CREATE TABLE IF NOT EXISTS `solicitacoes_exames` (
   `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
   `titulo_pedido` VARCHAR(180) NOT NULL COMMENT 'Título do pedido médico ex: Rotina Trimestral DM1',
   `lista_exames_solicitados` JSON NOT NULL COMMENT 'Array JSON com os nomes dos exames pedidos',
+  `justificativa_clinica` TEXT NULL COMMENT 'Justificativa clínica / observação ao laboratório (emitida na sala)',
   `guia_pdf_path` VARCHAR(255) DEFAULT NULL COMMENT 'Caminho do PDF gerado da guia',
   `status` ENUM('PENDENTE', 'REALIZADO') NOT NULL DEFAULT 'PENDENTE' COMMENT 'Status da solicitação',
   `data_solicitacao` DATETIME NOT NULL COMMENT 'Data e hora da emissão da guia',

@@ -373,6 +373,8 @@ export default function Especialistas() {
               tagsFoco={prof.tagsFoco}
               resumoCurto={prof.resumoCurto}
               valorConsulta={prof.valorConsulta}
+              ofereceRetornoIncluso={prof.ofereceRetornoIncluso !== false}
+              prazoRetornoDias={prof.prazoRetornoDias || 30}
               textoBotao="Ver Perfil e Agendar"
             />
           ))}

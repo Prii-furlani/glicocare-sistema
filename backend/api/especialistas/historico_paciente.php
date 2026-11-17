@@ -103,6 +103,16 @@ $glicemias = $stmtGli->fetchAll() ?: [];
 // 4. Linha do Tempo Longitudinal Unificada (Eventos Clínicos em Ordem Cronológica)
 $linhaDoTempo = [];
 
+/* INÍCIO: IDENTIFICAÇÃO DO ESPECIALISTA LOGADO (SIGILO DAS ANOTAÇÕES PRIVADAS)
+ * As anotacoes_privadas_especialista só são devolvidas ao autor do prontuário. */
+$especialistaLogadoId = 0;
+if ($usuarioAuth && isset($usuarioAuth['id'])) {
+    $stmtEspLog = $db->prepare('SELECT id FROM especialistas WHERE usuario_id = :uid LIMIT 1');
+    $stmtEspLog->execute([':uid' => (int)$usuarioAuth['id']]);
+    $especialistaLogadoId = (int)($stmtEspLog->fetchColumn() ?: 0);
+}
+/* FIM: IDENTIFICAÇÃO DO ESPECIALISTA LOGADO */
+
 // 4A. Consultas e Prontuários (com seus Adendos Datados)
 $stmtPronts = $db->prepare(
     'SELECT pa.*,
@@ -155,6 +165,10 @@ foreach ($prontuarios as $pront) {
         'evolucao_clinica' => $pront['evolucao_clinica'],
         'conduta_orientacoes' => $pront['conduta_orientacoes'],
         'encaminhamento_presencial' => (bool)$pront['encaminhamento_presencial'],
+        // Anotações privadas: visíveis apenas para o próprio especialista autor
+        'anotacoes_privadas_especialista' => ($especialistaLogadoId > 0 && $especialistaLogadoId === (int)$pront['especialista_id'])
+            ? ($pront['anotacoes_privadas_especialista'] ?? null)
+            : null,
         'adendos' => $adendos,
     ];
 }

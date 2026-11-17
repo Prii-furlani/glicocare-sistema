@@ -85,7 +85,7 @@ foreach ($examesRaw as $ex) {
 
 // 6. Busca Histórico de Teleconsultas e Prontuários
 $stmtPront = $db->prepare(
-    'SELECT p.*, a.data_hora_consulta, a.comprovante_nf,
+    'SELECT p.id, p.agendamento_id, p.perfil_saude_id, p.especialista_id, p.queixa_principal, p.evolucao_clinica, p.conduta_orientacoes, p.encaminhamento_presencial, p.data_registro, /* anotacoes_privadas_especialista NUNCA exposta no resumo do paciente */ a.data_hora_consulta, a.comprovante_nf,
             u_esp.nome_completo AS especialista_nome,
             e.especialidade,
             COALESCE(e.conselho_sigla, e.tipo_conselho) AS conselho_sigla,
