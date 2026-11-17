@@ -168,6 +168,8 @@ try {
     $rotaRedirecionamento = $perfilConfigurado ? '/meu-perfil' : '/boas-vindas';
     if ($tipoUsuario === 'admin' || $usuario['tipo_perfil'] === 'admin_moderador') {
         $rotaRedirecionamento = '/admin';
+    } elseif ($tipoUsuario === 'cuidador' || $usuario['tipo_perfil'] === 'cuidador') {
+        $rotaRedirecionamento = '/painel-cuidador';
     } elseif ($tipoUsuario === 'especialista' || $usuario['tipo_perfil'] === 'especialista') {
         $rotaRedirecionamento = ($dadosEspecialista && (int)$dadosEspecialista['registro_verificado'] === 1)
             ? '/painel-especialista'

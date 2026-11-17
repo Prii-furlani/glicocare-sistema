@@ -92,7 +92,11 @@ CREATE TABLE IF NOT EXISTS `perfis_saude` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do perfil de saúde',
   `usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
   `nome_completo` VARCHAR(150) NOT NULL COMMENT 'Nome completo da pessoa com DM1',
+  `nome_completo_paciente` VARCHAR(150) DEFAULT NULL COMMENT 'Nome completo do dependente (quando menor)',
   `data_nascimento` DATE NOT NULL COMMENT 'Data de nascimento para cálculo da idade',
+  `is_menor_12` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Paciente menor de 12 anos sob tutela de cuidador',
+  `escola_nome` VARCHAR(150) DEFAULT NULL COMMENT 'Nome da escola/colégio da criança para o cartão escolar',
+  `contato_emergencia_telefone` VARCHAR(30) DEFAULT NULL COMMENT 'Telefone de emergência dos responsáveis',
   `sexo` ENUM('masculino', 'feminino', 'outro') NOT NULL COMMENT 'Sexo biológico para fluxo condicional',
   `altura_cm` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Altura em centímetros (opcional)',
   `peso_kg` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Peso em quilos (opcional)',
@@ -177,6 +181,8 @@ CREATE TABLE IF NOT EXISTS `registros_glicemia` (
   `fator_contexto` VARCHAR(100) DEFAULT NULL COMMENT 'Contexto (Estresse, Calor Extremo, Exercício, TPM/Ciclo, Doença)',
   `sintomas` JSON DEFAULT NULL COMMENT 'Sintomas relatados (tontura, suor frio, tremores, etc.)',
   `observacoes` TEXT DEFAULT NULL COMMENT 'Notas complementares do usuário',
+  `registrado_por_usuario_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK para usuarios(id) de quem registrou a medição/dose',
+  `registrado_por_rotulo` VARCHAR(80) DEFAULT NULL COMMENT 'Rótulo identificador para evitar dose duplicada, ex: Mariana (Mãe), Carlos (Pai)',
   `data_hora_medicao` DATETIME NOT NULL COMMENT 'Data e hora da medição (permite retroativa)',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -186,6 +192,33 @@ CREATE TABLE IF NOT EXISTS `registros_glicemia` (
     FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Histórico e diário de medições glicêmicas';
+
+-- =============================================================================
+-- TABELA 2E: cuidadores_dependentes
+-- Vínculo escalável entre responsáveis legais e crianças abaixo de 12 anos com DM1
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `cuidadores_dependentes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do vínculo',
+  `cuidador_usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id) do responsável',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id) da criança',
+  `parentesco` ENUM('MAE', 'PAI', 'AVO_A', 'RESPONSAVEL_LEGAL', 'OUTRO_CUIDADOR') NOT NULL DEFAULT 'MAE' COMMENT 'Grau de parentesco declarado',
+  `nivel_acesso` ENUM('ADMINISTRADOR_LEGAL', 'ACOMPANHANTE_DIARIO') NOT NULL DEFAULT 'ADMINISTRADOR_LEGAL' COMMENT 'Nível de permissão (administrador assina TCLE e agenda; acompanhante visualiza e anota)',
+  `codigo_convite_familia` VARCHAR(16) DEFAULT NULL COMMENT 'Código único para convidar o segundo responsável (pai/mãe/avó)',
+  `vinculado_em` DATETIME NOT NULL COMMENT 'Data e hora do vínculo em America/Sao_Paulo',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_cuidador_dependente` (`cuidador_usuario_id`, `perfil_saude_id`),
+  UNIQUE KEY `uk_codigo_convite` (`codigo_convite_familia`),
+  KEY `idx_cuidadores_usuario` (`cuidador_usuario_id`),
+  KEY `idx_cuidadores_perfil` (`perfil_saude_id`),
+  CONSTRAINT `fk_cuidadores_usuario`
+    FOREIGN KEY (`cuidador_usuario_id`) REFERENCES `usuarios` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_cuidadores_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vínculo entre responsáveis e crianças com DM1';
 
 -- =============================================================================
 -- TABELA 3: artigos_conteudos
@@ -271,6 +304,7 @@ CREATE TABLE IF NOT EXISTS `depoimentos_moderacao` (
 CREATE TABLE IF NOT EXISTS `agendamentos` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da teleconsulta',
   `familiar_usuario_id` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id)',
+  `perfil_saude_id` INT UNSIGNED DEFAULT NULL COMMENT 'FK para perfis_saude(id) do paciente/criança atendida',
   `especialista_id` INT UNSIGNED NOT NULL COMMENT 'FK para especialistas(id)',
   `data_hora_consulta` DATETIME NOT NULL COMMENT 'Data e hora agendadas',
   `valor_transacao_interna` DECIMAL(10, 2) NOT NULL COMMENT 'Valor total da consulta em R$',
@@ -648,22 +682,38 @@ ON DUPLICATE KEY UPDATE `nome_completo` = VALUES(`nome_completo`), `tipo_usuario
 
 -- 1B. Perfis detalhados de saúde iniciais
 INSERT INTO `perfis_saude` (
-  `id`, `usuario_id`, `nome_completo`, `data_nascimento`, `sexo`, `altura_cm`, `peso_kg`,
+  `id`, `usuario_id`, `nome_completo`, `nome_completo_paciente`, `data_nascimento`, `is_menor_12`,
+  `escola_nome`, `contato_emergencia_telefone`, `sexo`, `altura_cm`, `peso_kg`,
   `tipo_diabetes`, `data_diagnostico`, `terapia_insulina`, `possui_alergias`, `fatores_glicemia`, `config_sexo_especifica`
 ) VALUES
 (
-  1, 4, 'Theo Silva', '2019-05-14', 'masculino', 118.00, 22.50,
+  1, 4, 'Theo Silva', 'Theo Silva', '2019-05-14', 1,
+  'Colégio Viver Bem (Educação Infantil e Fundamental I)', '(11) 97777-2001', 'masculino', 118.00, 22.50,
   'Tipo 1A', '2023-08-10', 'Caneta', 1,
   '{"estresse": "Sobe drasticamente", "calor": "Cai", "infeccao": "Aumenta necessidade de insulina", "exercicio": "Cai", "sonolencia": true}',
   '{"fadiga_persistente": false, "queda_libido": false, "objetivo_fisico": "Manutenção", "suplementos": "Vitamina D"}'
 ),
 (
-  2, 5, 'Carlos Eduardo Souza', '1988-11-20', 'masculino', 178.00, 76.00,
+  2, 5, 'Carlos Eduardo Souza', 'Carlos Eduardo Souza', '1988-11-20', 0,
+  NULL, '(21) 97777-2002', 'masculino', 178.00, 76.00,
   'Tipo 1A', '2015-03-12', 'Bomba com fio', 0,
   '{"estresse": "Sobe levemente", "calor": "Não se altera", "infeccao": "Aumenta necessidade de insulina", "exercicio": "Cai", "sonolencia": false}',
   '{"fadiga_persistente": false, "queda_libido": false, "objetivo_fisico": "Ganho de massa muscular", "suplementos": "Creatina e Whey"}'
 )
-ON DUPLICATE KEY UPDATE `nome_completo` = VALUES(`nome_completo`), `possui_alergias` = VALUES(`possui_alergias`);
+ON DUPLICATE KEY UPDATE
+  `nome_completo` = VALUES(`nome_completo`),
+  `nome_completo_paciente` = VALUES(`nome_completo_paciente`),
+  `is_menor_12` = VALUES(`is_menor_12`),
+  `escola_nome` = VALUES(`escola_nome`),
+  `contato_emergencia_telefone` = VALUES(`contato_emergencia_telefone`),
+  `possui_alergias` = VALUES(`possui_alergias`);
+
+-- 1B_CUIDADORES. Vínculos de responsáveis com crianças DM1 (Tabela cuidadores_dependentes)
+INSERT INTO `cuidadores_dependentes` (
+  `id`, `cuidador_usuario_id`, `perfil_saude_id`, `parentesco`, `nivel_acesso`, `codigo_convite_familia`, `vinculado_em`
+) VALUES
+(1, 4, 1, 'MAE', 'ADMINISTRADOR_LEGAL', 'THEO-FAM-2026', NOW())
+ON DUPLICATE KEY UPDATE `parentesco` = VALUES(`parentesco`), `nivel_acesso` = VALUES(`nivel_acesso`), `codigo_convite_familia` = VALUES(`codigo_convite_familia`);
 
 -- 1B_ALERGIAS. Alergias e sensibilidades iniciais cadastradas
 INSERT INTO `alergias_usuario` (
@@ -683,15 +733,19 @@ INSERT INTO `medicamentos_usuario` (
 (4, 2, 'Multivitamínico Mineral', 'Suplemento', '1', 'Comprimido', '08:00:00', 1)
 ON DUPLICATE KEY UPDATE `nome_medicamento` = VALUES(`nome_medicamento`);
 
--- 1D. Registros de glicemia e diário inicial
+-- 1D. Registros de glicemia e diário inicial com identificação de quem registrou
 INSERT INTO `registros_glicemia` (
   `id`, `perfil_saude_id`, `valor_mg_dl`, `momento_medicao`, `tipo_leitura`, `acao_realizada`,
-  `dose_insulina`, `carboidratos_g`, `fator_contexto`, `observacoes`, `data_hora_medicao`
+  `dose_insulina`, `carboidratos_g`, `fator_contexto`, `observacoes`,
+  `registrado_por_usuario_id`, `registrado_por_rotulo`, `data_hora_medicao`
 ) VALUES
-(1, 1, 108, 'Jejum', 'Manual', 'Nenhuma Acao', NULL, NULL, 'Acordou bem disposto', 'Noite estável sem alarmes de hipo', NOW() - INTERVAL 1 DAY),
-(2, 1, 145, '1h/2h Apos Refeicao', 'Sensor/CGM', 'Bolus para Refeicao', 1.5, 32, 'Almoço escolar', 'Lanche com pão integral e maçã', NOW() - INTERVAL 5 HOUR),
-(3, 1, 95, 'Antes de Dormir', 'Sensor/CGM', 'Nenhuma Acao', NULL, NULL, 'Estável', 'Leitura conferida antes do sono', NOW() - INTERVAL 1 HOUR)
-ON DUPLICATE KEY UPDATE `valor_mg_dl` = VALUES(`valor_mg_dl`);
+(1, 1, 108, 'Jejum', 'Manual', 'Nenhuma Acao', NULL, NULL, 'Acordou bem disposto', 'Noite estável sem alarmes de hipo', 4, 'Mariana Silva (Mãe)', NOW() - INTERVAL 1 DAY),
+(2, 1, 145, '1h/2h Apos Refeicao', 'Sensor/CGM', 'Bolus para Refeicao', 1.5, 32, 'Almoço escolar', 'Lanche com pão integral e maçã', 4, 'Mariana Silva (Mãe)', NOW() - INTERVAL 5 HOUR),
+(3, 1, 95, 'Antes de Dormir', 'Sensor/CGM', 'Nenhuma Acao', NULL, NULL, 'Estável', 'Leitura conferida antes do sono', 4, 'Mariana Silva (Mãe)', NOW() - INTERVAL 1 HOUR)
+ON DUPLICATE KEY UPDATE
+  `valor_mg_dl` = VALUES(`valor_mg_dl`),
+  `registrado_por_usuario_id` = VALUES(`registrado_por_usuario_id`),
+  `registrado_por_rotulo` = VALUES(`registrado_por_rotulo`);
 
 -- 2. Especialistas credenciados com selo verificado
 INSERT INTO `especialistas` (

@@ -74,4 +74,11 @@ export const adminService = {
   alternarStatusUsuario: (dados) => api.post('/admin/usuarios.php', dados),
 };
 
+export const cuidadorService = {
+  getMeusDependentes: () => api.get('/cuidadores/meus_dependentes.php'),
+  cadastrarDependente: (dados) => api.post('/cuidadores/cadastrar_dependente.php', dados),
+  gerarConviteFamilia: (dados) => api.post('/cuidadores/gerar_convite_familia.php', dados),
+  registrarGlicemiaCuidador: (dados) => api.post('/cuidadores/registrar_glicemia_cuidador.php', dados),
+};
+
 export default api;

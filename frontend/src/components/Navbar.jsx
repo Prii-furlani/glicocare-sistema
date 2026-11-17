@@ -50,7 +50,7 @@ export default function Navbar() {
       return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel', ehAdmin: false };
     }
     if (p === 'cuidador') {
-      return { rota: '/meu-perfil', badge: 'Cuidador', icone: '🤝', rotulo: 'Meu Espaço', ehAdmin: false };
+      return { rota: '/painel-cuidador', badge: 'Cuidador', icone: '🤝', rotulo: 'Painel do Cuidador', ehAdmin: false };
     }
     if (p === 'diabetico') {
       return { rota: '/meu-perfil', badge: 'Diabético', icone: '🌱', rotulo: 'Meu Espaço', ehAdmin: false };

@@ -604,6 +604,83 @@ async function main() {
   // FIM — 19. ATUALIZAÇÃO EDITORIAL DA TABELA artigos_conteudos
   // ==========================================================================
 
+  // ==========================================================================
+  // INÍCIO — 20. ESTRUTURA DO PERFIL CUIDADOR (cuidadores_dependentes E MENORES DM1)
+  // ==========================================================================
+  try {
+    await connection.query(`
+      ALTER TABLE \`perfis_saude\`
+      ADD COLUMN IF NOT EXISTS \`nome_completo_paciente\` VARCHAR(150) DEFAULT NULL
+        COMMENT 'Nome completo do dependente (quando menor)',
+      ADD COLUMN IF NOT EXISTS \`is_menor_12\` TINYINT(1) NOT NULL DEFAULT 0
+        COMMENT '1 = Paciente menor de 12 anos sob tutela de cuidador',
+      ADD COLUMN IF NOT EXISTS \`escola_nome\` VARCHAR(150) DEFAULT NULL
+        COMMENT 'Nome da escola/colégio da criança para o cartão escolar',
+      ADD COLUMN IF NOT EXISTS \`contato_emergencia_telefone\` VARCHAR(30) DEFAULT NULL
+        COMMENT 'Telefone de emergência dos responsáveis';
+    `);
+    console.log('✅ Colunas de dependente/escola adicionadas em perfis_saude.');
+  } catch (err) {
+    console.log('ℹ️ perfis_saude (cuidador):', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`registros_glicemia\`
+      ADD COLUMN IF NOT EXISTS \`registrado_por_usuario_id\` INT UNSIGNED DEFAULT NULL
+        COMMENT 'FK para usuarios(id) de quem registrou a medição/dose',
+      ADD COLUMN IF NOT EXISTS \`registrado_por_rotulo\` VARCHAR(80) DEFAULT NULL
+        COMMENT 'Rótulo identificador para evitar dose duplicada, ex: Mariana (Mãe), Carlos (Pai)';
+    `);
+    console.log('✅ Colunas registrado_por adicionadas em registros_glicemia.');
+  } catch (err) {
+    console.log('ℹ️ registros_glicemia (cuidador):', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`agendamentos\`
+      ADD COLUMN IF NOT EXISTS \`perfil_saude_id\` INT UNSIGNED DEFAULT NULL
+        COMMENT 'FK para perfis_saude(id) do paciente/criança atendida';
+    `);
+    console.log('✅ Coluna perfil_saude_id adicionada em agendamentos.');
+  } catch (err) {
+    console.log('ℹ️ agendamentos (perfil_saude_id):', err.message);
+  }
+
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`cuidadores_dependentes\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do vínculo',
+        \`cuidador_usuario_id\` INT UNSIGNED NOT NULL COMMENT 'FK para usuarios(id) do responsável',
+        \`perfil_saude_id\` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id) da criança',
+        \`parentesco\` ENUM('MAE', 'PAI', 'AVO_A', 'RESPONSAVEL_LEGAL', 'OUTRO_CUIDADOR') NOT NULL DEFAULT 'MAE' COMMENT 'Grau de parentesco declarado',
+        \`nivel_acesso\` ENUM('ADMINISTRADOR_LEGAL', 'ACOMPANHANTE_DIARIO') NOT NULL DEFAULT 'ADMINISTRADOR_LEGAL' COMMENT 'Nível de permissão (administrador assina TCLE e agenda; acompanhante visualiza e anota)',
+        \`codigo_convite_familia\` VARCHAR(16) DEFAULT NULL COMMENT 'Código único para convidar o segundo responsável (pai/mãe/avó)',
+        \`vinculado_em\` DATETIME NOT NULL COMMENT 'Data e hora do vínculo em America/Sao_Paulo',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`atualizado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        UNIQUE KEY \`uk_cuidador_dependente\` (\`cuidador_usuario_id\`, \`perfil_saude_id\`),
+        UNIQUE KEY \`uk_codigo_convite\` (\`codigo_convite_familia\`),
+        KEY \`idx_cuidadores_usuario\` (\`cuidador_usuario_id\`),
+        KEY \`idx_cuidadores_perfil\` (\`perfil_saude_id\`),
+        CONSTRAINT \`fk_cuidadores_usuario\`
+          FOREIGN KEY (\`cuidador_usuario_id\`) REFERENCES \`usuarios\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT \`fk_cuidadores_perfil\`
+          FOREIGN KEY (\`perfil_saude_id\`) REFERENCES \`perfis_saude\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vínculo entre responsáveis e crianças com DM1';
+    `);
+    console.log('✅ Tabela cuidadores_dependentes criada/verificada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ cuidadores_dependentes:', err.message);
+  }
+  // ==========================================================================
+  // FIM — 20. ESTRUTURA DO PERFIL CUIDADOR (cuidadores_dependentes E MENORES DM1)
+  // ==========================================================================
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

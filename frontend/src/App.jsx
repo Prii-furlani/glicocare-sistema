@@ -28,6 +28,7 @@ import MeuPerfil from './pages/MeuPerfil';
 import MinhaConta from './pages/MinhaConta';
 import PainelEspecialista from './pages/PainelEspecialista';
 import PainelAdmin from './pages/PainelAdmin';
+import PainelCuidador from './pages/PainelCuidador';
 import SalaTeleconsulta from './pages/SalaTeleconsulta';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL APP */
@@ -120,6 +121,16 @@ export default function App() {
                   requerEspecialistaVerificado={true}
                 >
                   <PainelEspecialista />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Painel Exclusivo do Cuidador de Crianças com DM1 (< 12 anos) */}
+            <Route
+              path="/painel-cuidador"
+              element={
+                <ProtectedRoute allowedRoles={['cuidador', 'admin']}>
+                  <PainelCuidador />
                 </ProtectedRoute>
               }
             />

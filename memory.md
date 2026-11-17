@@ -704,6 +704,43 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   4. *🩺 Especialistas & Curadoria:* Cards com conselho profissional, comutadores de aprovação/pausa e configuração de split.
   5. *💬 Moderação & Usuários:* Fila de aprovação de depoimentos e gestão completa de contas.
 
+---
+
+## 17. Módulo do Perfil Cuidador (Crianças < 12 anos, cuidadores_dependentes e Cartão Escolar)
+
+### A. Modelagem de Dados & Co-Cuidadores (TiDB Cloud MySQL)
+- **Tabela `cuidadores_dependentes`:**
+  * Relacionamento N:N escalável entre responsáveis legais (`cuidador_usuario_id`) e perfis de saúde de crianças (`perfil_saude_id`).
+  * `parentesco`: ENUM(`MAE`, `PAI`, `AVO_A`, `RESPONSAVEL_LEGAL`, `OUTRO_CUIDADOR`) NOT NULL DEFAULT `MAE`.
+  * `nivel_acesso`: ENUM(`ADMINISTRADOR_LEGAL`, `ACOMPANHANTE_DIARIO`) NOT NULL DEFAULT `ADMINISTRADOR_LEGAL`.
+    - `ADMINISTRADOR_LEGAL`: Assina TCLE anual como responsável civil, agenda consultas e gerencia exames e vínculos.
+    - `ACOMPANHANTE_DIARIO`: Visualiza histórico e registra aplicações de insulina e destros diários.
+  * `codigo_convite_familia`: VARCHAR(16) UNIQUE (código amigável, ex: `THEO-FAM-2026`, para o 2º responsável conectar sua conta à mesma criança).
+  * `vinculado_em`: DATETIME (`America/Sao_Paulo`).
+- **Atualização em `perfis_saude`:**
+  * `nome_completo_paciente` VARCHAR(150), `is_menor_12` BOOLEAN DEFAULT 0, `escola_nome` VARCHAR(150), `contato_emergencia_telefone` VARCHAR(30).
+- **Atualização em `registros_glicemia`:**
+  * `registrado_por_usuario_id` INT UNSIGNED e `registrado_por_rotulo` VARCHAR(80) (ex: *"Mariana Silva (Mãe)"*, *"Carlos Eduardo (Pai)"*).
+  * Garante que toda a família saiba exatamente quem realizou a medição ou bolus, prevenindo doses duplicadas e hipoglicemia severa.
+- **Atualização em `agendamentos`:**
+  * `perfil_saude_id` INT UNSIGNED vinculando a teleconsulta diretamente à criança atendida.
+
+### B. Endpoints de Retaguarda (`/backend/api/cuidadores/`)
+- `meus_dependentes.php` (GET): Retorna lista de crianças vinculadas ao cuidador autenticado, idade precisa (anos e meses), tempo de diagnóstico, co-cuidadores, alergias, medicamentos, IOB ativo, radar de queda rápida, consultas e exames.
+- `cadastrar_dependente.php` (POST): Cadastra nova criança (criando `perfis_saude` e `cuidadores_dependentes`) ou vincula-se a uma criança existente via `codigo_convite_familia`.
+- `gerar_convite_familia.php` (POST): Gera/renova o código de convite seguro com texto pronto para envio por WhatsApp.
+- `registrar_glicemia_cuidador.php` (POST): Registra destro/bolus com rotulagem do cuidador, verificação de empilhamento de doses nas últimas 3 horas e cálculo de velocidade de queda.
+
+### C. Workspace do Cuidador (`frontend/src/pages/PainelCuidador.jsx`)
+- **Seletor de Filhos no Topo:** Card acolhedor com dados de Theo Silva (ou outros filhos), botões `+ Adicionar Filho(a)` (com abas de cadastro ou código de convite) e `🔗 Convidar Familiar (Pai/Mãe)`.
+- **5 Abas Estruturadas:**
+  1. *🩸 Diário & Insulina Ativa (IOB):* Alerta âmbar/ouro contra empilhamento com dose e horário da última aplicação, formulário rápido com cores imediatas (Verde 70-140, Amarelo 141-180, Terracota >180) e linha do tempo com badges de quem aplicou.
+  2. *🩺 Especialistas & Consultas:* Teleconsultas da criança, status do TCLE anual assinado pelo responsável legal, formulário de Pré-Atendimento e atalho para a sala criptografada `/sala-consulta/:token`.
+  3. *🧪 Exames & Alergias:* Destaque de alergias (Dipirona, Adesivos FreeStyle Libre) com nível de gravidade e linha do tempo de exames laboratoriais (HbA1c).
+  4. *🏫 Cartão de Cuidado Escolar (PDF):* Visualização limpa para a escola com dados do aluno, contatos diretos dos pais (WhatsApp), sinais de alarme de hipoglicemia, Regra dos 15g de resgate e botão para impressão direta (`window.print()`).
+  5. *💬 Meus Comentários & Comunidade:* Histórico de depoimentos enviados pelo cuidador nos guias pedagógicos com status de moderação (`RN-MOD-01`).
+
+
 
 
 

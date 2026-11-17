@@ -151,14 +151,24 @@ export default function Login() {
                 redirecionar_para: '/especialistas',
               }
             };
+          } else if (emailFinal.includes('mariana') || emailFinal.includes('mae') || emailFinal.includes('cuidador')) {
+            respostaDados = {
+              sucesso: true,
+              mensagem: 'Que bom ter você de volta, Mariana!',
+              dados: {
+                token: 'mock-token-cuidador-12345',
+                usuario: { id: 4, nome_completo: 'Mariana Silva', email: emailFinal, tipo_perfil: 'cuidador', tipo_usuario: 'cuidador' },
+                redirecionar_para: '/painel-cuidador',
+              }
+            };
           } else {
             respostaDados = {
               sucesso: true,
               mensagem: 'Que bom ter você de volta à família GlicoCare!',
               dados: {
                 token: 'mock-token-user-12345',
-                usuario: { id: 4, nome_completo: 'Mariana Silva', email: emailFinal, tipo_perfil: 'familiar_paciente' },
-                redirecionar_para: '/biblioteca',
+                usuario: { id: 5, nome_completo: 'Carlos Eduardo Souza', email: emailFinal, tipo_perfil: 'diabetico', tipo_usuario: 'diabetico' },
+                redirecionar_para: '/meu-perfil',
               }
             };
           }
@@ -185,11 +195,15 @@ export default function Login() {
 
         setMensagemSucesso(mensagem || 'Login realizado com sucesso!');
 
-        // Redireciona para o Painel Admin se for admin, ou para a rota de origem
+        // Redireciona para o painel correspondente ao perfil logado (RN-ACC-01)
         const perfilLogado = dados?.usuario?.tipo_usuario || dados?.usuario?.tipo_perfil;
         const destino = (perfilLogado === 'admin' || perfilLogado === 'admin_moderador')
           ? '/admin'
-          : (location.state?.from?.pathname || dados.redirecionar_para || '/biblioteca');
+          : (perfilLogado === 'cuidador')
+            ? '/painel-cuidador'
+            : (perfilLogado === 'especialista')
+              ? '/painel-especialista'
+              : (location.state?.from?.pathname || dados.redirecionar_para || '/meu-perfil');
         setTimeout(() => {
           navigate(destino);
         }, 750);
