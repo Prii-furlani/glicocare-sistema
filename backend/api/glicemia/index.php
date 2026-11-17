@@ -59,9 +59,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $perfilId = obterOuCriarPerfilSaude($db, $usuarioId, $usuarioLogado['nome_completo']);
 
+        // Busca configurações clínicas do perfil (FSI, Alvo, Duração)
+        $stmtPerfil = $db->prepare('SELECT fsi, glicemia_alvo, duracao_insulina_horas FROM perfis_saude WHERE id = :pid LIMIT 1');
+        $stmtPerfil->execute([':pid' => $perfilId]);
+        $configClinica = $stmtPerfil->fetch(PDO::FETCH_ASSOC) ?: [
+            'fsi'                    => null,
+            'glicemia_alvo'          => 100,
+            'duracao_insulina_horas' => 3,
+        ];
+
         $stmt = $db->prepare(
             'SELECT id, perfil_saude_id, valor_mg_dl, momento_medicao, tipo_leitura,
-                    acao_realizada, dose_insulina, carboidratos_g, fator_contexto,
+                    acao_realizada, dose_insulina, dose_insulina AS dose_aplicada,
+                    insulina_ativa_estimada, insulina_total_organismo,
+                    variacao_por_minuto, tendencia_destro,
+                    carboidratos_g, fator_contexto,
                     sintomas, observacoes, data_hora_medicao, criado_em
              FROM registros_glicemia
              WHERE perfil_saude_id = :pid
@@ -71,15 +83,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt->execute([':pid' => $perfilId]);
         $registros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Decodifica JSON de sintomas
+        // Decodifica JSON de sintomas e normaliza tipos numéricos
         foreach ($registros as &$reg) {
             $reg['sintomas'] = !empty($reg['sintomas']) ? json_decode($reg['sintomas'], true) : [];
+            $reg['valor_mg_dl'] = (int)$reg['valor_mg_dl'];
+            $reg['dose_insulina'] = $reg['dose_insulina'] !== null ? (float)$reg['dose_insulina'] : null;
+            $reg['dose_aplicada'] = $reg['dose_insulina'];
+            $reg['insulina_ativa_estimada'] = $reg['insulina_ativa_estimada'] !== null ? (float)$reg['insulina_ativa_estimada'] : null;
+            $reg['insulina_total_organismo'] = $reg['insulina_total_organismo'] !== null ? (float)$reg['insulina_total_organismo'] : null;
+            $reg['variacao_por_minuto'] = $reg['variacao_por_minuto'] !== null ? (float)$reg['variacao_por_minuto'] : null;
         }
 
         http_response_code(200);
         echo json_encode([
-            'sucesso' => true,
-            'dados'   => $registros,
+            'sucesso'        => true,
+            'config_clinica' => [
+                'fsi'                    => $configClinica['fsi'] !== null ? (float)$configClinica['fsi'] : null,
+                'glicemia_alvo'          => (int)($configClinica['glicemia_alvo'] ?? 100),
+                'duracao_insulina_horas' => (int)($configClinica['duracao_insulina_horas'] ?? 3),
+            ],
+            'dados'          => $registros,
         ]);
         exit;
     } catch (Exception $e) {
@@ -105,7 +128,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $momentoMedicao = trim($payload['momento_medicao'] ?? 'Padrao');
     $tipoLeitura = trim($payload['tipo_leitura'] ?? 'Manual');
     $acaoRealizada = trim($payload['acao_realizada'] ?? 'Nenhuma Acao');
-    $doseInsulina = !empty($payload['dose_insulina']) ? (float)$payload['dose_insulina'] : null;
+    $doseInsulina = isset($payload['dose_insulina']) && $payload['dose_insulina'] !== '' 
+        ? (float)$payload['dose_insulina'] 
+        : (isset($payload['dose_aplicada']) && $payload['dose_aplicada'] !== '' ? (float)$payload['dose_aplicada'] : null);
+    
+    $insulinaAtivaEstimada = isset($payload['insulina_ativa_estimada']) && $payload['insulina_ativa_estimada'] !== '' 
+        ? (float)$payload['insulina_ativa_estimada'] : null;
+    
+    $insulinaTotalOrganismo = isset($payload['insulina_total_organismo']) && $payload['insulina_total_organismo'] !== '' 
+        ? (float)$payload['insulina_total_organismo'] : null;
+    
+    if ($insulinaTotalOrganismo === null && ($doseInsulina !== null || $insulinaAtivaEstimada !== null)) {
+        $insulinaTotalOrganismo = (float)(($doseInsulina ?? 0) + ($insulinaAtivaEstimada ?? 0));
+    }
+
+    $variacaoPorMinuto = isset($payload['variacao_por_minuto']) && $payload['variacao_por_minuto'] !== '' 
+        ? (float)$payload['variacao_por_minuto'] : null;
+    
+    $tendenciaDestro = !empty($payload['tendencia_destro']) ? trim($payload['tendencia_destro']) : null;
+
     $carboidratosG = !empty($payload['carboidratos_g']) ? (int)$payload['carboidratos_g'] : null;
     $fatorContexto = !empty($payload['fator_contexto']) ? trim($payload['fator_contexto']) : null;
     $sintomasJson = !empty($payload['sintomas']) ? json_encode($payload['sintomas'], JSON_UNESCAPED_UNICODE) : null;
@@ -123,12 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtIn = $db->prepare(
             'INSERT INTO registros_glicemia (
                 perfil_saude_id, valor_mg_dl, momento_medicao, tipo_leitura,
-                acao_realizada, dose_insulina, carboidratos_g, fator_contexto,
-                sintomas, observacoes, data_hora_medicao
+                acao_realizada, dose_insulina, insulina_ativa_estimada,
+                insulina_total_organismo, variacao_por_minuto, tendencia_destro,
+                carboidratos_g, fator_contexto, sintomas, observacoes, data_hora_medicao
              ) VALUES (
                 :pid, :valor, :momento, :tipo,
-                :acao, :dose, :carbos, :contexto,
-                :sintomas, :obs, :datahora
+                :acao, :dose, :iob,
+                :itotal, :varmut, :tend,
+                :carbos, :contexto, :sintomas, :obs, :datahora
              )'
         );
 
@@ -139,6 +182,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':tipo'     => $tipoLeitura,
             ':acao'     => $acaoRealizada,
             ':dose'     => $doseInsulina,
+            ':iob'      => $insulinaAtivaEstimada,
+            ':itotal'   => $insulinaTotalOrganismo,
+            ':varmut'   => $variacaoPorMinuto,
+            ':tend'     => $tendenciaDestro,
             ':carbos'   => $carboidratosG,
             ':contexto' => $fatorContexto,
             ':sintomas' => $sintomasJson,
@@ -157,10 +204,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             '/meu-perfil',
             null,
             [
-                'id'          => $novoId,
-                'valor_mg_dl' => $valorMgDl,
-                'momento'     => $momentoMedicao,
-                'data_hora'   => $dataHoraMedicao,
+                'id'                       => $novoId,
+                'valor_mg_dl'              => $valorMgDl,
+                'momento'                  => $momentoMedicao,
+                'tipo_leitura'             => $tipoLeitura,
+                'dose_insulina'            => $doseInsulina,
+                'insulina_ativa_estimada'  => $insulinaAtivaEstimada,
+                'insulina_total_organismo' => $insulinaTotalOrganismo,
+                'variacao_por_minuto'      => $variacaoPorMinuto,
+                'tendencia_destro'         => $tendenciaDestro,
+                'data_hora'                => $dataHoraMedicao,
             ],
             $usuarioId,
             $usuarioLogado['nome_completo']
@@ -171,10 +224,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'sucesso'  => true,
             'mensagem' => 'Medição registrada com sucesso no seu diário seguro.',
             'dados'    => [
-                'id'                => $novoId,
-                'valor_mg_dl'       => $valorMgDl,
-                'momento_medicao'   => $momentoMedicao,
-                'data_hora_medicao' => $dataHoraMedicao,
+                'id'                       => $novoId,
+                'valor_mg_dl'              => $valorMgDl,
+                'momento_medicao'          => $momentoMedicao,
+                'tipo_leitura'             => $tipoLeitura,
+                'dose_insulina'            => $doseInsulina,
+                'insulina_ativa_estimada'  => $insulinaAtivaEstimada,
+                'insulina_total_organismo' => $insulinaTotalOrganismo,
+                'variacao_por_minuto'      => $variacaoPorMinuto,
+                'tendencia_destro'         => $tendenciaDestro,
+                'data_hora_medicao'        => $dataHoraMedicao,
             ]
         ]);
         exit;
@@ -183,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['sucesso' => false, 'mensagem' => 'Não foi possível registrar a medição.', 'detalhe' => $e->getMessage()]);
         exit;
     }
+}
 }
 /* FIM DO ENDPOINT POST */
 

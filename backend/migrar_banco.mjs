@@ -79,6 +79,52 @@ async function main() {
     console.log('ℹ️ Colunas de perfil em usuarios:', err.message);
   }
 
+  // 3. Adiciona colunas clínicas educativas em perfis_saude e registros_glicemia
+  try {
+    await connection.query(`
+      ALTER TABLE \`perfis_saude\`
+      ADD COLUMN IF NOT EXISTS \`fsi\` DECIMAL(5, 2) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`glicemia_alvo\` INT DEFAULT 100,
+      ADD COLUMN IF NOT EXISTS \`duracao_insulina_horas\` INT DEFAULT 3;
+    `);
+    console.log('✅ Colunas fsi, glicemia_alvo e duracao_insulina_horas verificadas em perfis_saude.');
+  } catch (err) {
+    console.log('ℹ️ Colunas em perfis_saude:', err.message);
+  }
+
+  try {
+    await connection.query(`
+      ALTER TABLE \`registros_glicemia\`
+      ADD COLUMN IF NOT EXISTS \`insulina_ativa_estimada\` DECIMAL(5, 2) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`insulina_total_organismo\` DECIMAL(5, 2) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`variacao_por_minuto\` DECIMAL(6, 2) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS \`tendencia_destro\` VARCHAR(50) DEFAULT NULL;
+    `);
+    console.log('✅ Colunas de IOB e velocidade de tendência verificadas em registros_glicemia.');
+  } catch (err) {
+    console.log('ℹ️ Colunas em registros_glicemia:', err.message);
+  }
+
+  // 4. Garante a publicação do artigo educativo de Insulina Ativa e Destro (RN-EDU-01)
+  try {
+    await connection.query(`
+      INSERT INTO \`artigos_conteudos\` (
+        \`id\`, \`autor_usuario_id\`, \`titulo\`, \`slug\`, \`categoria\`, \`resumo\`, \`conteudo\`, \`tempo_leitura_min\`, \`status_publicacao\`
+      ) VALUES (
+        7, 1,
+        'Insulina Ativa e Queda Rápida: como não ficar "às cegas" quando você está só no destro',
+        'insulina-ativa-e-queda-rapida',
+        'Tecnologia & Autonomia',
+        'Aprenda a calcular a insulina restante no organismo (IOB), evitar empilhamento perigoso de doses e ler a velocidade de variação entre pontas de dedo sem precisar de sensor contínuo.',
+        'Conviver com o DM1 sem um sensor contínuo (CGM) ou bomba de infusão não significa estar às cegas. Com conceitos simples de farmacocinética educativa — como a Insulina Ativa (IOB), o Fator de Sensibilidade (FSI) e a leitura de velocidade entre duas pontas de dedo consecutivas —, você e sua família ganham previsibilidade e serenidade no dia a dia.',
+        7, 'publicado'
+      ) ON DUPLICATE KEY UPDATE \`titulo\` = VALUES(\`titulo\`), \`resumo\` = VALUES(\`resumo\`);
+    `);
+    console.log('✅ Artigo educativo sobre IOB e Destro inserido/atualizado na tabela artigos_conteudos.');
+  } catch (err) {
+    console.log('ℹ️ Inserção do artigo educativo:', err.message);
+  }
+
   const sqlPath = path.resolve('backend', 'database_tidb.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 

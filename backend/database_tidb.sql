@@ -92,6 +92,9 @@ CREATE TABLE IF NOT EXISTS `perfis_saude` (
   `tipo_diabetes` ENUM('Tipo 1A', 'Tipo 1B', 'Tipo 2', 'LADA', 'MODY', 'Gestacional', 'Pre-diabetes', 'Nao tenho') NOT NULL DEFAULT 'Tipo 1A' COMMENT 'Classificação do diabetes',
   `data_diagnostico` DATE DEFAULT NULL COMMENT 'Data estimada do diagnóstico',
   `terapia_insulina` ENUM('Caneta', 'Seringa', 'Bomba com fio', 'Bomba sem fio / Adesivo', 'Nao uso insulina') NOT NULL DEFAULT 'Caneta' COMMENT 'Modalidade de aplicação de insulina',
+  `fsi` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Fator de Sensibilidade Insulínica (1 UI reduz X mg/dL, ex: 20, 30, 40)',
+  `glicemia_alvo` INT DEFAULT 100 COMMENT 'Meta glicêmica educativa em mg/dL (padrão 100)',
+  `duracao_insulina_horas` INT DEFAULT 3 COMMENT 'Duração da insulina ativa em horas (3, 4 ou 5, padrão 3)',
   `fatores_glicemia` JSON DEFAULT NULL COMMENT 'JSON com sensibilidade a estresse, calor, infecções, exercício, etc.',
   `config_sexo_especifica` JSON DEFAULT NULL COMMENT 'JSON com respostas condicionais específicas de saúde feminina ou masculina',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -138,6 +141,10 @@ CREATE TABLE IF NOT EXISTS `registros_glicemia` (
   `tipo_leitura` ENUM('Manual', 'Sensor/CGM') NOT NULL DEFAULT 'Manual' COMMENT 'Glicosímetro de ponta de dedo ou sensor contínuo',
   `acao_realizada` ENUM('Bolus de Correcao', 'Bolus para Refeicao', 'Bolus Correcao + Refeicao', 'Ajuste na Basal', 'Nenhuma Acao') NOT NULL DEFAULT 'Nenhuma Acao' COMMENT 'Conduta adotada na medição',
   `dose_insulina` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Dose aplicada (se houver)',
+  `insulina_ativa_estimada` DECIMAL(5, 2) DEFAULT NULL COMMENT 'IOB estimada de aplicações anteriores no momento do registro',
+  `insulina_total_organismo` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Dose aplicada + insulina ativa estimada',
+  `variacao_por_minuto` DECIMAL(6, 2) DEFAULT NULL COMMENT 'Velocidade de variação em mg/dL por minuto (calculada para intervalos <= 45 min)',
+  `tendencia_destro` VARCHAR(50) DEFAULT NULL COMMENT 'Seta e rótulo de tendência calculada entre destros',
   `carboidratos_g` INT DEFAULT NULL COMMENT 'Carboidratos ingeridos em gramas',
   `fator_contexto` VARCHAR(100) DEFAULT NULL COMMENT 'Contexto (Estresse, Calor Extremo, Exercício, TPM/Ciclo, Doença)',
   `sintomas` JSON DEFAULT NULL COMMENT 'Sintomas relatados (tontura, suor frio, tremores, etc.)',
@@ -384,6 +391,15 @@ INSERT INTO `artigos_conteudos` (
   'Orientações práticas para alinhar condutas com a coordenação pedagógica sobre momentos de lanche, aulas de educação física e o estojo de hipoglicemia.',
   'Confiar os cuidados da criança à equipe escolar é um passo significativo. Um roteiro ilustrado simples, orientações claras sobre sintomas de hipoglicemia e a presença do kit de emergência devidamente sinalizado aproximam pais e professores com total serenidade.',
   8, 'publicado'
+),
+(
+  7, 1,
+  'Insulina Ativa e Queda Rápida: como não ficar "às cegas" quando você está só no destro',
+  'insulina-ativa-e-queda-rapida',
+  'Tecnologia & Autonomia',
+  'Aprenda a calcular a insulina restante no organismo (IOB), evitar empilhamento perigoso de doses e ler a velocidade de variação entre pontas de dedo sem precisar de sensor contínuo.',
+  'Conviver com o DM1 sem um sensor contínuo (CGM) ou bomba de infusão não significa estar às cegas. Com conceitos simples de farmacocinética educativa — como a Insulina Ativa (IOB), o Fator de Sensibilidade (FSI) e a leitura de velocidade entre duas pontas de dedo consecutivas —, você e sua família ganham previsibilidade e serenidade no dia a dia.',
+  7, 'publicado'
 )
 ON DUPLICATE KEY UPDATE `titulo` = VALUES(`titulo`);
 

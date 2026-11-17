@@ -123,6 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
     $tipoDiabetes = trim($payload['tipo_diabetes'] ?? 'Tipo 1A');
     $dataDiagnostico = !empty($payload['data_diagnostico']) ? $payload['data_diagnostico'] : null;
     $terapiaInsulina = trim($payload['terapia_insulina'] ?? 'Caneta');
+    $fsi = !empty($payload['fsi']) ? (float)$payload['fsi'] : null;
+    $glicemiaAlvo = !empty($payload['glicemia_alvo']) ? (int)$payload['glicemia_alvo'] : 100;
+    $duracaoInsulinaHoras = !empty($payload['duracao_insulina_horas']) ? (int)$payload['duracao_insulina_horas'] : 3;
 
     $fatoresGlicemiaJson = !empty($payload['fatores_glicemia'])
         ? json_encode($payload['fatores_glicemia'], JSON_UNESCAPED_UNICODE) : null;
@@ -153,6 +156,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                      tipo_diabetes          = :tipodm,
                      data_diagnostico       = :dtdiag,
                      terapia_insulina       = :terapia,
+                     fsi                    = :fsi,
+                     glicemia_alvo          = :alvo,
+                     duracao_insulina_horas = :duracao,
                      fatores_glicemia       = :fatores,
                      config_sexo_especifica = :configsexo
                  WHERE id = :id'
@@ -166,6 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                 ':tipodm'     => $tipoDiabetes,
                 ':dtdiag'     => $dataDiagnostico,
                 ':terapia'    => $terapiaInsulina,
+                ':fsi'        => $fsi,
+                ':alvo'       => $glicemiaAlvo,
+                ':duracao'    => $duracaoInsulinaHoras,
                 ':fatores'    => $fatoresGlicemiaJson,
                 ':configsexo' => $configSexoJson,
                 ':id'         => $perfilSaudeId,
@@ -185,6 +194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                     'tipo_diabetes'    => $tipoDiabetes,
                     'data_diagnostico' => $dataDiagnostico,
                     'terapia_insulina' => $terapiaInsulina,
+                    'fsi'              => $fsi,
+                    'glicemia_alvo'    => $glicemiaAlvo,
                 ],
                 $usuarioId,
                 $usuarioLogado['nome_completo']
@@ -195,9 +206,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                 'INSERT INTO perfis_saude (
                     usuario_id, nome_completo, data_nascimento, sexo,
                     altura_cm, peso_kg, tipo_diabetes, data_diagnostico,
-                    terapia_insulina, fatores_glicemia, config_sexo_especifica
+                    terapia_insulina, fsi, glicemia_alvo, duracao_insulina_horas,
+                    fatores_glicemia, config_sexo_especifica
                  ) VALUES (
                     :uid, :nome, :dtnasc, :sexo,
+                    :altura, :peso, :tipodm, :dtdiag,
+                    :terapia, :fsi, :alvo, :duracao,
+                    :fatores, :configsexo
+                 )'
+            );
+            $stmtIn->execute([
+                ':uid'        => $usuarioId,
+                ':nome'       => $nomeCompleto,
+                ':dtnasc'     => $dataNascimento,
+                ':sexo'       => $sexo,
+                ':altura'     => $alturaCm,
+                ':peso'       => $pesoKg,
+                ':tipodm'     => $tipoDiabetes,
+                ':dtdiag'     => $dataDiagnostico,
+                ':terapia'    => $terapiaInsulina,
+                ':fsi'        => $fsi,
+                ':alvo'       => $glicemiaAlvo,
+                ':duracao'    => $duracaoInsulinaHoras,
+                ':fatores'    => $fatoresGlicemiaJson,
+                ':configsexo' => $configSexoJson,
+            ]);
                     :altura, :peso, :tipodm, :dtdiag,
                     :terapia, :fatores, :configsexo
                  )'

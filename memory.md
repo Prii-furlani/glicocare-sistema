@@ -134,3 +134,37 @@
 ### C. Apresentação nas Telas do Sistema
 - **Página Pessoal (`MeuPerfil.jsx`):** Badge de destaque no cabeçalho do perfil e card de medidas com resumo acolhedor da jornada.
 - **Painel do Especialista (`PainelEspecialista.jsx`):** Exibição do "Resumo Clínico para Anamnese" em cada consulta agendada, informando o tempo de diagnóstico e tipo de diabetes para agilizar a consulta sem exigir que a família repita toda a história clínica.
+
+---
+
+## 7. Diário Inteligente de Glicemia, Insulina Ativa (IOB), FSI e Tendência Destro (RN-GLI-01)
+
+### A. Parâmetros Clínicos Educativos (`perfis_saude`)
+- Campos armazenados:
+  * `fsi`: Fator de Sensibilidade Insulínica (1 UI reduz X mg/dL, ex: 20, 30, 40).
+  * `glicemia_alvo`: Meta glicêmica educativa (padrão 100 mg/dL).
+  * `duracao_insulina_horas`: Duração da ação da insulina rápida/ultrarrápida no organismo (3h, 4h ou 5h, padrão 3h).
+- **Aviso Ético Obrigatório:** *"Estes parâmetros são estritamente educativos e devem refletir com fidelidade as metas prescritas pela equipe médica do paciente. A GlicoCare não prescreve nem altera doses de insulina."*
+
+### B. Motor de Cálculo Educativo (`frontend/src/utils/glicemiaAnalytics.js`)
+1. **Insulina Ativa (IOB Estimada) — `calcularInsulinaAtiva()`:**
+   - Calcula a insulina restante no organismo com base em curva de decaimento fisiológico (0 min: 100%, 30 min: 80%, 60 min: 60%, 90 min: 40%, 120 min: 25%, 150 min: 10%, 180 min: 0%).
+   - Informa as UI ativas e o tempo estimado de expiração total (ex: `expira em ~1h15`).
+2. **Projeção pelo FSI e Detecção de Empilhamento — `calcularProjecaoFSI()`:**
+   - Calcula `(insulinaAtiva + novaDose) * fsi` e projeta a glicemia resultante.
+   - Emite **Alerta Educativo de Sobreposição / Risco de Hipoglicemia** quando a projeção resultante fica abaixo de 70 mg/dL, orientando calma antes de aplicar uma nova correção.
+3. **Velocidade de Variação e Seta de Tendência entre Destros — `calcularTendenciaDestro()`:**
+   - Para intervalos $\le 45$ minutos entre pontas de dedo consecutivas, calcula a taxa em mg/dL por minuto:
+     * $> +2.0$: `↑↑ Subida brusca`
+     * $> +1.0$: `↑ Subida rápida`
+     * $> +0.4$: `↗ Subida moderada`
+     * $-0.4 \dots +0.4$: `→ Estável`
+     * $-1.0 \dots -0.4$: `↘ Queda moderada`
+     * $-2.0 \dots -1.0$: `↓ Queda rápida`
+     * $< -2.0$: `↓↓ Queda brusca` (atenção preventiva mesmo com número atual ainda em faixa normal).
+
+### C. Apresentação no Diário Pessoal (`MeuPerfil.jsx`)
+- **Painel Resumo Superior:** 3 cards com Insulina Ativa (IOB), Última Glicemia + Seta de Tendência e Metas Clínicas com botão de ajuste modal.
+- **Formulário com Simulação em Tempo Real:** Feedback dinâmico enquanto digita a glicemia e/ou dose de insulina.
+- **Linha do Tempo em Planilha Inteligente:** Colunas para Data/Hora, Glicemia & Tendência, Dose Aplicada, IOB no Momento, Insulina Total no Corpo, Contexto e Ação de exclusão auditada.
+- **Auditoria e Banco TiDB Cloud:** Tabela `registros_glicemia` atualizada com as colunas de IOB, taxa por minuto e tendência, auditada compulsória por `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.

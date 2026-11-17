@@ -450,6 +450,77 @@ const CONTEUDO_COMPLETO_ARTIGOS = {
     mensagemLufyFinal:
       'Números sobem e descem como ondas no mar, mas o amor da sua família é o farol firme que mantém tudo seguro. Respire fundo, você está fazendo um trabalho lindo!',
   },
+  7: {
+    indicadorTopo: '💡 Tecnologia & Autonomia • 7 min de leitura',
+    tituloFormatado: (
+      <>
+        Insulina Ativa e Queda Rápida: como não ficar "às cegas" no <span className="texto-italico-terracota">destro</span>
+      </>
+    ),
+    autor: {
+      nome: 'Dra. Helena Monteiro (Endocrinologista) & Equipe GlicoCare',
+      iniciais: 'HM',
+      atualizacao: 'Educação em Farmacocinética • Atualizado em 2026',
+    },
+    subtituloIntrodutorio:
+      'Cuidar do DM1 na ponta de dedo não significa viver na incerteza. Entenda a Insulina Ativa (IOB), o Fator de Sensibilidade e como calcular a velocidade de queda entre dois testes.',
+    paragrafosIniciais: [
+      'Muitas famílias e adultos que utilizam glicosímetro de ponta de dedo (destro) sentem uma ponta de desvantagem em relação a quem tem sensor contínuo. Parece que quem usa sensor tem setas de tendência mágicas e gráficos no celular, enquanto quem usa glicosímetro tem apenas números isolados no tempo.',
+      'A verdade libertadora é que a matemática do corpo e a farmacocinética da insulina são as mesmas. Quando você domina três conceitos fundamentais — Insulina Ativa (IOB), Fator de Sensibilidade (FSI) e Variação por Minuto —, suas medições de ponta de dedo ganham olhos clínicos de alta precisão.',
+    ],
+    respiroVerde: {
+      selo: '🐾 Respiro do Guardião • Farmacocinética Serena',
+      frase:
+        '“A insulina rápida não desaparece após uma hora. Respeitar o tempo de ação do organismo é o maior escudo contra o desespero e contra a hipoglicemia de rebote.”',
+    },
+    subtituloMeio: 'O Perigo Invisível do Empilhamento de Insulina (Stacking)',
+    paragrafosMeio: [
+      'Imagine que você almoçou às 12h e aplicou insulina rápida. Às 14h (2 horas depois), a glicemia está em 230 mg/dL. O impulso imediato da maioria das pessoas é aplicar uma dose cheia de correção para fazer o número baixar logo.',
+      'É aí que mora o perigo do empilhamento: a insulina aplicada às 12h ainda tem cerca de 25% a 40% de potência agindo no seu sangue. Se você aplicar outra dose sem descontar essa insulina ativa, essas duas ondas vão se chocar por volta das 15h, provocando uma queda vertiginosa.',
+    ],
+    passosTitulo: 'Como Navegar no Destro com Visão de Sensor',
+    passosNumerados: [
+      {
+        numero: '01',
+        titulo: 'Consultar a Insulina Ativa (IOB)',
+        descricao:
+          'Antes de qualquer bolus de correção, calcule quantas UI ainda estão ativas das últimas 3 horas para evitar doses sobrepostas.',
+      },
+      {
+        numero: '02',
+        titulo: 'Cálculo de Projeção pelo FSI',
+        descricao:
+          'Multiplique a insulina ativa pelo seu Fator de Sensibilidade. Se a queda projetada ultrapassar sua meta segura, espere mais um pouco.',
+      },
+      {
+        numero: '03',
+        titulo: 'Dois testes em 30 minutos',
+        descricao:
+          'Se desconfiar de queda rápida, repita o destro 30 minutos depois. Uma variação superior a 1 mg/dL por minuto exige atenção preventiva.',
+      },
+      {
+        numero: '04',
+        titulo: 'Correção com líquidos simples',
+        descricao:
+          'Em quedas rápidas, use apenas carboidrato líquido (suco ou sachê de glicose). Gorduras e chocolates demoram até 45 minutos para agir.',
+      },
+    ],
+    imagemSecundaria: {
+      src: familiaCuidadoImg,
+      legenda:
+        'Com calma e método, as anotações no diário revelam a direção segura para cuidar sem sustos.',
+    },
+    respiroTerracota: {
+      selo: '🌿 Respiro do Guardião • Apoio Emocional',
+      frase:
+        '“Tecnologia é ferramenta, mas o carinho, a observação dos sinais do corpo e o método seguro são as verdadeiras bases do autocuidado.”',
+    },
+    paragrafosFinais: [
+      'Na GlicoCare, nosso diário inteligente calcula automaticamente a IOB estimada e a velocidade entre suas medições consecutivas, dando suporte clínico às decisões acordadas com seu endocrinologista.',
+    ],
+    mensagemLufyFinal:
+      'Viu só? Você não está às cegas! Com anotações cuidadosas e respeitando a insulina ativa, cada pontinha de dedo se transforma em segurança para brincar e viver leve!',
+  },
 };
 
 /* Comentários aprovados da comunidade (RN-MOD-01) */

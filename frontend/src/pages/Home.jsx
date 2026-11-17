@@ -106,6 +106,21 @@ export const ARTIGOS_BIBLIOTECA = [
       'Um olhar mais humano para tendências, alarmes e decisões compartilhadas no dia a dia.',
     destaqueSetaSolida: false,
   },
+  {
+    id: 7,
+    slug: 'insulina-ativa-e-queda-rapida',
+    seloSuperior: 'GUIA ESSENCIAL',
+    imagemCapa: null,
+    numeroEditorial: '05',
+    corTopo: '#3B7E48',
+    iconeCategoria: '💡',
+    categoria: 'Tecnologia & Autonomia',
+    tempoLeitura: '7 min de leitura',
+    titulo: 'Insulina Ativa e Queda Rápida: como não ficar "às cegas" no destro',
+    resumo:
+      'Como calcular a insulina restante no organismo (IOB), evitar empilhamento perigoso de doses e ler a velocidade de variação entre pontas de dedo sem precisar de sensor contínuo.',
+    destaqueSetaSolida: true,
+  },
 ];
 
 // 4 Profissionais da seção "REDE DE ESPECIALISTAS GLICOCARE"
