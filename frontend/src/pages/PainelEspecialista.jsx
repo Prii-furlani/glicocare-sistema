@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
+import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
 /* INÍCIO DO COMPONENTE PAINEL ESPECIALISTA */
 export default function PainelEspecialista() {
@@ -29,6 +30,10 @@ export default function PainelEspecialista() {
     {
       id: 1,
       paciente: 'Mariana Silva (mãe do Theo, 6 anos)',
+      tipo_diabetes: 'Tipo 1A',
+      data_diagnostico: '2023-08-10',
+      terapia_insulina: 'Caneta',
+      sensor_glicemia: 'FreeStyle Libre 2',
       data_hora: '2026-11-20 14:00',
       status: 'confirmado',
       link_video: '/atendimento-nativo/SALA-NATIVA-GC-HELENA-THEO',
@@ -164,6 +169,54 @@ export default function PainelEspecialista() {
                 <p style={{ fontSize: '0.85rem', color: '#5A5049', margin: '0 0 0.5rem 0' }}>
                   📅 Data/Hora: <strong>{c.data_hora}</strong>
                 </p>
+
+                {/* Resumo Clínico para Anamnese Ágil — Tempo de Jornada Calculado */}
+                {c.data_diagnostico && (() => {
+                  const infoJornada = calcularTempoDiagnostico(c.data_diagnostico);
+                  return (
+                    <div
+                      style={{
+                        backgroundColor: '#F8FBF8',
+                        border: '1px solid #D5E8D8',
+                        borderRadius: '8px',
+                        padding: '0.65rem 0.85rem',
+                        margin: '0.5rem 0 0.75rem 0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.76rem', color: '#1E4620', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          📋 Resumo Clínico para Anamnese
+                        </span>
+                        {infoJornada && (
+                          <span
+                            style={{
+                              backgroundColor: '#EFF7F1',
+                              color: '#285832',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '12px',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <span>{infoJornada.badgeIcone}</span>
+                            <span>{infoJornada.textoJornada} ({infoJornada.rotuloFase})</span>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#4A4039', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                        <span><strong>Diagnóstico:</strong> {c.tipo_diabetes || 'DM1'}</span>
+                        {c.terapia_insulina && <span>• <strong>Terapia:</strong> {c.terapia_insulina}</span>}
+                        {c.sensor_glicemia && <span>• <strong>Monitoramento:</strong> {c.sensor_glicemia}</span>}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <p style={{ fontSize: '0.82rem', color: '#7C533F', margin: '0 0 0.85rem 0', fontStyle: 'italic' }}>
                   "{c.observacoes}"

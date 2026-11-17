@@ -94,3 +94,23 @@
    * Botões em formato de pílula para filtragem rápida no topo da biblioteca. O item ativo ganha preenchimento em Verde Alívio (`#3B7E48`) e texto branco; os inativos ficam em tom neutro suave com ícones.
 5. **Widget do Bot (Lufy):**
    * Balão de fala flutuante com bordas arredondadas suaves, contendo uma frase acolhedora do mascote em destaque (ex: *"Ei, respira. A gente vai aprender isso juntos."*), acompanhado da identidade do Lufy e botão de chat rápido.
+
+---
+
+## 6. Tempo de Diagnóstico, Jornada de Aprendizado e Resumo Clínico
+
+### A. Campo de Data de Diagnóstico (`data_diagnostico` em `perfis_saude`)
+- Localizado logo após a classificação do diabetes nas telas de cadastro complementar (`ConfigurarPerfil.jsx`) e de edição de perfil.
+- Feedback imediato, afetuoso e em tempo real à medida que a data é preenchida.
+
+### B. Cálculo Automático da Jornada (`frontend/src/utils/dateUtils.js`)
+- Função utilitária pura `calcularTempoDiagnostico(dataDiagnostico)`:
+  * Devolve o tempo transcorrido em anos e meses formatados em português natural (ex: *"3 anos e 5 meses"*, *"1 ano"*, *"8 meses"*, *"Menos de 1 mês"*).
+  * Classificação de fase da jornada:
+    - `recem_diagnosticado` (< 6 meses) — Badge `🌿 Recém-diagnosticado(a)` — Tom de acolhimento nos primeiros passos;
+    - `adaptacao` (6 meses a 2 anos) — Badge `🌱 Fase de Adaptação` — Reconhecimento da construção de rotina segura;
+    - `experiente` (> 2 anos) — Badge `🌱 Jornada Experiente` — Validação de resiliência e maturidade no autocuidado.
+
+### C. Apresentação nas Telas do Sistema
+- **Página Pessoal (`MeuPerfil.jsx`):** Badge de destaque no cabeçalho do perfil e card de medidas com resumo acolhedor da jornada.
+- **Painel do Especialista (`PainelEspecialista.jsx`):** Exibição do "Resumo Clínico para Anamnese" em cada consulta agendada, informando o tempo de diagnóstico e tipo de diabetes para agilizar a consulta sem exigir que a família repita toda a história clínica.
