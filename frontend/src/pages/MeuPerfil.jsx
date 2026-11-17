@@ -16,6 +16,7 @@ import Button from '../components/Button';
 import CentralExames from '../components/CentralExames';
 import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoCompartilhavel';
 import ModalTCLE from '../components/ModalTCLE';
+import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import {
@@ -1415,7 +1416,6 @@ export default function MeuPerfil() {
                     placeholder="Ex: 30 (1 UI reduz 30 mg/dL)"
                     value={fsi}
                     onChange={(e) => setFsi(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #CCC', fontSize: '0.95rem' }}
                   />
                   <small style={{ color: '#6A5E57', fontSize: '0.76rem' }}>
                     Quantos mg/dL 1 unidade de insulina rápida reduz na sua glicemia.
@@ -1431,7 +1431,6 @@ export default function MeuPerfil() {
                     placeholder="Ex: 100"
                     value={glicemiaAlvo}
                     onChange={(e) => setGlicemiaAlvo(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #CCC', fontSize: '0.95rem' }}
                   />
                   <small style={{ color: '#6A5E57', fontSize: '0.76rem' }}>
                     Valor de referência seguro orientado para o equilíbrio do dia a dia.
@@ -1442,15 +1441,15 @@ export default function MeuPerfil() {
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.3rem', color: '#2E2824' }}>
                     Duração da Ação da Insulina (Horas)
                   </label>
-                  <select
+                  <CustomSelect
                     value={duracaoInsulinaHoras}
                     onChange={(e) => setDuracaoInsulinaHoras(Number(e.target.value))}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC', fontSize: '0.95rem', backgroundColor: '#FFF' }}
-                  >
-                    <option value={3}>3 horas (Padrão para ultrarrápidas modernas)</option>
-                    <option value={4}>4 horas (Maior tempo de ação em crianças e adultos)</option>
-                    <option value={5}>5 horas (Ação prolongada)</option>
-                  </select>
+                    options={[
+                      { value: 3, label: '3 horas (Padrão para ultrarrápidas modernas)' },
+                      { value: 4, label: '4 horas (Maior tempo de ação em crianças e adultos)' },
+                      { value: 5, label: '5 horas (Ação prolongada)' },
+                    ]}
+                  />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -1599,14 +1598,8 @@ export default function MeuPerfil() {
                   onChange={(e) => setValorGlicemia(e.target.value)}
                   placeholder="Ex: 145"
                   style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '10px',
-                    border: '2px solid rgba(124, 83, 63, 0.3)',
                     fontSize: '1.15rem',
                     fontWeight: 700,
-                    color: '#2E2824',
-                    backgroundColor: '#FFF',
                   }}
                 />
               </div>
@@ -1616,17 +1609,17 @@ export default function MeuPerfil() {
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                   Momento do dia
                 </label>
-                <select
+                <CustomSelect
                   value={momentoMedicao}
                   onChange={(e) => setMomentoMedicao(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #DDD', backgroundColor: '#FFF', fontSize: '0.9rem' }}
-                >
-                  <option value="Jejum">Jejum (ao acordar)</option>
-                  <option value="Antes da Refeicao">Antes da Refeição</option>
-                  <option value="1h/2h Apos Refeicao">1h a 2h Após Refeição</option>
-                  <option value="Antes de Dormir">Antes de Dormir</option>
-                  <option value="Padrao">Medição Avulsa / Madrugada</option>
-                </select>
+                  options={[
+                    { value: 'Jejum', label: 'Jejum (ao acordar)' },
+                    { value: 'Antes da Refeicao', label: 'Antes da Refeição' },
+                    { value: '1h/2h Apos Refeicao', label: '1h a 2h Após Refeição' },
+                    { value: 'Antes de Dormir', label: 'Antes de Dormir' },
+                    { value: 'Padrao', label: 'Medição Avulsa / Madrugada' },
+                  ]}
+                />
               </div>
 
               {/* Tipo de Leitura */}
@@ -1634,14 +1627,14 @@ export default function MeuPerfil() {
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                   Tipo de leitura
                 </label>
-                <select
+                <CustomSelect
                   value={tipoLeitura}
                   onChange={(e) => setTipoLeitura(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #DDD', backgroundColor: '#FFF', fontSize: '0.9rem' }}
-                >
-                  <option value="Manual">Glicosímetro (Ponta de dedo / Destro)</option>
-                  <option value="Sensor/CGM">Sensor Contínuo (FreeStyle / Dexcom)</option>
-                </select>
+                  options={[
+                    { value: 'Manual', label: 'Glicosímetro (Ponta de dedo / Destro)', icone: '🩸' },
+                    { value: 'Sensor/CGM', label: 'Sensor Contínuo (FreeStyle / Dexcom)', icone: '📡' },
+                  ]}
+                />
               </div>
 
               {/* Ação Realizada */}
@@ -1649,17 +1642,17 @@ export default function MeuPerfil() {
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                   Conduta adotada
                 </label>
-                <select
+                <CustomSelect
                   value={acaoRealizada}
                   onChange={(e) => setAcaoRealizada(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #DDD', backgroundColor: '#FFF', fontSize: '0.9rem' }}
-                >
-                  <option value="Nenhuma Acao">Apenas monitoramento</option>
-                  <option value="Bolus para Refeicao">Bolus para refeição</option>
-                  <option value="Bolus de Correcao">Bolus de correção</option>
-                  <option value="Bolus Correcao + Refeicao">Correção + Refeição</option>
-                  <option value="Ajuste na Basal">Ajuste na basal</option>
-                </select>
+                  options={[
+                    { value: 'Nenhuma Acao', label: 'Apenas monitoramento' },
+                    { value: 'Bolus para Refeicao', label: 'Bolus para refeição', icone: '🍽️' },
+                    { value: 'Bolus de Correcao', label: 'Bolus de correção', icone: '🎯' },
+                    { value: 'Bolus Correcao + Refeicao', label: 'Correção + Refeição', icone: '⚡' },
+                    { value: 'Ajuste na Basal', label: 'Ajuste na basal', icone: '💉' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -1675,7 +1668,6 @@ export default function MeuPerfil() {
                   value={doseInsulina}
                   onChange={(e) => setDoseInsulina(e.target.value)}
                   placeholder="Ex: 3.0"
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', fontSize: '0.88rem' }}
                 />
               </div>
 
@@ -1688,7 +1680,6 @@ export default function MeuPerfil() {
                   value={carbosG}
                   onChange={(e) => setCarbosG(e.target.value)}
                   placeholder="Ex: 40"
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', fontSize: '0.88rem' }}
                 />
               </div>
 
@@ -1701,7 +1692,6 @@ export default function MeuPerfil() {
                   value={fatorContexto}
                   onChange={(e) => setFatorContexto(e.target.value)}
                   placeholder="Ex: Estresse, Aula de Natação, Pizza"
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', fontSize: '0.88rem' }}
                 />
               </div>
 
@@ -1713,7 +1703,6 @@ export default function MeuPerfil() {
                   type="datetime-local"
                   value={dataHoraCustom}
                   onChange={(e) => setDataHoraCustom(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', fontSize: '0.84rem' }}
                 />
               </div>
             </div>
@@ -1725,7 +1714,6 @@ export default function MeuPerfil() {
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
                 placeholder="Observações complementares (ex: acabei de trocar o sensor, noite calma)"
-                style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', fontSize: '0.88rem' }}
               />
             </div>
 

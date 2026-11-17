@@ -7,6 +7,7 @@
    ========================================================================== */
 
 import React from 'react';
+import CustomSelect from './CustomSelect';
 
 /* INÍCIO DO COMPONENTE FORM INPUT */
 export default function FormInput({
@@ -90,20 +91,17 @@ export default function FormInput({
           className="gc-textarea"
         />
       ) : tipo === 'select' ? (
-        <select
+        <CustomSelect
           id={inputId}
           name={name}
           value={value}
           onChange={onChange}
           required={obrigatorio}
-          className="gc-select"
-        >
-          {opcoes.map((op) => (
-            <option key={op.valor} value={op.valor}>
-              {op.rotulo}
-            </option>
-          ))}
-        </select>
+          options={opcoes.map((op) => ({
+            value: op.valor !== undefined ? op.valor : op.value,
+            label: op.rotulo !== undefined ? op.rotulo : op.label,
+          }))}
+        />
       ) : (
         <input
           id={inputId}

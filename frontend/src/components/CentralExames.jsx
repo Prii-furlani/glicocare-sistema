@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
+import CustomSelect from './CustomSelect';
 
 // Dados demonstrativos padrão (espelhados com o seed do banco de dados TiDB)
 export const EXAMES_DEMO_INICIAIS = [
@@ -1046,25 +1047,19 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
                   Vincular a uma Guia Médica Solicitada (Opcional)
                 </label>
-                <select
+                <CustomSelect
                   value={formSolicitacaoId}
                   onChange={(e) => setFormSolicitacaoId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 0.9rem',
-                    borderRadius: '8px',
-                    border: '1px solid #D8D0C5',
-                    fontSize: '0.92rem',
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  <option value="">Exame avulso / Sem vínculo com guia específica</option>
-                  {solicitacoes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      Guia #{s.id}: {s.titulo_pedido} ({s.especialista_nome} - {s.status})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Exame avulso / Sem vínculo com guia específica"
+                  options={[
+                    { value: '', label: 'Exame avulso / Sem vínculo com guia específica' },
+                    ...solicitacoes.map((s) => ({
+                      value: s.id,
+                      label: `Guia #${s.id}: ${s.titulo_pedido} (${s.especialista_nome} - ${s.status})`,
+                      icone: '📋',
+                    })),
+                  ]}
+                />
               </div>
 
               {/* Upload de Laudo Digital */}

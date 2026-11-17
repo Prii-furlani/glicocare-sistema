@@ -756,18 +756,109 @@ a {
   color: var(--cor-texto);
 }
 
+/* ==========================================================================
+   INÍCIO DA PADRONIZAÇÃO GLOBAL DE CAMPOS DE FORMULÁRIO ("PORTO SEGURO")
+   Modernização e acolhimento visual para inputs, textareas, checkboxes e radios.
+   Elimina contornos e dropdowns azuis nativos, aplicando Verde Alívio e Terracota.
+   ========================================================================== */
+:root {
+  accent-color: #3B7E48;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--cor-cta, #3B7E48);
+  cursor: pointer;
+  width: 17px;
+  height: 17px;
+  vertical-align: middle;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input:not([type]),
+textarea,
 .gc-input,
-.gc-select,
 .gc-textarea {
   width: 100%;
-  padding: 0.8rem 1rem;
-  border-radius: var(--raio-medio);
-  border: 1.5px solid var(--cor-borda);
-  background-color: var(--cor-branco);
-  color: var(--cor-texto);
-  font-family: var(--fonte-corpo);
-  font-size: 0.96rem;
+  box-sizing: border-box;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(124, 83, 63, 0.22);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-family: var(--fonte-corpo, 'Plus Jakarta Sans', sans-serif);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--cor-texto, #2E2824);
+  transition: border-color var(--transicao-padrao, 0.2s ease),
+              box-shadow var(--transicao-padrao, 0.2s ease),
+              background-color var(--transicao-padrao, 0.2s ease);
 }
+
+input::placeholder,
+textarea::placeholder,
+.gc-input::placeholder,
+.gc-textarea::placeholder {
+  color: rgba(46, 40, 36, 0.45);
+  font-weight: 400;
+}
+
+input:focus,
+textarea:focus,
+.gc-input:focus,
+.gc-textarea:focus {
+  outline: none;
+  border-color: var(--cor-cta, #3B7E48);
+  box-shadow: 0 0 0 3px rgba(59, 126, 72, 0.14);
+}
+
+/* Foco alternativo Terracota para contextos editoriais */
+.gc-input--terracota:focus,
+.input-foco-terracota:focus {
+  outline: none;
+  border-color: var(--cor-primaria, #7C533F);
+  box-shadow: 0 0 0 3px rgba(124, 83, 63, 0.14);
+}
+
+/* Ícone de calendário / relógio nativo em inputs date e time */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  padding: 2px;
+  margin-right: -2px;
+  filter: sepia(0.4) hue-rotate(330deg);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* Animação suave para menus suspensos e dropdowns */
+@keyframes gcFadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* FIM DA PADRONIZAÇÃO GLOBAL DE CAMPOS DE FORMULÁRIO */
 /* FIM DO ACORDEÃO EDITORIAL DO FAQ E INPUTS */
 
 /* ==========================================================================

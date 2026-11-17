@@ -125,6 +125,24 @@
   * No modal *"Registrar Exame Laboratorial"*, a linha de inputs dos marcadores clínicos (Nome, Valor, Unidade, Valor de Referência e Botão Lixeira) opera com `display: flex; flex-wrap: wrap; gap: 0.5rem`.
   * Os campos utilizam `flex-grow` e `min-width` proporcionais, garantindo que em telas estreitas, smartphones ou tablets a linha quebre com naturalidade sem jamais produzir barra de rolagem horizontal no rodapé do modal (`scrollWidth <= clientWidth`).
 
+### E. Padronização Global de Formulários & Componente <CustomSelect /> ("Porto Seguro")
+- **Regra de Ouro Visual:** Proibido o uso de azul padrão de sistemas operacionais / navegadores (Windows, Chrome, Safari) em seleções, dropdowns, focos, checkboxes ou radios.
+- **Controles Nativos com Verde Alívio (`index.css` & `variables.css`):**
+  * `accent-color: #3B7E48;` configurado no `:root` para checkboxes e radios assumirem o Verde Alívio da marca.
+  * Inputs (`text`, `email`, `password`, `number`, `date`, `time`, `datetime-local`, `search`) e `textarea`:
+    - Fundo limpo (`#FFFFFF`), borda sutil (`1px solid rgba(124, 83, 63, 0.22)`), `border-radius: 12px`, `padding: 11px 14px`, fonte `Plus Jakarta Sans` (`14.5px`), cor `#2E2824`.
+    - Placeholder suave em `rgba(46, 40, 36, 0.45)`.
+    - Foco minimalista com anel suave: `border-color: var(--cor-cta, #3B7E48); box-shadow: 0 0 0 3px rgba(59, 126, 72, 0.14); outline: none;`.
+    - Ícone nativo de calendário/relógio (`::-webkit-calendar-picker-indicator`): cursor pointer, opacidade discreta (0.65) e tonalidade acolhedora com filtro sépia sutil.
+- **Componente Reutilizável `<CustomSelect />` (`frontend/src/components/CustomSelect.jsx`):**
+  * **Botão Gatilho:** Fundo `#FFFFFF`, `border-radius: 12px`, borda sutil, seta minimalista em SVG animada (rotação de 180° ao abrir) e truncamento com reticências para textos longos.
+  * **Dropdown Flutuante:** Card suspenso em `#FFFFFF`, `border-radius: 14px`, borda suave `1px solid rgba(124, 83, 63, 0.18)`, sombra elegante (`0 12px 30px rgba(46, 40, 36, 0.12)`), scroll fino terracota e fechamento automático ao clicar fora ou apertar `Esc`.
+  * **Opções no Design System GlicoCare:**
+    - Hover: fundo bege acolhedor (`#F6F3EE`).
+    - Opção selecionada: fundo verde suave (`rgba(59, 126, 72, 0.12)`), texto em Verde Alívio escuro (`#2D6337`) com `font-weight: 600` e ícone de check (`✓`) destacado em Verde Alívio (`#3B7E48`) à direita (zero azul nativo do navegador).
+  * **Acessibilidade e Navegação:** Suporte a `Enter`, `Espaço`, `Esc`, `Setas` e eventos sintéticos compatíveis tanto com `(e) => setVal(e.target.value)` quanto com `(val) => setVal(val)`.
+  * **Adoção Oficial:** Substitui os `<select>` nativos nos formulários de Perfil de Saúde (`ConfigurarPerfil.jsx`), Central de Exames (`CentralExames.jsx`), Diário de Glicemia e Parâmetros Clínicos (`MeuPerfil.jsx`), Vitrine de Especialistas (`Especialistas.jsx`) e inputs genéricos (`FormInput.jsx`).
+
 ---
 
 ## 6. Tempo de Diagnóstico, Jornada de Aprendizado e Resumo Clínico

@@ -12,6 +12,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
+import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
@@ -410,22 +411,15 @@ export default function ConfigurarPerfil() {
                 <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                   Sexo biológico (define o passo 3 de saúde) *
                 </label>
-                <select
+                <CustomSelect
                   value={sexo}
                   onChange={(e) => setSexo(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(124, 83, 63, 0.25)',
-                    fontSize: '0.92rem',
-                    backgroundColor: '#FFF',
-                  }}
-                >
-                  <option value="feminino">Feminino</option>
-                  <option value="masculino">Masculino</option>
-                  <option value="outro">Outro / Prefiro não detalhar</option>
-                </select>
+                  options={[
+                    { value: 'feminino', label: 'Feminino' },
+                    { value: 'masculino', label: 'Masculino' },
+                    { value: 'outro', label: 'Outro / Prefiro não detalhar' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -478,27 +472,20 @@ export default function ConfigurarPerfil() {
                 <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '0.35rem' }}>
                   Classificação do Diabetes *
                 </label>
-                <select
+                <CustomSelect
                   value={tipoDiabetes}
                   onChange={(e) => setTipoDiabetes(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(124, 83, 63, 0.25)',
-                    fontSize: '0.92rem',
-                    backgroundColor: '#FFF',
-                  }}
-                >
-                  <option value="Tipo 1A">Diabetes Tipo 1A (Autoimune)</option>
-                  <option value="Tipo 1B">Diabetes Tipo 1B (Idiopático)</option>
-                  <option value="Tipo 2">Diabetes Tipo 2</option>
-                  <option value="LADA">LADA (Autoimune latente do adulto)</option>
-                  <option value="MODY">MODY (Genético monogênico)</option>
-                  <option value="Gestacional">Diabetes Gestacional</option>
-                  <option value="Pre-diabetes">Pré-diabetes</option>
-                  <option value="Nao tenho">Apenas acompanho como cuidador</option>
-                </select>
+                  options={[
+                    { value: 'Tipo 1A', label: 'Diabetes Tipo 1A (Autoimune)' },
+                    { value: 'Tipo 1B', label: 'Diabetes Tipo 1B (Idiopático)' },
+                    { value: 'Tipo 2', label: 'Diabetes Tipo 2' },
+                    { value: 'LADA', label: 'LADA (Autoimune latente do adulto)' },
+                    { value: 'MODY', label: 'MODY (Genético monogênico)' },
+                    { value: 'Gestacional', label: 'Diabetes Gestacional' },
+                    { value: 'Pre-diabetes', label: 'Pré-diabetes' },
+                    { value: 'Nao tenho', label: 'Apenas acompanho como cuidador' },
+                  ]}
+                />
               </div>
 
               <div>
@@ -836,15 +823,15 @@ export default function ConfigurarPerfil() {
                       <span style={{ fontSize: '0.84rem', color: '#6A5E57', display: 'block', marginBottom: '0.35rem' }}>
                         Possibilidade ou plano de engravidar?
                       </span>
-                      <select
+                      <CustomSelect
                         value={femininoConfig.planeja_engravidar}
                         onChange={(e) => setFemininoConfig({ ...femininoConfig, planeja_engravidar: e.target.value })}
-                        style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', backgroundColor: '#FFF' }}
-                      >
-                        <option value="Nao">Não no momento</option>
-                        <option value="Planejando">Planejando engravidar nos próximos meses</option>
-                        <option value="Gestante">Já estou gestante</option>
-                      </select>
+                        options={[
+                          { value: 'Nao', label: 'Não no momento' },
+                          { value: 'Planejando', label: 'Planejando engravidar nos próximos meses' },
+                          { value: 'Gestante', label: 'Já estou gestante' },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1120,17 +1107,17 @@ export default function ConfigurarPerfil() {
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.25rem' }}>
                       Tipo
                     </label>
-                    <select
+                    <CustomSelect
                       value={med.tipo}
                       onChange={(e) => atualizarItemMedicamento(index, 'tipo', e.target.value)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #DDD', backgroundColor: '#FFF', fontSize: '0.9rem' }}
-                    >
-                      <option value="Insulina">Insulina</option>
-                      <option value="Comprimido">Comprimido</option>
-                      <option value="Dragea">Drágea</option>
-                      <option value="Suplemento">Suplemento</option>
-                      <option value="Outro">Outro</option>
-                    </select>
+                      options={[
+                        { value: 'Insulina', label: 'Insulina', icone: '💉' },
+                        { value: 'Comprimido', label: 'Comprimido', icone: '💊' },
+                        { value: 'Dragea', label: 'Drágea', icone: '⚪' },
+                        { value: 'Suplemento', label: 'Suplemento', icone: '🌿' },
+                        { value: 'Outro', label: 'Outro', icone: '📦' },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -1371,15 +1358,15 @@ export default function ConfigurarPerfil() {
                           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
                             Gravidade da Reação
                           </label>
-                          <select
+                          <CustomSelect
                             value={al.gravidade}
                             onChange={(e) => atualizarItemAlergia(idx, 'gravidade', e.target.value)}
-                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #D8D0C5', backgroundColor: '#FFFFFF', fontSize: '0.88rem' }}
-                          >
-                            <option value="LEVE">🟢 Leve (ex: prurido leve, vermelhidão local)</option>
-                            <option value="MODERADA">🟠 Moderada (ex: urticária, inchaço moderado)</option>
-                            <option value="GRAVE">🔴 Grave / Risco de Anafilaxia (urgência)</option>
-                          </select>
+                            options={[
+                              { value: 'LEVE', label: '🟢 Leve (ex: prurido leve, vermelhidão local)' },
+                              { value: 'MODERADA', label: '🟠 Moderada (ex: urticária, inchaço moderado)' },
+                              { value: 'GRAVE', label: '🔴 Grave / Risco de Anafilaxia (urgência)' },
+                            ]}
+                          />
                         </div>
                       </div>
 

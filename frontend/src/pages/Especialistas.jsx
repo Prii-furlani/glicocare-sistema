@@ -15,6 +15,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CardEspecialista from '../components/CardEspecialista';
+import CustomSelect from '../components/CustomSelect';
 import { REDE_ESPECIALISTAS } from './Home';
 
 /* INÍCIO DAS LISTAS DE FILTROS AVANÇADOS DO MARKETPLACE */
@@ -193,19 +194,15 @@ export default function Especialistas() {
             >
               Especialidade Principal
             </label>
-            <select
+            <CustomSelect
               id="seletor-especialidade"
-              className="gc-select"
               value={especialidadeAtiva}
               onChange={(e) => setEspecialidadeAtiva(e.target.value)}
-              style={{ borderRadius: 'var(--raio-pilula)' }}
-            >
-              {ESPECIALIDADES_FILTRO.map((item) => (
-                <option key={item.valor} value={item.valor}>
-                  {item.rotulo}
-                </option>
-              ))}
-            </select>
+              options={ESPECIALIDADES_FILTRO.map((item) => ({
+                value: item.valor,
+                label: item.rotulo,
+              }))}
+            />
           </div>
         </div>
 

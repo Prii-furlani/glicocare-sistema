@@ -6,6 +6,9 @@
 
 /* INÍCIO DOS DESIGN TOKENS (VARIÁVEIS GLOBAIS) */
 :root {
+  /* Controles nativos (checkbox, radio, range) no Verde Alívio da GlicoCare */
+  accent-color: #3B7E48;
+
   /* --- Paleta de Cores Oficial ("Porto Seguro" - memory.md & Design Editorial) --- */
   --cor-fundo: #EAE4D9;              /* Fundo principal: Bege neutro suave */
   --cor-superficie: #F6F3EE;         /* Superfícies e Cards: Branco acolhedor / marfim suave */
