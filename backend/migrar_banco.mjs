@@ -85,11 +85,50 @@ async function main() {
       ALTER TABLE \`perfis_saude\`
       ADD COLUMN IF NOT EXISTS \`fsi\` DECIMAL(5, 2) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS \`glicemia_alvo\` INT DEFAULT 100,
-      ADD COLUMN IF NOT EXISTS \`duracao_insulina_horas\` INT DEFAULT 3;
+      ADD COLUMN IF NOT EXISTS \`duracao_insulina_horas\` INT DEFAULT 3,
+      ADD COLUMN IF NOT EXISTS \`possui_alergias\` TINYINT(1) DEFAULT NULL;
     `);
-    console.log('✅ Colunas fsi, glicemia_alvo e duracao_insulina_horas verificadas em perfis_saude.');
+    console.log('✅ Colunas fsi, glicemia_alvo, duracao_insulina_horas e possui_alergias verificadas em perfis_saude.');
   } catch (err) {
     console.log('ℹ️ Colunas em perfis_saude:', err.message);
+  }
+
+  // 3B. Garante a criação da tabela alergias_usuario (Alergias e Sensibilidades)
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`alergias_usuario\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da alergia ou sensibilidade',
+        \`perfil_saude_id\` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+        \`categoria\` ENUM('MEDICAMENTO', 'ALIMENTO', 'ADESIVO_INSUMO', 'OUTRA') NOT NULL COMMENT 'Categoria da substância ou insumo',
+        \`substancia_ou_item\` VARCHAR(150) NOT NULL COMMENT 'Nome da substância, medicamento ou item causador',
+        \`gravidade\` ENUM('LEVE', 'MODERADA', 'GRAVE') NOT NULL DEFAULT 'MODERADA' COMMENT 'Gravidade clínica da reação',
+        \`reacao_observada\` VARCHAR(255) DEFAULT NULL COMMENT 'Sintomas ou manifestações clínicas relatadas',
+        \`criado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`atualizado_em\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_alergias_perfil\` (\`perfil_saude_id\`),
+        CONSTRAINT \`fk_alergias_perfil\`
+          FOREIGN KEY (\`perfil_saude_id\`) REFERENCES \`perfis_saude\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Alergias e sensibilidades clínicas do usuário';
+    `);
+    console.log('✅ Tabela alergias_usuario verificada/criada com sucesso.');
+
+    // Seed inicial para o perfil do Theo Silva (perfil_saude_id = 1)
+    await connection.query(`
+      UPDATE \`perfis_saude\` SET \`possui_alergias\` = 1 WHERE \`id\` = 1;
+      UPDATE \`perfis_saude\` SET \`possui_alergias\` = 0 WHERE \`id\` = 2;
+
+      INSERT INTO \`alergias_usuario\` (
+        \`id\`, \`perfil_saude_id\`, \`categoria\`, \`substancia_ou_item\`, \`gravidade\`, \`reacao_observada\`
+      ) VALUES
+      (1, 1, 'ADESIVO_INSUMO', 'Adesivo de Sensor / Cateter', 'LEVE', 'Dermatite de contato no braço após 10 dias de uso'),
+      (2, 1, 'MEDICAMENTO', 'Dipirona', 'MODERADA', 'Urticária e prurido generalizado')
+      ON DUPLICATE KEY UPDATE \`substancia_ou_item\` = VALUES(\`substancia_ou_item\`), \`gravidade\` = VALUES(\`gravidade\`);
+    `);
+    console.log('✅ Alergias demonstrativas inseridas com sucesso para o paciente Theo Silva.');
+  } catch (err) {
+    console.log('ℹ️ Tabela alergias_usuario:', err.message);
   }
 
   try {

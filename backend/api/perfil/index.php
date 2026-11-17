@@ -4,8 +4,8 @@
  * ARQUIVO: index.php (Localização: /backend/api/perfil/index.php)
  * PROJETO: GlicoCare — Sistema de Saúde Integrada e Acolhimento em DM1
  * OBJETIVO: Gerenciar a busca e atualização do perfil clínico personalizado
- *           (perfis_saude) e medicamentos ativos (medicamentos_usuario),
- *           com auditoria imutável compulsória (RN-AUD-01).
+ *           (perfis_saude), medicamentos ativos (medicamentos_usuario) e
+ *           alergias/sensibilidades (alergias_usuario), com auditoria imutável compulsória (RN-AUD-01).
  * =============================================================================
  */
 
@@ -32,24 +32,45 @@ $db = $database->getConnection();
 $usuarioLogado = AuthMiddleware::autenticar($db, '/meu-perfil');
 $usuarioId = (int)$usuarioLogado['id'];
 
-/* INÍCIO DO ENDPOINT GET: CONSULTAR PERFIL DE SAÚDE E MEDICAMENTOS */
+/* INÍCIO DO ENDPOINT GET: CONSULTAR PERFIL DE SAÚDE, MEDICAMENTOS E ALERGIAS */
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
-        // Busca perfil de saúde do usuário logado
-        $stmtPerfil = $db->prepare(
-            'SELECT id, usuario_id, nome_completo, data_nascimento, sexo,
-                    altura_cm, peso_kg, tipo_diabetes, data_diagnostico,
-                    terapia_insulina, fatores_glicemia, config_sexo_especifica,
-                    criado_em, atualizado_em
-             FROM perfis_saude
-             WHERE usuario_id = :uid
-             ORDER BY id DESC
-             LIMIT 1'
-        );
-        $stmtPerfil->execute([':uid' => $usuarioId]);
+        // Se informado perfil_saude_id via query (para visualização de profissional/consulta)
+        $targetPerfilId = isset($_GET['perfil_saude_id']) ? (int)$_GET['perfil_saude_id'] : 0;
+
+        if ($targetPerfilId > 0 && in_array($usuarioLogado['tipo_usuario'] ?? '', ['especialista', 'admin'], true)) {
+            $stmtPerfil = $db->prepare(
+                'SELECT id, usuario_id, nome_completo, data_nascimento, sexo,
+                        altura_cm, peso_kg, tipo_diabetes, data_diagnostico,
+                        terapia_insulina, fsi, glicemia_alvo, duracao_insulina_horas,
+                        possui_alergias, fatores_glicemia, config_sexo_especifica,
+                        criado_em, atualizado_em
+                 FROM perfis_saude
+                 WHERE id = :pid
+                 LIMIT 1'
+            );
+            $stmtPerfil->execute([':pid' => $targetPerfilId]);
+        } else {
+            // Busca perfil de saúde do usuário logado
+            $stmtPerfil = $db->prepare(
+                'SELECT id, usuario_id, nome_completo, data_nascimento, sexo,
+                        altura_cm, peso_kg, tipo_diabetes, data_diagnostico,
+                        terapia_insulina, fsi, glicemia_alvo, duracao_insulina_horas,
+                        possui_alergias, fatores_glicemia, config_sexo_especifica,
+                        criado_em, atualizado_em
+                 FROM perfis_saude
+                 WHERE usuario_id = :uid
+                 ORDER BY id DESC
+                 LIMIT 1'
+            );
+            $stmtPerfil->execute([':uid' => $usuarioId]);
+        }
+
         $perfil = $stmtPerfil->fetch(PDO::FETCH_ASSOC);
 
         $medicamentos = [];
+        $alergias = [];
+
         if ($perfil) {
             // Decodifica JSONs
             $perfil['fatores_glicemia'] = !empty($perfil['fatores_glicemia'])
@@ -67,6 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             );
             $stmtMeds->execute([':pid' => $perfil['id']]);
             $medicamentos = $stmtMeds->fetchAll(PDO::FETCH_ASSOC);
+
+            // Busca alergias estruturadas vinculadas a este perfil
+            $stmtAlergias = $db->prepare(
+                'SELECT id, perfil_saude_id, categoria, substancia_ou_item,
+                        gravidade, reacao_observada, criado_em
+                 FROM alergias_usuario
+                 WHERE perfil_saude_id = :pid
+                 ORDER BY id ASC'
+            );
+            $stmtAlergias->execute([':pid' => $perfil['id']]);
+            $alergias = $stmtAlergias->fetchAll(PDO::FETCH_ASSOC);
         }
 
         http_response_code(200);
@@ -82,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ],
                 'perfil_saude' => $perfil,
                 'medicamentos' => $medicamentos,
+                'alergias'     => $alergias,
             ]
         ]);
         exit;
@@ -127,6 +160,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
     $glicemiaAlvo = !empty($payload['glicemia_alvo']) ? (int)$payload['glicemia_alvo'] : 100;
     $duracaoInsulinaHoras = !empty($payload['duracao_insulina_horas']) ? (int)$payload['duracao_insulina_horas'] : 3;
 
+    // Alergias e sensibilidades
+    $possuiAlergias = null;
+    if (array_key_exists('possui_alergias', $payload)) {
+        if ($payload['possui_alergias'] === true || $payload['possui_alergias'] === 1 || $payload['possui_alergias'] === '1') {
+            $possuiAlergias = 1;
+        } elseif ($payload['possui_alergias'] === false || $payload['possui_alergias'] === 0 || $payload['possui_alergias'] === '0') {
+            $possuiAlergias = 0;
+        }
+    }
+    $alergiasLista = is_array($payload['alergias'] ?? null) ? $payload['alergias'] : [];
+
     $fatoresGlicemiaJson = !empty($payload['fatores_glicemia'])
         ? json_encode($payload['fatores_glicemia'], JSON_UNESCAPED_UNICODE) : null;
     $configSexoJson = !empty($payload['config_sexo_especifica'])
@@ -135,6 +179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
     $medicamentosLista = is_array($payload['medicamentos'] ?? null) ? $payload['medicamentos'] : [];
 
     try {
+        // Inicia transação
+        $db->beginTransaction();
+
         // Verifica se já existe um perfil_saude para este usuario_id
         $stmtBusca = $db->prepare('SELECT * FROM perfis_saude WHERE usuario_id = :uid LIMIT 1');
         $stmtBusca->execute([':uid' => $usuarioId]);
@@ -159,25 +206,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                      fsi                    = :fsi,
                      glicemia_alvo          = :alvo,
                      duracao_insulina_horas = :duracao,
+                     possui_alergias        = :alergias_flag,
                      fatores_glicemia       = :fatores,
                      config_sexo_especifica = :configsexo
                  WHERE id = :id'
             );
             $stmtUp->execute([
-                ':nome'       => $nomeCompleto,
-                ':dtnasc'     => $dataNascimento,
-                ':sexo'       => $sexo,
-                ':altura'     => $alturaCm,
-                ':peso'       => $pesoKg,
-                ':tipodm'     => $tipoDiabetes,
-                ':dtdiag'     => $dataDiagnostico,
-                ':terapia'    => $terapiaInsulina,
-                ':fsi'        => $fsi,
-                ':alvo'       => $glicemiaAlvo,
-                ':duracao'    => $duracaoInsulinaHoras,
-                ':fatores'    => $fatoresGlicemiaJson,
-                ':configsexo' => $configSexoJson,
-                ':id'         => $perfilSaudeId,
+                ':nome'           => $nomeCompleto,
+                ':dtnasc'         => $dataNascimento,
+                ':sexo'           => $sexo,
+                ':altura'         => $alturaCm,
+                ':peso'           => $pesoKg,
+                ':tipodm'         => $tipoDiabetes,
+                ':dtdiag'         => $dataDiagnostico,
+                ':terapia'        => $terapiaInsulina,
+                ':fsi'            => $fsi,
+                ':alvo'           => $glicemiaAlvo,
+                ':duracao'        => $duracaoInsulinaHoras,
+                ':alergias_flag'  => $possuiAlergias,
+                ':fatores'        => $fatoresGlicemiaJson,
+                ':configsexo'     => $configSexoJson,
+                ':id'             => $perfilSaudeId,
             ]);
 
             // Auditoria imutável da alteração (RN-AUD-01)
@@ -194,8 +243,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                     'tipo_diabetes'    => $tipoDiabetes,
                     'data_diagnostico' => $dataDiagnostico,
                     'terapia_insulina' => $terapiaInsulina,
-                    'fsi'              => $fsi,
-                    'glicemia_alvo'    => $glicemiaAlvo,
+                    'possui_alergias'  => $possuiAlergias,
+                    'total_alergias'   => count($alergiasLista),
                 ],
                 $usuarioId,
                 $usuarioLogado['nome_completo']
@@ -207,46 +256,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                     usuario_id, nome_completo, data_nascimento, sexo,
                     altura_cm, peso_kg, tipo_diabetes, data_diagnostico,
                     terapia_insulina, fsi, glicemia_alvo, duracao_insulina_horas,
-                    fatores_glicemia, config_sexo_especifica
+                    possui_alergias, fatores_glicemia, config_sexo_especifica
                  ) VALUES (
                     :uid, :nome, :dtnasc, :sexo,
                     :altura, :peso, :tipodm, :dtdiag,
                     :terapia, :fsi, :alvo, :duracao,
-                    :fatores, :configsexo
+                    :alergias_flag, :fatores, :configsexo
                  )'
             );
             $stmtIn->execute([
-                ':uid'        => $usuarioId,
-                ':nome'       => $nomeCompleto,
-                ':dtnasc'     => $dataNascimento,
-                ':sexo'       => $sexo,
-                ':altura'     => $alturaCm,
-                ':peso'       => $pesoKg,
-                ':tipodm'     => $tipoDiabetes,
-                ':dtdiag'     => $dataDiagnostico,
-                ':terapia'    => $terapiaInsulina,
-                ':fsi'        => $fsi,
-                ':alvo'       => $glicemiaAlvo,
-                ':duracao'    => $duracaoInsulinaHoras,
-                ':fatores'    => $fatoresGlicemiaJson,
-                ':configsexo' => $configSexoJson,
-            ]);
-                    :altura, :peso, :tipodm, :dtdiag,
-                    :terapia, :fatores, :configsexo
-                 )'
-            );
-            $stmtIn->execute([
-                ':uid'        => $usuarioId,
-                ':nome'       => $nomeCompleto,
-                ':dtnasc'     => $dataNascimento ?: '2000-01-01',
-                ':sexo'       => $sexo,
-                ':altura'     => $alturaCm,
-                ':peso'       => $pesoKg,
-                ':tipodm'     => $tipoDiabetes,
-                ':dtdiag'     => $dataDiagnostico,
-                ':terapia'    => $terapiaInsulina,
-                ':fatores'    => $fatoresGlicemiaJson,
-                ':configsexo' => $configSexoJson,
+                ':uid'           => $usuarioId,
+                ':nome'          => $nomeCompleto,
+                ':dtnasc'        => $dataNascimento ?: '2000-01-01',
+                ':sexo'          => $sexo,
+                ':altura'        => $alturaCm,
+                ':peso'          => $pesoKg,
+                ':tipodm'        => $tipoDiabetes,
+                ':dtdiag'        => $dataDiagnostico,
+                ':terapia'       => $terapiaInsulina,
+                ':fsi'           => $fsi,
+                ':alvo'          => $glicemiaAlvo,
+                ':duracao'       => $duracaoInsulinaHoras,
+                ':alergias_flag' => $possuiAlergias,
+                ':fatores'       => $fatoresGlicemiaJson,
+                ':configsexo'    => $configSexoJson,
             ]);
             $perfilSaudeId = (int)$db->lastInsertId();
 
@@ -265,6 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                     'tipo_diabetes'    => $tipoDiabetes,
                     'data_diagnostico' => $dataDiagnostico,
                     'terapia_insulina' => $terapiaInsulina,
+                    'possui_alergias'  => $possuiAlergias,
                 ],
                 $usuarioId,
                 $usuarioLogado['nome_completo']
@@ -275,36 +309,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
         $stmtUserUp = $db->prepare('UPDATE usuarios SET perfil_configurado = 1 WHERE id = :uid');
         $stmtUserUp->execute([':uid' => $usuarioId]);
 
-        // Sincroniza medicamentos (remove anteriores deste perfil e insere os novos da lista)
+        // Sincroniza medicamentos (remove anteriores e insere a lista atualizada)
         if (!empty($perfilSaudeId)) {
             $stmtDelMeds = $db->prepare('DELETE FROM medicamentos_usuario WHERE perfil_saude_id = :pid');
             $stmtDelMeds->execute([':pid' => $perfilSaudeId]);
 
-            $stmtInMed = $db->prepare(
-                'INSERT INTO medicamentos_usuario (
-                    perfil_saude_id, nome_medicamento, tipo, dose,
-                    unidade_medida, horario, uso_continuo, numero_dias
-                 ) VALUES (
-                    :pid, :nome, :tipo, :dose,
-                    :unidade, :horario, :continuo, :dias
-                 )'
-            );
+            if (!empty($medicamentosLista)) {
+                $stmtInMed = $db->prepare(
+                    'INSERT INTO medicamentos_usuario (
+                        perfil_saude_id, nome_medicamento, tipo, dose,
+                        unidade_medida, horario, uso_continuo, numero_dias
+                     ) VALUES (
+                        :pid, :nome, :tipo, :dose,
+                        :unidade, :horario, :continuo, :dias
+                     )'
+                );
 
-            foreach ($medicamentosLista as $med) {
-                if (!empty(trim($med['nome_medicamento'] ?? ''))) {
-                    $stmtInMed->execute([
-                        ':pid'      => $perfilSaudeId,
-                        ':nome'     => trim($med['nome_medicamento']),
-                        ':tipo'     => $med['tipo'] ?? 'Insulina',
-                        ':dose'     => trim($med['dose'] ?? '1'),
-                        ':unidade'  => trim($med['unidade_medida'] ?? 'UI'),
-                        ':horario'  => !empty($med['horario']) ? $med['horario'] : null,
-                        ':continuo' => isset($med['uso_continuo']) ? ((int)$med['uso_continuo'] ? 1 : 0) : 1,
-                        ':dias'     => !empty($med['numero_dias']) ? (int)$med['numero_dias'] : null,
-                    ]);
+                foreach ($medicamentosLista as $med) {
+                    if (!empty(trim($med['nome_medicamento'] ?? ''))) {
+                        $stmtInMed->execute([
+                            ':pid'      => $perfilSaudeId,
+                            ':nome'     => trim($med['nome_medicamento']),
+                            ':tipo'     => $med['tipo'] ?? 'Insulina',
+                            ':dose'     => trim($med['dose'] ?? '1'),
+                            ':unidade'  => trim($med['unidade_medida'] ?? 'UI'),
+                            ':horario'  => !empty($med['horario']) ? $med['horario'] : null,
+                            ':continuo' => isset($med['uso_continuo']) ? ((int)$med['uso_continuo'] ? 1 : 0) : 1,
+                            ':dias'     => !empty($med['numero_dias']) ? (int)$med['numero_dias'] : null,
+                        ]);
+                    }
                 }
             }
+
+            // Sincroniza alergias e sensibilidades (alergias_usuario)
+            $stmtDelAlergias = $db->prepare('DELETE FROM alergias_usuario WHERE perfil_saude_id = :pid');
+            $stmtDelAlergias->execute([':pid' => $perfilSaudeId]);
+
+            if ($possuiAlergias === 1 && !empty($alergiasLista)) {
+                $stmtInAlergia = $db->prepare(
+                    'INSERT INTO alergias_usuario (
+                        perfil_saude_id, categoria, substancia_ou_item, gravidade, reacao_observada
+                     ) VALUES (
+                        :pid, :cat, :item, :gravidade, :reacao
+                     )'
+                );
+
+                $categoriasValidas = ['MEDICAMENTO', 'ALIMENTO', 'ADESIVO_INSUMO', 'OUTRA'];
+                $gravidadesValidas = ['LEVE', 'MODERADA', 'GRAVE'];
+
+                foreach ($alergiasLista as $alergia) {
+                    $itemNome = trim($alergia['substancia_ou_item'] ?? '');
+                    if (!empty($itemNome)) {
+                        $cat = strtoupper(trim($alergia['categoria'] ?? 'OUTRA'));
+                        if (!in_array($cat, $categoriasValidas, true)) {
+                            $cat = 'OUTRA';
+                        }
+
+                        $grav = strtoupper(trim($alergia['gravidade'] ?? 'MODERADA'));
+                        if (!in_array($grav, $gravidadesValidas, true)) {
+                            $grav = 'MODERADA';
+                        }
+
+                        $reacao = !empty($alergia['reacao_observada']) ? trim($alergia['reacao_observada']) : null;
+
+                        $stmtInAlergia->execute([
+                            ':pid'       => $perfilSaudeId,
+                            ':cat'       => $cat,
+                            ':item'      => $itemNome,
+                            ':gravidade' => $grav,
+                            ':reacao'    => $reacao,
+                        ]);
+                    }
+                }
+
+                // Auditoria da sincronização de alergias
+                AuditLogger::registrar(
+                    $db,
+                    'EDICAO',
+                    'alergias_usuario',
+                    (string)$perfilSaudeId,
+                    '/meu-perfil',
+                    null,
+                    ['total_alergias' => count($alergiasLista)],
+                    $usuarioId,
+                    $usuarioLogado['nome_completo']
+                );
+            }
         }
+
+        $db->commit();
 
         http_response_code(200);
         echo json_encode([
@@ -313,11 +406,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
             'dados'    => [
                 'perfil_saude_id'    => $perfilSaudeId,
                 'perfil_configurado' => true,
+                'possui_alergias'    => $possuiAlergias,
             ]
         ]);
         exit;
 
     } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         http_response_code(500);
         echo json_encode(['sucesso' => false, 'mensagem' => 'Não foi possível salvar seu perfil agora.', 'detalhe' => $e->getMessage()]);
         exit;

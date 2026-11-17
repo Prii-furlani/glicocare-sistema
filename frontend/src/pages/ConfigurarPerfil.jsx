@@ -15,6 +15,18 @@ import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 
+/* SUGESTÕES RÁPIDAS DE ALERGIAS FREQUENTES (RN-ALE-01) */
+const SUGESTOES_ALERGIAS_COMUNS = [
+  { item: 'Dipirona', cat: 'MEDICAMENTO' },
+  { item: 'Penicilina / Amoxicilina', cat: 'MEDICAMENTO' },
+  { item: 'Anti-inflamatórios (AINEs)', cat: 'MEDICAMENTO' },
+  { item: 'Adesivo de Sensor / Cateter', cat: 'ADESIVO_INSUMO' },
+  { item: 'Amendoim / Castanhas', cat: 'ALIMENTO' },
+  { item: 'Leite / Lactose', cat: 'ALIMENTO' },
+  { item: 'Frutos do Mar', cat: 'ALIMENTO' },
+  { item: 'Látex', cat: 'OUTRA' },
+];
+
 /* INÍCIO DO COMPONENTE CONFIGURARPERFIL */
 export default function ConfigurarPerfil() {
   const navigate = useNavigate();
@@ -77,6 +89,17 @@ export default function ConfigurarPerfil() {
     },
   ]);
 
+  // Alergias e Sensibilidades (RN-ALE-01)
+  const [possuiAlergias, setPossuiAlergias] = useState(false);
+  const [alergias, setAlergias] = useState([
+    {
+      categoria: 'MEDICAMENTO',
+      substancia_ou_item: '',
+      gravidade: 'MODERADA',
+      reacao_observada: '',
+    },
+  ]);
+
   /**
    * Busca dados existentes prévios do perfil se já cadastrados
    */
@@ -107,6 +130,14 @@ export default function ConfigurarPerfil() {
 
           if (json.dados.medicamentos && json.dados.medicamentos.length > 0) {
             setMedicamentos(json.dados.medicamentos);
+          }
+
+          if (p.possui_alergias !== undefined && p.possui_alergias !== null) {
+            setPossuiAlergias(p.possui_alergias === 1 || p.possui_alergias === true);
+          }
+
+          if (json.dados.alergias && json.dados.alergias.length > 0) {
+            setAlergias(json.dados.alergias);
           }
         }
       } catch (e) {
@@ -142,6 +173,41 @@ export default function ConfigurarPerfil() {
     setMedicamentos(medicamentos.filter((_, i) => i !== index));
   };
 
+  // Manipuladores de alergias dinâmicas (RN-ALE-01)
+  const adicionarAlergia = (sugestao = null) => {
+    if (sugestao) {
+      setAlergias((prev) => [
+        ...prev,
+        {
+          categoria: sugestao.cat || 'OUTRA',
+          substancia_ou_item: sugestao.item,
+          gravidade: 'MODERADA',
+          reacao_observada: '',
+        },
+      ]);
+    } else {
+      setAlergias((prev) => [
+        ...prev,
+        {
+          categoria: 'MEDICAMENTO',
+          substancia_ou_item: '',
+          gravidade: 'MODERADA',
+          reacao_observada: '',
+        },
+      ]);
+    }
+  };
+
+  const atualizarItemAlergia = (index, campo, valor) => {
+    const novas = [...alergias];
+    novas[index][campo] = valor;
+    setAlergias(novas);
+  };
+
+  const removerAlergia = (index) => {
+    setAlergias(alergias.filter((_, i) => i !== index));
+  };
+
   /**
    * Submete o perfil completo para a API PHP com registro de auditoria imutável
    */
@@ -163,6 +229,10 @@ export default function ConfigurarPerfil() {
       fatores_glicemia: fatoresGlicemia,
       config_sexo_especifica: configSexo,
       medicamentos: medicamentos.filter((m) => m.nome_medicamento.trim() !== ''),
+      possui_alergias: possuiAlergias ? 1 : 0,
+      alergias: possuiAlergias
+        ? alergias.filter((a) => a.substancia_ou_item.trim() !== '')
+        : [],
     };
 
     try {
@@ -189,6 +259,7 @@ export default function ConfigurarPerfil() {
         criado_em: new Date().toISOString(),
       }));
       localStorage.setItem('glicocare_medicamentos', JSON.stringify(payload.medicamentos));
+      localStorage.setItem('glicocare_alergias', JSON.stringify(payload.alergias));
 
       atualizarUsuario({ perfil_configurado: true, nome_completo: nomeCompleto });
       navigate('/meu-perfil');
@@ -1104,6 +1175,250 @@ export default function ConfigurarPerfil() {
                 </div>
               </div>
             ))}
+
+            {/* ================================================================
+                SEÇÃO: ALERGIAS E SENSIBILIDADES CLÍNICAS (RN-ALE-01)
+                ================================================================ */}
+            <div
+              style={{
+                backgroundColor: '#FAF8F5',
+                border: '1.5px solid #E2DBD0',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                marginTop: '0.75rem',
+              }}
+            >
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '1.35rem' }}>🛡️</span>
+                  <h3 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.3rem', color: 'var(--cor-texto)', margin: 0 }}>
+                    Alergias & Sensibilidades
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.88rem', color: '#5A5049', margin: 0 }}>
+                  Segurança clínica essencial: previne prescrições de risco e orienta a equipe de saúde sobre reações a medicamentos, alimentos ou adesivos de sensores/bombas.
+                </p>
+              </div>
+
+              {/* Pergunta Sim / Não */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.92rem', fontWeight: 700, color: 'var(--cor-texto)', marginBottom: '0.65rem' }}>
+                  Você possui alguma alergia (medicamento, alimento, adesivo de sensor ou outra)?
+                </label>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPossuiAlergias(false)}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      borderRadius: '10px',
+                      border: !possuiAlergias ? '2px solid #3B7E48' : '1px solid #D8D0C5',
+                      backgroundColor: !possuiAlergias ? '#EFF7F1' : '#FFFFFF',
+                      color: !possuiAlergias ? '#285832' : '#4A4039',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span>✓</span>
+                    <span>Não possuo alergias conhecidas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPossuiAlergias(true);
+                      if (alergias.length === 0) {
+                        setAlergias([{ categoria: 'MEDICAMENTO', substancia_ou_item: '', gravidade: 'MODERADA', reacao_observada: '' }]);
+                      }
+                    }}
+                    style={{
+                      padding: '0.65rem 1.4rem',
+                      borderRadius: '10px',
+                      border: possuiAlergias ? '2px solid #7C533F' : '1px solid #D8D0C5',
+                      backgroundColor: possuiAlergias ? '#F6F3EE' : '#FFFFFF',
+                      color: possuiAlergias ? '#7C533F' : '#4A4039',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span>⚠️</span>
+                    <span>Sim, possuo alergia(s)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Construtor Dinâmico quando "Sim" */}
+              {possuiAlergias && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                  {/* Sugestões Rápidas em Chips */}
+                  <div style={{ backgroundColor: '#FFFFFF', padding: '0.85rem 1.15rem', borderRadius: '10px', border: '1px solid #E2DBD0' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6A5E57', display: 'block', marginBottom: '0.4rem' }}>
+                      Sugestões comuns (clique para adicionar rapidamente):
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {SUGESTOES_ALERGIAS_COMUNS.map((sug, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => adicionarAlergia(sug)}
+                          style={{
+                            backgroundColor: '#FAF8F5',
+                            border: '1px solid #D8D0C5',
+                            borderRadius: '999px',
+                            padding: '0.25rem 0.65rem',
+                            fontSize: '0.76rem',
+                            color: '#4A4039',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          + {sug.item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Lista de Alergias Cadastradas */}
+                  {alergias.map((al, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        padding: '1.25rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(124, 83, 63, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.85rem',
+                        boxShadow: '0 2px 6px rgba(46, 40, 36, 0.03)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#7C533F' }}>
+                          Alergia #{idx + 1}
+                        </span>
+                        {alergias.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removerAlergia(idx)}
+                            style={{ background: 'none', border: 'none', color: '#A23B2A', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            ✕ Remover
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Categoria: Pílulas de Seleção Rápida */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5A5049', marginBottom: '0.35rem' }}>
+                          Categoria da Alergia:
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {[
+                            { id: 'MEDICAMENTO', rotulo: '💊 Medicamento' },
+                            { id: 'ALIMENTO', rotulo: '🍎 Alimento' },
+                            { id: 'ADESIVO_INSUMO', rotulo: '🩹 Adesivo / Insumo DM1' },
+                            { id: 'OUTRA', rotulo: '🌿 Outra' },
+                          ].map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => atualizarItemAlergia(idx, 'categoria', c.id)}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                border: al.categoria === c.id ? '2px solid #7C533F' : '1px solid #D8D0C5',
+                                backgroundColor: al.categoria === c.id ? '#F6F3EE' : '#FFFFFF',
+                                color: al.categoria === c.id ? '#7C533F' : '#4A4039',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {c.rotulo}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                        {/* Nome do item / substância */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                            Substância ou Item causador *
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Dipirona, Adesivo do sensor Libre, Amendoim"
+                            value={al.substancia_ou_item}
+                            onChange={(e) => atualizarItemAlergia(idx, 'substancia_ou_item', e.target.value)}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #D8D0C5', fontSize: '0.88rem' }}
+                          />
+                        </div>
+
+                        {/* Gravidade */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                            Gravidade da Reação
+                          </label>
+                          <select
+                            value={al.gravidade}
+                            onChange={(e) => atualizarItemAlergia(idx, 'gravidade', e.target.value)}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #D8D0C5', backgroundColor: '#FFFFFF', fontSize: '0.88rem' }}
+                          >
+                            <option value="LEVE">🟢 Leve (ex: prurido leve, vermelhidão local)</option>
+                            <option value="MODERADA">🟠 Moderada (ex: urticária, inchaço moderado)</option>
+                            <option value="GRAVE">🔴 Grave / Risco de Anafilaxia (urgência)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Reação observada */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                          O que costuma acontecer? (Reação observada - opcional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Dermatite de contato no braço após 10 dias de uso do sensor, placas vermelhas..."
+                          value={al.reacao_observada || ''}
+                          onChange={(e) => atualizarItemAlergia(idx, 'reacao_observada', e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #D8D0C5', fontSize: '0.88rem' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => adicionarAlergia()}
+                    style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: '#FFFFFF',
+                      color: '#7C533F',
+                      border: '1px solid #7C533F',
+                      borderRadius: '8px',
+                      padding: '0.45rem 0.95rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Adicionar outra alergia
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

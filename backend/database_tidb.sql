@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS `perfis_saude` (
   `fsi` DECIMAL(5, 2) DEFAULT NULL COMMENT 'Fator de Sensibilidade Insulínica (1 UI reduz X mg/dL, ex: 20, 30, 40)',
   `glicemia_alvo` INT DEFAULT 100 COMMENT 'Meta glicêmica educativa em mg/dL (padrão 100)',
   `duracao_insulina_horas` INT DEFAULT 3 COMMENT 'Duração da insulina ativa em horas (3, 4 ou 5, padrão 3)',
+  `possui_alergias` TINYINT(1) DEFAULT NULL COMMENT 'NULL = nao informado, 0 = sem alergias conhecidas, 1 = possui alergias registradas',
   `fatores_glicemia` JSON DEFAULT NULL COMMENT 'JSON com sensibilidade a estresse, calor, infecções, exercício, etc.',
   `config_sexo_especifica` JSON DEFAULT NULL COMMENT 'JSON com respostas condicionais específicas de saúde feminina ou masculina',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -105,6 +106,26 @@ CREATE TABLE IF NOT EXISTS `perfis_saude` (
     FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Perfis clínicos personalizados de saúde DM1';
+
+-- =============================================================================
+-- TABELA 2B_ALERGIAS: alergias_usuario
+-- Registro estruturado de alergias e sensibilidades clínicas vinculadas a perfis_saude (1:N)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `alergias_usuario` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID da alergia ou sensibilidade',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `categoria` ENUM('MEDICAMENTO', 'ALIMENTO', 'ADESIVO_INSUMO', 'OUTRA') NOT NULL COMMENT 'Categoria da substância ou insumo',
+  `substancia_ou_item` VARCHAR(150) NOT NULL COMMENT 'Nome da substância, medicamento ou item causador',
+  `gravidade` ENUM('LEVE', 'MODERADA', 'GRAVE') NOT NULL DEFAULT 'MODERADA' COMMENT 'Gravidade clínica da reação',
+  `reacao_observada` VARCHAR(255) DEFAULT NULL COMMENT 'Sintomas ou manifestações clínicas relatadas',
+  `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_alergias_perfil` (`perfil_saude_id`),
+  CONSTRAINT `fk_alergias_perfil`
+    FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Alergias e sensibilidades clínicas do usuário';
 
 -- =============================================================================
 -- TABELA 2C: medicamentos_usuario
@@ -411,21 +432,29 @@ ON DUPLICATE KEY UPDATE `nome_completo` = VALUES(`nome_completo`), `tipo_usuario
 -- 1B. Perfis detalhados de saúde iniciais
 INSERT INTO `perfis_saude` (
   `id`, `usuario_id`, `nome_completo`, `data_nascimento`, `sexo`, `altura_cm`, `peso_kg`,
-  `tipo_diabetes`, `data_diagnostico`, `terapia_insulina`, `fatores_glicemia`, `config_sexo_especifica`
+  `tipo_diabetes`, `data_diagnostico`, `terapia_insulina`, `possui_alergias`, `fatores_glicemia`, `config_sexo_especifica`
 ) VALUES
 (
   1, 4, 'Theo Silva', '2019-05-14', 'masculino', 118.00, 22.50,
-  'Tipo 1A', '2023-08-10', 'Caneta',
+  'Tipo 1A', '2023-08-10', 'Caneta', 1,
   '{"estresse": "Sobe drasticamente", "calor": "Cai", "infeccao": "Aumenta necessidade de insulina", "exercicio": "Cai", "sonolencia": true}',
   '{"fadiga_persistente": false, "queda_libido": false, "objetivo_fisico": "Manutenção", "suplementos": "Vitamina D"}'
 ),
 (
   2, 5, 'Carlos Eduardo Souza', '1988-11-20', 'masculino', 178.00, 76.00,
-  'Tipo 1A', '2015-03-12', 'Bomba com fio',
+  'Tipo 1A', '2015-03-12', 'Bomba com fio', 0,
   '{"estresse": "Sobe levemente", "calor": "Não se altera", "infeccao": "Aumenta necessidade de insulina", "exercicio": "Cai", "sonolencia": false}',
   '{"fadiga_persistente": false, "queda_libido": false, "objetivo_fisico": "Ganho de massa muscular", "suplementos": "Creatina e Whey"}'
 )
-ON DUPLICATE KEY UPDATE `nome_completo` = VALUES(`nome_completo`);
+ON DUPLICATE KEY UPDATE `nome_completo` = VALUES(`nome_completo`), `possui_alergias` = VALUES(`possui_alergias`);
+
+-- 1B_ALERGIAS. Alergias e sensibilidades iniciais cadastradas
+INSERT INTO `alergias_usuario` (
+  `id`, `perfil_saude_id`, `categoria`, `substancia_ou_item`, `gravidade`, `reacao_observada`
+) VALUES
+(1, 1, 'ADESIVO_INSUMO', 'Adesivo de Sensor / Cateter', 'LEVE', 'Dermatite de contato no braço após 10 dias de uso'),
+(2, 1, 'MEDICAMENTO', 'Dipirona', 'MODERADA', 'Urticária e prurido generalizado')
+ON DUPLICATE KEY UPDATE `substancia_ou_item` = VALUES(`substancia_ou_item`), `gravidade` = VALUES(`gravidade`);
 
 -- 1C. Medicamentos e insulinas iniciais
 INSERT INTO `medicamentos_usuario` (

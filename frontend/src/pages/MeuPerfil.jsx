@@ -97,6 +97,7 @@ export default function MeuPerfil() {
   // Estados de dados do perfil e medicamentos
   const [perfilSaude, setPerfilSaude] = useState(null);
   const [medicamentos, setMedicamentos] = useState([]);
+  const [alergias, setAlergias] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
   // Parâmetros clínicos educativos
@@ -159,6 +160,9 @@ export default function MeuPerfil() {
             if (p.glicemia_alvo !== undefined && p.glicemia_alvo !== null) setGlicemiaAlvo(p.glicemia_alvo);
             if (p.duracao_insulina_horas !== undefined && p.duracao_insulina_horas !== null) setDuracaoInsulinaHoras(p.duracao_insulina_horas);
             setMedicamentos(dataPerfil.dados.medicamentos || []);
+            if (Array.isArray(dataPerfil.dados.alergias)) {
+              setAlergias(dataPerfil.dados.alergias);
+            }
             dadosCarregadosAPI = true;
           }
         }
@@ -216,6 +220,28 @@ export default function MeuPerfil() {
         const medsLocal = localStorage.getItem('glicocare_medicamentos');
         if (medsLocal) {
           setMedicamentos(JSON.parse(medsLocal));
+        }
+
+        const alergiasLocal = localStorage.getItem('glicocare_alergias');
+        if (alergiasLocal) {
+          setAlergias(JSON.parse(alergiasLocal));
+        } else {
+          setAlergias([
+            {
+              id: 1,
+              categoria: 'ADESIVO_INSUMO',
+              substancia_ou_item: 'Adesivo de Sensor / Cateter',
+              gravidade: 'LEVE',
+              reacao_observada: 'Dermatite de contato no braço após 10 dias de uso',
+            },
+            {
+              id: 2,
+              categoria: 'MEDICAMENTO',
+              substancia_ou_item: 'Dipirona',
+              gravidade: 'MODERADA',
+              reacao_observada: 'Urticária e prurido generalizado',
+            },
+          ]);
         }
 
         const glicemiaLocal = localStorage.getItem('glicocare_glicemia_registros');
@@ -636,6 +662,112 @@ export default function MeuPerfil() {
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* ==================================================================
+            FAIXA DE SEGURANÇA CLÍNICA: ALERGIAS & SENSIBILIDADES (RN-ALE-01)
+            ================================================================== */}
+        <div
+          style={{
+            backgroundColor: '#F6F3EE',
+            border: '1.5px solid rgba(124, 83, 63, 0.25)',
+            borderRadius: '16px',
+            padding: '1.25rem 1.6rem',
+            boxShadow: '0 2px 10px rgba(46, 40, 36, 0.03)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                backgroundColor: (perfilSaude?.possui_alergias === 1 || alergias.length > 0) ? '#FDF2F0' : '#EFF7F1',
+                color: (perfilSaude?.possui_alergias === 1 || alergias.length > 0) ? '#A23B2A' : '#285832',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.25rem',
+                flexShrink: 0,
+              }}
+            >
+              {(perfilSaude?.possui_alergias === 1 || alergias.length > 0) ? '⚠️' : '🛡️'}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '0.94rem', color: '#7C533F', letterSpacing: '-0.2px' }}>
+                  Segurança Clínica: Alergias & Sensibilidades
+                </strong>
+                {(perfilSaude?.possui_alergias === 1 || alergias.length > 0) ? (
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#FDF2F0', color: '#A23B2A', border: '1px solid #F0C9B6', padding: '0.15rem 0.5rem', borderRadius: '6px', fontWeight: 700 }}>
+                    {alergias.length} alerta(s) de atenção
+                  </span>
+                ) : perfilSaude?.possui_alergias === 0 ? (
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#EFF7F1', color: '#285832', border: '1px solid #B8E2BE', padding: '0.15rem 0.5rem', borderRadius: '6px', fontWeight: 700 }}>
+                    Nenhuma alergia conhecida relatada
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', backgroundColor: '#F6F3EE', color: '#6A5E57', border: '1px solid #DDD', padding: '0.15rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
+                    Ainda não informado
+                  </span>
+                )}
+              </div>
+
+              {(perfilSaude?.possui_alergias === 1 || alergias.length > 0) ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.45rem' }}>
+                  {alergias.map((al, idx) => {
+                    const isGrave = al.gravidade === 'GRAVE';
+                    const isMod = al.gravidade === 'MODERADA';
+                    return (
+                      <span
+                        key={al.id || idx}
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          border: isGrave ? '1.5px solid #E06A55' : '1px solid #E2DBD0',
+                          color: isGrave ? '#A23B2A' : '#2E2824',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                        }}
+                      >
+                        <span>{al.categoria === 'MEDICAMENTO' ? '💊' : (al.categoria === 'ALIMENTO' ? '🍎' : (al.categoria === 'ADESIVO_INSUMO' ? '🩹' : '🌿'))}</span>
+                        <strong>{al.substancia_ou_item}</strong>
+                        <span style={{ fontSize: '0.74rem', color: isGrave ? '#A23B2A' : (isMod ? '#B87A00' : '#285832'), fontWeight: 700 }}>
+                          ({al.gravidade})
+                        </span>
+                        {al.reacao_observada && (
+                          <span style={{ fontSize: '0.74rem', color: '#6A5E57', fontStyle: 'italic' }}>
+                            • {al.reacao_observada}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.84rem', color: '#5A5049' }}>
+                  {perfilSaude?.possui_alergias === 0
+                    ? 'A família informou que não há histórico de alergias a medicamentos, alimentos ou adesivos de sensores.'
+                    : 'Registre suas alergias para que médicos e escolas tenham essa informação crítica em mãos.'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <Link to="/configurar-perfil" style={{ textDecoration: 'none' }}>
+            <Button variante="secundario" style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem' }}>
+              ✏️ {alergias.length > 0 ? 'Gerenciar Alergias' : 'Informar Alergias'}
+            </Button>
+          </Link>
         </div>
 
         {/* ==================================================================

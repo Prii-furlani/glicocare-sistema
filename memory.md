@@ -293,5 +293,42 @@
   * Botão *"📑 Ver Exames do Paciente"* no card de atendimento: abre modal com histórico detalhado e laudos anexados.
   * Botão *"🩺 Solicitar Novos Exames"*: abre modal para seleção rápida de dosagens frequentes em DM1 ou adição de itens personalizados, emitindo a guia oficial assinada e gerando link para o PDF timbrado.
 
+## 11. Registro Estruturado de Alergias e Sensibilidades Clínicas (RN-ALE-01)
+
+### A. Estrutura do Banco de Dados Relacional (TiDB Cloud MySQL)
+- **Tabela `perfis_saude`**:
+  * `possui_alergias`: TINYINT(1) DEFAULT NULL (diferenciação explícita entre `NULL` = não informado, `0` = sem alergias conhecidas e `1` = possui alergias cadastradas).
+- **Tabela `alergias_usuario` (Relacionamento 1:N com `perfis_saude`):**
+  * `id`: INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `perfil_saude_id`: INT UNSIGNED NOT NULL (FK -> `perfis_saude(id)` ON DELETE CASCADE).
+  * `categoria`: ENUM('MEDICAMENTO', 'ALIMENTO', 'ADESIVO_INSUMO', 'OUTRA') NOT NULL (abrangendo medicamentos, alimentos, reações a adesivos de sensores/cateteres e outras).
+  * `substancia_ou_item`: VARCHAR(150) NOT NULL (ex: "Dipirona", "Amoxicilina", "Amendoim", "Adesivo de Sensor / Cateter").
+  * `gravidade`: ENUM('LEVE', 'MODERADA', 'GRAVE') NOT NULL DEFAULT 'MODERADA' (LEVE: vermelhidão/prurido; MODERADA: urticária/edema; GRAVE: risco de anafilaxia/urgência).
+  * `reacao_observada`: VARCHAR(255) DEFAULT NULL (ex: "Dermatite de contato no braço após 10 dias", "Urticária e prurido generalizado").
+  * `criado_em` e `atualizado_em`: TIMESTAMP.
+
+### B. Endpoints da API PHP (`/backend/api/perfil/`)
+- `index.php` (GET / POST / PUT):
+  * No `GET`, retorna `possui_alergias` e o array `alergias` aninhado aos dados clínicos do perfil.
+  * No `POST` / `PUT`, processa em transação atômica a atualização de `possui_alergias` e a sincronização estruturada de `alergias_usuario`.
+  * Toda mutação é auditada compulsoriamente via `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
+- `alergias.php` (GET / POST / DELETE):
+  * Endpoint RESTful dedicado para consulta individual, inclusão e remoção de alergias com auditoria imutável.
+
+### C. Interface Front-End e Experiência do Usuário
+- **Cadastro Complementar (`ConfigurarPerfil.jsx` - Bloco D):**
+  * Pergunta obrigatória com seleção rápida: *"Você possui alguma alergia (medicamento, alimento, adesivo de sensor ou outra)?"* (`Não possuo alergias conhecidas` vs `Sim, possuo alergia(s)`).
+  * Ao selecionar `Sim`, abre construtor dinâmico com:
+    - Pílulas de seleção de categoria (`💊 Medicamento`, `🍎 Alimento`, `🩹 Adesivo / Insumo DM1`, `🌿 Outra`).
+    - Chips de sugestão rápida em 1 clique: *Dipirona*, *Penicilina / Amoxicilina*, *Anti-inflamatórios*, *Adesivo de Sensor / Cateter*, *Amendoim / Castanhas*, *Leite / Lactose*, *Frutos do Mar*, *Látex*.
+    - Seletor de gravidade com código de cores e campo descritivo da reação observada.
+- **Página Pessoal (`MeuPerfil.jsx`):**
+  * Faixa de segurança clínica em terracota `#7C533F` com superfície `#F6F3EE` no topo da página.
+  * Exibe chips detalhados com ícones por categoria, substância, gravidade e reação para consulta rápida em emergências ou compartilhamento escolar.
+  * Quando não houver alergias, exibe o selo seguro *"✓ Nenhuma alergia conhecida relatada"*.
+- **Painel do Especialista (`PainelEspecialista.jsx`):**
+  * Alerta visual em `#FFF5F0` com borda terracota `#E06A55` posicionado no topo do resumo clínico do paciente e no modal de emissão de guia médica/receitas, prevenindo qualquer prescrição de risco.
+
+
 
 

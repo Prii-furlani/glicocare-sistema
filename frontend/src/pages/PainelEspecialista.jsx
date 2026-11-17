@@ -375,6 +375,33 @@ export default function PainelEspecialista() {
                           </span>
                         )}
                       </div>
+
+                      {/* Alerta de Segurança: Alergias Estruturadas (RN-ALE-01) */}
+                      <div
+                        style={{
+                          backgroundColor: '#FFF5F0',
+                          border: '1.5px solid #E06A55',
+                          borderRadius: '8px',
+                          padding: '0.55rem 0.75rem',
+                          margin: '0.25rem 0',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                          <span style={{ fontSize: '0.95rem' }}>⚠️</span>
+                          <strong style={{ fontSize: '0.76rem', color: '#A23B2A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Alergias Conhecidas (Atenção na Prescrição / Procedimentos):
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #E06A55', color: '#A23B2A', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            💊 Dipirona (MODERADA • Urticária e prurido)
+                          </span>
+                          <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #E06A55', color: '#A23B2A', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            🩹 Adesivo de Sensor / Cateter (LEVE • Dermatite de contato no braço)
+                          </span>
+                        </div>
+                      </div>
+
                       <div style={{ fontSize: '0.8rem', color: '#4A4039', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                         <span><strong>Diagnóstico:</strong> {c.tipo_diabetes || 'DM1'}</span>
                         {c.terapia_insulina && <span>• <strong>Terapia:</strong> {c.terapia_insulina}</span>}
@@ -738,6 +765,24 @@ export default function PainelEspecialista() {
                 </div>
               ) : (
                 <form onSubmit={handleEmitirGuiaOficial} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Alerta de Segurança Clínica: Alergias do Paciente */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFF5F0',
+                      border: '1.5px solid #E06A55',
+                      borderRadius: '10px',
+                      padding: '0.75rem 1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                    <div style={{ fontSize: '0.82rem', color: '#A23B2A' }}>
+                      <strong>Atenção às Alergias do Paciente:</strong> Dipirona (Moderada), Adesivo de Sensor / Cateter (Leve). Certifique-se de que nenhum insumo ou contraste recomendado conflite com essas sensibilidades.
+                    </div>
+                  </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
                       Título / Justificativa do Pedido *
