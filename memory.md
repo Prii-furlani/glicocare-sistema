@@ -143,6 +143,29 @@
   * **Acessibilidade e Navegação:** Suporte a `Enter`, `Espaço`, `Esc`, `Setas` e eventos sintéticos compatíveis tanto com `(e) => setVal(e.target.value)` quanto com `(val) => setVal(val)`.
   * **Adoção Oficial:** Substitui os `<select>` nativos nos formulários de Perfil de Saúde (`ConfigurarPerfil.jsx`), Central de Exames (`CentralExames.jsx`), Diário de Glicemia e Parâmetros Clínicos (`MeuPerfil.jsx`), Vitrine de Especialistas (`Especialistas.jsx`) e inputs genéricos (`FormInput.jsx`).
 
+### F. Padrão Visual Oficial de Capa Editorial Padrão (CapaEditorialDefault — RN-CAP-01)
+- **Objetivo & Acionamento Automático:** Exibição imediata e padronizada sempre que um conteúdo/artigo não possuir imagem enviada via upload (`imagem_capa_url` nulo/vazio) ou caso a imagem remota falhe ao carregar (`onError`).
+- **Paleta Oficial "Porto Seguro" (Alternância Automática ou Manual):**
+  * `terracota` (`#947460`): Padrão para *Com o Lufy*, *Conversa em Família* e *Acolhimento Inicial*.
+  * `verde` (`#527356`): Padrão para *Rotina Escolar*, *Checklist Prático* e nutrição familiar.
+  * `carvalho` (`#665B53`): Padrão para *Tecnologia & Autonomia*, *Vida Real* e monitoramento.
+- **Elementos Gráficos Decorativos Sutis:**
+  * **Arcos Concêntricos:** Dois círculos concêntricos delicados (`border: 1px solid rgba(246, 243, 238, 0.22)`) fixados no canto superior direito.
+  * **Ponto de Respiro:** Um pequeno círculo sólido de `8px` (`#EAE4D9`, opacidade 0.95) no canto inferior direito.
+- **Selo Superior (Pílula Marfim Oficial):**
+  * Fundo `#F6F3EE`, tipografia em caixa alta `#2E2824` (`font-size: 11px`, `font-weight: 700`, `letter-spacing: 0.08em`, `border-radius: 9999px`, sombra sutil `0 2px 8px rgba(0,0,0,0.08)`), exibindo rótulos editoriais como `GUIA ESSENCIAL`, `CHECKLIST PRÁTICO`, `VIDA REAL`, `CONVERSA EM FAMÍLIA`, `AUTONOMIA POSSÍVEL`.
+- **Numeração Editorial em Itálico:**
+  * Formatação estrita com dois dígitos (`01`, `02`, `03`, `04`...) em tipografia serifada `Fraunces` itálica (`font-size: clamp(2.6rem, 4vw, 3.4rem)` para cards e `clamp(3.4rem, 6vw, 5.2rem)` para banners; cor `#EAE4D9`), posicionada no canto inferior esquerdo.
+- **Responsividade e Adaptação Multi-Ambiente:**
+  * `variante="card"`: Preenche 100% da área do topo dos cards (`CardConteudo.jsx`), mantendo altura exata de 235px no desktop e 185px no mobile.
+  * `variante="banner"`: Renderiza com cantos arredondados de 16px e altura fluida (`clamp(240px, 34vw, 380px)`) no topo da página de leitura (`/artigo/:id` ou `/conteudo/:id`).
+  * `variante="preview"`: Exibição em tempo real no formulário do Painel Admin (`PainelAdmin.jsx`) enquanto o administrador digita o selo ou altera a cor.
+  * `variante="mini"`: Thumbnail elegante de 56px na listagem de acervo do Painel Admin.
+- **Persistência no Banco de Dados (`artigos_conteudos`):**
+  * Coluna `imagem_capa_url` configurada como `VARCHAR(255) DEFAULT NULL` (upload opcional).
+  * Coluna `selo_editorial`: `VARCHAR(60) NOT NULL DEFAULT 'GUIA ESSENCIAL'`.
+  * Coluna `cor_capa_default`: `ENUM('terracota', 'verde', 'carvalho') NOT NULL DEFAULT 'terracota'`.
+
 ---
 
 ## 6. Tempo de Diagnóstico, Jornada de Aprendizado e Resumo Clínico

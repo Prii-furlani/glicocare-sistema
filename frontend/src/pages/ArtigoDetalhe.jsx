@@ -15,6 +15,7 @@ import { depoimentosService } from '../services/api';
 import { analisarMensagemModerador } from '../utils/moderadorGlicoCare';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
+import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import { ARTIGOS_BIBLIOTECA } from './Home';
 import lufyMascoteImg from '../assets/lufy-mascote.jpg';
 import familiaCuidadoImg from '../assets/familia-cuidado.jpg';
@@ -577,6 +578,11 @@ export default function ArtigoDetalhe() {
   const [cidade, setCidade] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [parecerModeracao, setParecerModeracao] = useState(null);
+  const [erroCapa, setErroCapa] = useState(false);
+
+  // Verifica se o artigo possui foto válida ou se deve exibir a Capa Editorial Padrão
+  const fotoUrl = artigo.imagemCapa || artigo.imagem_capa_url || null;
+  const exibirFoto = Boolean(fotoUrl && !erroCapa);
 
   // Envio de comentário com moderação prévia (RN-MOD-01)
   const handleEnviarComentarioFamilia = async (e) => {
@@ -656,18 +662,32 @@ export default function ArtigoDetalhe() {
 
       {/* ====================================================================
           2. INÍCIO DA IMAGEM DE CAPA AMPLA E RESPONSIVA (max-width: 1040px)
+             OU CAPA EDITORIAL PADRÃO ("PORTO SEGURO")
           ==================================================================== */}
       <figure className="artigo-imagem-ampla-container">
-        <img
-          src={artigo.imagemCapa || familiaCuidadoImg}
-          alt={artigo.titulo}
-        />
-        <figcaption className="artigo-imagem-legenda">
-          Ilustração editorial GlicoCare: informação clara e acolhimento caminham
-          juntos para transformar a rotina em um porto seguro.
-        </figcaption>
+        {exibirFoto ? (
+          <>
+            <img
+              src={fotoUrl}
+              alt={artigo.titulo}
+              onError={() => setErroCapa(true)}
+            />
+            <figcaption className="artigo-imagem-legenda">
+              {artigo.legenda_capa ||
+                'Ilustração editorial GlicoCare: informação clara e acolhimento caminham juntos para transformar a rotina em um porto seguro.'}
+            </figcaption>
+          </>
+        ) : (
+          <CapaEditorialDefault
+            selo={artigo.seloSuperior || artigo.selo_editorial || 'GUIA ESSENCIAL'}
+            numero={artigo.numeroEditorial || artigo.id || '01'}
+            cor={artigo.corTopo || artigo.cor_capa_default}
+            categoria={artigo.categoria}
+            variante="banner"
+          />
+        )}
       </figure>
-      {/* FIM DA IMAGEM PRINCIPAL AMPLA */}
+      {/* FIM DA IMAGEM PRINCIPAL AMPLA OU CAPA EDITORIAL PADRÃO */}
 
       {/* ====================================================================
           3. INÍCIO DA COLUNA DE LEITURA EDITORIAL (~720px)

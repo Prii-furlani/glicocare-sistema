@@ -46,6 +46,7 @@ try {
                 SELECT id, autor_usuario_id, autor_nome, titulo, titulo_destaque_italico, 
                        subtitulo, slug, categoria, resumo, conteudo, conteudo_blocos, 
                        tempo_leitura, tempo_leitura_min, imagem_capa_url, legenda_capa, 
+                       selo_editorial, cor_capa_default,
                        status_publicacao, criado_em, atualizado_em
                 FROM artigos_conteudos
                 WHERE id = :id
@@ -95,6 +96,7 @@ try {
         $stmtList = $db->prepare("
             SELECT id, autor_nome, titulo, titulo_destaque_italico, subtitulo, slug, 
                    categoria, resumo, tempo_leitura, imagem_capa_url, legenda_capa, 
+                   selo_editorial, cor_capa_default,
                    status_publicacao, criado_em, atualizado_em
             FROM artigos_conteudos
             {$whereSql}
@@ -159,7 +161,14 @@ try {
         if ($tempoLeituraMin <= 0) $tempoLeituraMin = 5;
 
         $imagemCapaUrl = trim($dados['imagem_capa_url'] ?? '');
+        $imagemCapaUrl = !empty($imagemCapaUrl) ? $imagemCapaUrl : null;
         $legendaCapa = trim($dados['legenda_capa'] ?? '');
+        $seloEditorial = trim($dados['selo_editorial'] ?? 'GUIA ESSENCIAL');
+        if (empty($seloEditorial)) $seloEditorial = 'GUIA ESSENCIAL';
+        $corCapaDefault = trim(strtolower($dados['cor_capa_default'] ?? 'terracota'));
+        if (!in_array($corCapaDefault, ['terracota', 'verde', 'carvalho'], true)) {
+            $corCapaDefault = 'terracota';
+        }
         $autorNome = trim($dados['autor_nome'] ?? 'Priscila Manzoni Furlani');
         $statusPublicacao = trim(strtolower($dados['status_publicacao'] ?? 'publicado'));
         if (!in_array($statusPublicacao, ['rascunho', 'em_revisao', 'publicado', 'arquivado'], true)) {
@@ -206,6 +215,8 @@ try {
                     tempo_leitura_min = :tempo_leitura_min,
                     imagem_capa_url = :imagem_capa_url,
                     legenda_capa = :legenda_capa,
+                    selo_editorial = :selo_editorial,
+                    cor_capa_default = :cor_capa_default,
                     autor_nome = :autor_nome,
                     status_publicacao = :status_publicacao,
                     atualizado_em = NOW()
@@ -225,6 +236,8 @@ try {
                 ':tempo_leitura_min' => $tempoLeituraMin,
                 ':imagem_capa_url' => $imagemCapaUrl,
                 ':legenda_capa' => $legendaCapa,
+                ':selo_editorial' => $seloEditorial,
+                ':cor_capa_default' => $corCapaDefault,
                 ':autor_nome' => $autorNome,
                 ':status_publicacao' => $statusPublicacao,
                 ':id' => $id,
@@ -258,11 +271,13 @@ try {
                     autor_usuario_id, autor_nome, titulo, titulo_destaque_italico, 
                     subtitulo, slug, categoria, resumo, conteudo, conteudo_blocos, 
                     tempo_leitura, tempo_leitura_min, imagem_capa_url, legenda_capa, 
+                    selo_editorial, cor_capa_default,
                     status_publicacao, criado_em, atualizado_em
                 ) VALUES (
                     :autor_usuario_id, :autor_nome, :titulo, :titulo_destaque_italico, 
                     :subtitulo, :slug, :categoria, :resumo, :conteudo, :conteudo_blocos, 
                     :tempo_leitura, :tempo_leitura_min, :imagem_capa_url, :legenda_capa, 
+                    :selo_editorial, :cor_capa_default,
                     :status_publicacao, NOW(), NOW()
                 )
             ");
@@ -282,6 +297,8 @@ try {
                 ':tempo_leitura_min' => $tempoLeituraMin,
                 ':imagem_capa_url' => $imagemCapaUrl,
                 ':legenda_capa' => $legendaCapa,
+                ':selo_editorial' => $seloEditorial,
+                ':cor_capa_default' => $corCapaDefault,
                 ':status_publicacao' => $statusPublicacao,
             ]);
 

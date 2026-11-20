@@ -588,12 +588,17 @@ async function main() {
         COMMENT 'Texto amigável de tempo de leitura',
       ADD COLUMN IF NOT EXISTS \`imagem_capa_url\` VARCHAR(255) DEFAULT NULL
         COMMENT 'URL ou caminho da imagem de capa',
+      ADD COLUMN IF NOT EXISTS \`selo_editorial\` VARCHAR(60) NOT NULL DEFAULT 'GUIA ESSENCIAL'
+        COMMENT 'Texto do selo superior marfim',
+      ADD COLUMN IF NOT EXISTS \`cor_capa_default\` ENUM('terracota', 'verde', 'carvalho') NOT NULL DEFAULT 'terracota'
+        COMMENT 'Cor da capa default quando sem imagem',
       ADD COLUMN IF NOT EXISTS \`legenda_capa\` VARCHAR(255) DEFAULT NULL
         COMMENT 'Legenda ou acessibilidade da imagem',
       ADD COLUMN IF NOT EXISTS \`conteudo_blocos\` JSON DEFAULT NULL
         COMMENT 'Blocos estruturados de conteúdo (parágrafos, H2, respiros, listas)';
 
       ALTER TABLE \`artigos_conteudos\`
+      MODIFY COLUMN \`imagem_capa_url\` VARCHAR(255) DEFAULT NULL,
       MODIFY COLUMN \`conteudo\` LONGTEXT NULL;
     `);
     console.log('✅ Colunas editoriais de artigos_conteudos verificadas.');

@@ -1,115 +1,94 @@
 /* ==========================================================================
    ARQUIVO: CardConteudo.jsx
    COMPONENTE: CardConteudo (Card Reutilizável da Biblioteca GlicoCare)
-   OBJETIVO: Renderizar fielmente os dois estilos de Card de Conteúdo do
-   protótipo:
-   1. Card com Foto de Capa (ex: "Hipoglicemia sem susto" com Lufy ou "DM1 na
-      escola" com a ilustração mãe e filha);
-   2. Card Editorial Numerado (01, 02, 03, 04) com fundo colorido terroso ou
-      verde sálvia, círculos concêntricos e ponto decorativo.
+   OBJETIVO: Renderizar fielmente os dois estilos de Card de Conteúdo:
+   1. Card com Foto de Capa (quando há imagem anexada e carregada com sucesso);
+   2. Capa Editorial Padrão (CapaEditorialDefault) quando imagem_capa_url for
+      nulo/vazio ou disparar erro de carregamento (onError).
    ========================================================================== */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import CapaEditorialDefault from './CapaEditorialDefault';
 
 /* INÍCIO DO COMPONENTE CARD DE CONTEÚDO */
 export default function CardConteudo({
   id,                                     // ID do artigo para a rota /artigo/:id
-  seloSuperior = 'GUIA ESSENCIAL',        // Pílula branca no canto superior esquerdo da capa
-  imagemCapa = null,                      // Se fornecido, exibe imagem; caso contrário exibe banner numerado
-  numeroEditorial = '01',                 // Número em Fraunces itálico exibido quando não há foto
-  corTopo = '#9C7A63',                    // Cor de fundo do topo editorial numerado
+  seloSuperior = 'GUIA ESSENCIAL',        // Rótulo do selo (ex: GUIA ESSENCIAL, AUTONOMIA POSSÍVEL)
+  imagemCapa = null,                      // Se fornecido e válido, exibe foto; senão CapaEditorialDefault
+  numeroEditorial = '01',                 // Número em Fraunces itálico
+  corTopo = 'terracota',                  // 'terracota', 'verde', 'carvalho' ou código HEX
   iconeCategoria = '🐾',                  // Ícone ao lado do nome da categoria
   categoria = 'Com o Lufy',               // Nome da trilha/categoria
   tempoLeitura = '6 min de leitura',      // Estimativa de leitura
   titulo,                                 // Título em Fraunces
   resumo,                                 // Descrição empática
   textoBotao = 'Ler conteúdo',            // Texto à esquerda do rodapé
-  destaqueSetaSolida = false,             // Se verdadeiro, o botão circular ↗ já aparece preenchido em verde
+  destaqueSetaSolida = false,             // Se verdadeiro, botão circular aparece preenchido
+  selo_editorial,                         // Compatibilidade com schema do banco de dados
+  imagem_capa_url,                        // Compatibilidade com schema do banco de dados
+  cor_capa_default,                       // Compatibilidade com schema do banco de dados
 }) {
+  const [erroCarregamentoImagem, setErroCarregamentoImagem] = useState(false);
+
+  const seloFinal = seloSuperior || selo_editorial || 'GUIA ESSENCIAL';
+  const fotoUrl = imagemCapa || imagem_capa_url || null;
+  const corFinal = corTopo || cor_capa_default || 'terracota';
+
+  // Determina se deve exibir imagem fotográfica ou a Capa Editorial Padrão
+  const temFotoValida = Boolean(fotoUrl && !erroCarregamentoImagem);
+
   return (
     <Link to={`/artigo/${id}`} className="biblioteca-card">
-      {/* INÍCIO DO TOPO VISUAL (FOTO OU BANNER NUMERADO 01..04) */}
+      {/* INÍCIO DO TOPO VISUAL (FOTO OU CAPA EDITORIAL PADRÃO) */}
       <div>
-        <div
-          className="biblioteca-card__topo"
-          style={{
-            backgroundColor: corTopo,
-          }}
-        >
-          {/* Pílula branca flutuante no canto superior esquerdo */}
-          <span
-            style={{
-              position: 'absolute',
-              top: '1.15rem',
-              left: '1.15rem',
-              zIndex: 3,
-              backgroundColor: 'var(--cor-superficie)',
-              color: 'var(--cor-texto)',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              padding: '0.4rem 0.9rem',
-              borderRadius: 'var(--raio-pilula)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-            }}
-          >
-            {seloSuperior}
-          </span>
-
-          {imagemCapa ? (
-            /* Variante com Imagem Ilustrativa / 3D */
-            <img
-              src={imagemCapa}
-              alt={titulo}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
-            />
-          ) : (
-            /* Variante Editorial Numerada (01, 02, 03, 04) idêntica ao protótipo */
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                position: 'relative',
-                padding: '1.35rem 1.5rem',
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'space-between',
-              }}
-            >
-              {/* Círculos concêntricos sutis no canto superior direito */}
-              <div className="biblioteca-card__circulos-deco" aria-hidden="true" />
-
-              {/* Grande número em Fraunces itálico claro */}
+        <div className="biblioteca-card__topo">
+          {temFotoValida ? (
+            /* Variante com Imagem Fotográfica / Ilustração */
+            <>
+              {/* Pílula branca flutuante no canto superior esquerdo sobre a foto */}
               <span
-                className="serif-title"
                 style={{
-                  fontSize: '4.4rem',
-                  fontStyle: 'italic',
-                  color: 'rgba(246, 243, 238, 0.88)',
-                  lineHeight: 0.9,
+                  position: 'absolute',
+                  top: '1.15rem',
+                  left: '1.15rem',
+                  zIndex: 3,
+                  backgroundColor: '#F6F3EE',
+                  color: '#2E2824',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  padding: '0.38rem 0.9rem',
+                  borderRadius: '9999px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                  lineHeight: 1.2,
                 }}
               >
-                {numeroEditorial}
+                {seloFinal}
               </span>
 
-              {/* Pontinho marfim no canto inferior direito do banner */}
-              <span
+              <img
+                src={fotoUrl}
+                alt={titulo}
+                onError={() => setErroCarregamentoImagem(true)}
                 style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(246, 243, 238, 0.85)',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
                 }}
-                aria-hidden="true"
               />
-            </div>
+            </>
+          ) : (
+            /* Variante Capa Editorial Padrão Oficial ("Porto Seguro") */
+            <CapaEditorialDefault
+              selo={seloFinal}
+              numero={numeroEditorial || id}
+              cor={corFinal}
+              categoria={categoria}
+              variante="card"
+            />
           )}
         </div>
 

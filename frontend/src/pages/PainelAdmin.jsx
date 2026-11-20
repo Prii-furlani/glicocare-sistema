@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { adminService } from '../services/api';
 import Button from '../components/Button';
 import CustomSelect from '../components/CustomSelect';
+import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
 import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
 import { ARTIGOS_BIBLIOTECA, REDE_ESPECIALISTAS } from './Home';
@@ -188,6 +189,8 @@ export default function PainelAdmin() {
         status_publicacao: 'publicado',
         imagem_capa_url: a.imagemCapa,
         legenda_capa: 'Ilustração editorial da GlicoCare',
+        selo_editorial: a.seloSuperior || 'GUIA ESSENCIAL',
+        cor_capa_default: a.corTopo || 'terracota',
         conteudo_blocos: [
           { tipo: 'paragrafo', texto: a.resumo },
           { tipo: 'subtitulo', texto: 'Acolhimento prático' },
@@ -359,6 +362,8 @@ export default function PainelAdmin() {
       autor_nome: 'Priscila Manzoni Furlani',
       imagem_capa_url: '',
       legenda_capa: '',
+      selo_editorial: 'GUIA ESSENCIAL',
+      cor_capa_default: 'terracota',
       status_publicacao: 'publicado',
       conteudo_blocos: [
         { tipo: 'paragrafo', texto: 'Escreva aqui o parágrafo de introdução acolhedor...' },
@@ -389,6 +394,8 @@ export default function PainelAdmin() {
         ...art,
         conteudo_blocos: blocos,
         autor_nome: art.autor_nome || 'Priscila Manzoni Furlani',
+        selo_editorial: art.selo_editorial || 'GUIA ESSENCIAL',
+        cor_capa_default: art.cor_capa_default || 'terracota',
       });
       setArquivoCapaArtigo(null);
       setPreviewCapaArtigo(art.imagem_capa_url || '');
@@ -399,6 +406,8 @@ export default function PainelAdmin() {
         ...artigo,
         conteudo_blocos: [{ tipo: 'paragrafo', texto: artigo.resumo || '' }],
         autor_nome: artigo.autor_nome || 'Priscila Manzoni Furlani',
+        selo_editorial: artigo.selo_editorial || 'GUIA ESSENCIAL',
+        cor_capa_default: artigo.cor_capa_default || 'terracota',
       });
       setModalArtigoAberto(true);
     }
@@ -423,6 +432,8 @@ export default function PainelAdmin() {
       formData.append('tempo_leitura', artigoEmEdicao.tempo_leitura || '5 min de leitura');
       formData.append('autor_nome', artigoEmEdicao.autor_nome || 'Priscila Manzoni Furlani');
       formData.append('legenda_capa', artigoEmEdicao.legenda_capa || '');
+      formData.append('selo_editorial', artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL');
+      formData.append('cor_capa_default', artigoEmEdicao.cor_capa_default || 'terracota');
       formData.append('status_publicacao', artigoEmEdicao.status_publicacao || 'publicado');
       formData.append('conteudo_blocos', JSON.stringify(artigoEmEdicao.conteudo_blocos || []));
 
@@ -430,6 +441,8 @@ export default function PainelAdmin() {
         formData.append('imagem_capa', arquivoCapaArtigo);
       } else if (artigoEmEdicao.imagem_capa_url) {
         formData.append('imagem_capa_url', artigoEmEdicao.imagem_capa_url);
+      } else {
+        formData.append('imagem_capa_url', '');
       }
 
       const res = await adminService.salvarArtigo(formData);
@@ -1538,7 +1551,13 @@ export default function PainelAdmin() {
                         {art.imagem_capa_url ? (
                           <img src={art.imagem_capa_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          '📖'
+                          <CapaEditorialDefault
+                            selo={art.selo_editorial || 'GUIA'}
+                            numero={art.id}
+                            cor={art.cor_capa_default || 'terracota'}
+                            categoria={art.categoria}
+                            variante="mini"
+                          />
                         )}
                       </div>
 
@@ -1698,12 +1717,22 @@ export default function PainelAdmin() {
                     </p>
                   )}
 
-                  {previewCapaArtigo && (
+                  {previewCapaArtigo ? (
                     <img
                       src={previewCapaArtigo}
                       alt={artigoEmEdicao.legenda_capa || 'Capa do artigo'}
                       style={{ width: '100%', maxHeight: '340px', objectFit: 'cover', borderRadius: '14px', marginBottom: '1.5rem' }}
                     />
+                  ) : (
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <CapaEditorialDefault
+                        selo={artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL'}
+                        numero={artigoEmEdicao.id || '01'}
+                        cor={artigoEmEdicao.cor_capa_default || 'terracota'}
+                        categoria={artigoEmEdicao.categoria}
+                        variante="banner"
+                      />
+                    </div>
                   )}
 
                   <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem' }}>
@@ -1852,33 +1881,165 @@ export default function PainelAdmin() {
                     />
                   </div>
 
-                  {/* Upload de Capa */}
-                  <div style={{ backgroundColor: '#F6F3EE', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(124, 83, 63, 0.15)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ width: '70px', height: '70px', borderRadius: '8px', backgroundColor: '#EAE4D9', overflow: 'hidden', flexShrink: 0 }}>
-                      {previewCapaArtigo ? (
-                        <img src={previewCapaArtigo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🖼️</div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.2rem' }}>
-                        Imagem de Capa do Artigo:
+                  {/* INÍCIO DO BLOCO DE CONFIGURAÇÃO DA CAPA EDITORIAL & UPLOAD OPCIONAL */}
+                  <div
+                    style={{
+                      backgroundColor: '#F6F3EE',
+                      padding: '1.25rem',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(124, 83, 63, 0.18)',
+                      display: 'grid',
+                      gap: '1.15rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.88rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Capa do Artigo (Personalizada ou Editorial Padrão)
                       </label>
-                      <input
-                        type="file"
-                        accept="image/png, image/jpeg, image/webp"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setArquivoCapaArtigo(file);
-                            setPreviewCapaArtigo(URL.createObjectURL(file));
+                      <span style={{ fontSize: '0.78rem', color: '#5A5049', fontStyle: 'italic' }}>
+                        * Upload de imagem é opcional
+                      </span>
+                    </div>
+
+                    {/* Campos: Texto do Selo Superior e Cor da Capa Padrão */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#2E2824', marginBottom: '0.35rem' }}>
+                          Texto do Selo Superior (Pílula Marfim):
+                        </label>
+                        <input
+                          type="text"
+                          value={artigoEmEdicao.selo_editorial || ''}
+                          onChange={(e) =>
+                            setArtigoEmEdicao({ ...artigoEmEdicao, selo_editorial: e.target.value.toUpperCase() })
                           }
+                          placeholder="ex: GUIA ESSENCIAL, CHECKLIST PRÁTICO, VIDA REAL"
+                          style={{ width: '100%', fontSize: '0.85rem' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#2E2824', marginBottom: '0.35rem' }}>
+                          Cor da Capa Padrão (Sem Imagem):
+                        </label>
+                        <CustomSelect
+                          value={artigoEmEdicao.cor_capa_default || 'terracota'}
+                          onChange={(v) => setArtigoEmEdicao({ ...artigoEmEdicao, cor_capa_default: v })}
+                          options={[
+                            { value: 'terracota', label: 'Terracota (#947460) — Com o Lufy / Conversa em Família' },
+                            { value: 'verde', label: 'Verde Sálvia (#527356) — Rotina Escolar / Checklist Prático' },
+                            { value: 'carvalho', label: 'Carvalho (#665B53) — Tecnologia & Autonomia / Vida Real' },
+                          ]}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pré-visualização em Tempo Real da Capa */}
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2E2824', marginBottom: '0.45rem' }}>
+                        Pré-visualização em Tempo Real da Capa:
+                      </div>
+
+                      <div
+                        style={{
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          border: '1px solid rgba(124, 83, 63, 0.2)',
+                          height: '200px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#EAE4D9',
+                          position: 'relative',
                         }}
-                        style={{ fontSize: '0.82rem' }}
-                      />
+                      >
+                        {previewCapaArtigo ? (
+                          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                            <span
+                              style={{
+                                position: 'absolute',
+                                top: '1rem',
+                                left: '1rem',
+                                zIndex: 3,
+                                backgroundColor: '#F6F3EE',
+                                color: '#2E2824',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                                padding: '0.35rem 0.85rem',
+                                borderRadius: '9999px',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              }}
+                            >
+                              {artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL'}
+                            </span>
+                            <img
+                              src={previewCapaArtigo}
+                              alt="Prévia da capa"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </div>
+                        ) : (
+                          <CapaEditorialDefault
+                            selo={artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL'}
+                            numero={artigoEmEdicao.id || '01'}
+                            cor={artigoEmEdicao.cor_capa_default || 'terracota'}
+                            categoria={artigoEmEdicao.categoria}
+                            variante="preview"
+                            style={{ height: '200px' }}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload de Imagem Fotográfica Opcional */}
+                    <div style={{ borderTop: '1px dashed rgba(124, 83, 63, 0.2)', paddingTop: '0.85rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#2E2824', marginBottom: '0.2rem' }}>
+                            Upload de Imagem de Capa (Opcional):
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setArquivoCapaArtigo(file);
+                                setPreviewCapaArtigo(URL.createObjectURL(file));
+                              }
+                            }}
+                            style={{ fontSize: '0.82rem', width: '100%' }}
+                          />
+                        </div>
+
+                        {previewCapaArtigo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setArquivoCapaArtigo(null);
+                              setPreviewCapaArtigo('');
+                              setArtigoEmEdicao({ ...artigoEmEdicao, imagem_capa_url: '' });
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.78rem',
+                              backgroundColor: '#FFF',
+                              color: '#A0382B',
+                              border: '1px solid #A0382B',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                            }}
+                          >
+                            ✕ Remover imagem (usar Capa Padrão)
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  {/* FIM DO BLOCO DE CONFIGURAÇÃO DA CAPA EDITORIAL & UPLOAD OPCIONAL */}
 
                   {/* BLOCOS DE CONTEÚDO ESTRUTURADO */}
                   <div style={{ marginTop: '0.5rem' }}>

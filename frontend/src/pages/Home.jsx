@@ -52,7 +52,7 @@ export const ARTIGOS_BIBLIOTECA = [
     seloSuperior: 'AUTONOMIA POSSÍVEL',
     imagemCapa: null,
     numeroEditorial: '01',
-    corTopo: '#9C7A63',
+    corTopo: 'carvalho', // Paleta Porto Seguro: #665B53
     iconeCategoria: '💡',
     categoria: 'Tecnologia & Autonomia',
     tempoLeitura: '5 min de leitura',
@@ -67,7 +67,7 @@ export const ARTIGOS_BIBLIOTECA = [
     seloSuperior: 'CONVERSA EM FAMÍLIA',
     imagemCapa: null,
     numeroEditorial: '02',
-    corTopo: '#A88E7B',
+    corTopo: 'terracota', // Paleta Porto Seguro: #947460
     iconeCategoria: '🐾',
     categoria: 'Com o Lufy',
     tempoLeitura: '7 min de leitura',
@@ -82,7 +82,7 @@ export const ARTIGOS_BIBLIOTECA = [
     seloSuperior: 'CHECKLIST PRÁTICO',
     imagemCapa: null,
     numeroEditorial: '03',
-    corTopo: '#5B7B5E',
+    corTopo: 'verde', // Paleta Porto Seguro: #527356
     iconeCategoria: '🏫',
     categoria: 'Rotina Escolar',
     tempoLeitura: '4 min de leitura',
@@ -97,7 +97,7 @@ export const ARTIGOS_BIBLIOTECA = [
     seloSuperior: 'VIDA REAL',
     imagemCapa: null,
     numeroEditorial: '04',
-    corTopo: '#6E6259',
+    corTopo: 'carvalho', // Paleta Porto Seguro: #665B53
     iconeCategoria: '💡',
     categoria: 'Tecnologia & Autonomia',
     tempoLeitura: '6 min de leitura',
@@ -112,7 +112,7 @@ export const ARTIGOS_BIBLIOTECA = [
     seloSuperior: 'GUIA ESSENCIAL',
     imagemCapa: null,
     numeroEditorial: '05',
-    corTopo: '#3B7E48',
+    corTopo: 'verde', // Paleta Porto Seguro: #527356
     iconeCategoria: '💡',
     categoria: 'Tecnologia & Autonomia',
     tempoLeitura: '7 min de leitura',

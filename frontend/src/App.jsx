@@ -54,6 +54,8 @@ export default function App() {
             <Route path="/conteudos" element={<Biblioteca />} />
             <Route path="/artigo/:slugOrId" element={<ArtigoDetalhe />} />
             <Route path="/artigo/:slug" element={<ArtigoDetalhe />} />
+            <Route path="/conteudo/:slugOrId" element={<ArtigoDetalhe />} />
+            <Route path="/conteudo/:id" element={<ArtigoDetalhe />} />
             <Route path="/especialistas" element={<Especialistas />} />
             <Route path="/especialistas/:id" element={<PerfilEspecialista />} />
             <Route path="/como-funciona-atendimentos" element={<ComoFuncionaAtendimentos />} />

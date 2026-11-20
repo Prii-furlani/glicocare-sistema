@@ -239,6 +239,8 @@ CREATE TABLE IF NOT EXISTS `artigos_conteudos` (
   `tempo_leitura` VARCHAR(50) NOT NULL DEFAULT '5 min de leitura' COMMENT 'Texto amigável de tempo',
   `tempo_leitura_min` SMALLINT UNSIGNED NOT NULL DEFAULT 5 COMMENT 'Tempo de leitura em minutos',
   `imagem_capa_url` VARCHAR(255) DEFAULT NULL COMMENT 'URL ou caminho da imagem de capa',
+  `selo_editorial` VARCHAR(60) NOT NULL DEFAULT 'GUIA ESSENCIAL' COMMENT 'Texto do selo superior marfim',
+  `cor_capa_default` ENUM('terracota', 'verde', 'carvalho') NOT NULL DEFAULT 'terracota' COMMENT 'Cor da capa default quando sem imagem',
   `legenda_capa` VARCHAR(255) DEFAULT NULL COMMENT 'Legenda da imagem de capa',
   `status_publicacao` ENUM('rascunho', 'em_revisao', 'publicado', 'arquivado') NOT NULL DEFAULT 'publicado',
   `criado_em` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

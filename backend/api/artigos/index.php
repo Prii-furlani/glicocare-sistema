@@ -46,7 +46,7 @@ if ($method === 'GET') {
     $categoria = $_GET['categoria'] ?? null;
     if ($categoria && $categoria !== 'Todas') {
         $stmt = $db->prepare(
-            'SELECT id, titulo, slug, categoria, resumo, tempo_leitura_min, criado_em
+            'SELECT id, titulo, slug, categoria, resumo, tempo_leitura_min, imagem_capa_url, selo_editorial, cor_capa_default, criado_em
              FROM artigos_conteudos
              WHERE status_publicacao = "publicado" AND categoria = :categoria
              ORDER BY criado_em DESC'
@@ -54,7 +54,7 @@ if ($method === 'GET') {
         $stmt->execute([':categoria' => $categoria]);
     } else {
         $stmt = $db->query(
-            'SELECT id, titulo, slug, categoria, resumo, tempo_leitura_min, criado_em
+            'SELECT id, titulo, slug, categoria, resumo, tempo_leitura_min, imagem_capa_url, selo_editorial, cor_capa_default, criado_em
              FROM artigos_conteudos
              WHERE status_publicacao = "publicado"
              ORDER BY criado_em DESC'
@@ -83,18 +83,21 @@ if ($method === 'POST') {
 
     $stmt = $db->prepare(
         'INSERT INTO artigos_conteudos
-         (autor_usuario_id, titulo, slug, categoria, resumo, conteudo, tempo_leitura_min, status_publicacao)
-         VALUES (:autor_id, :titulo, :slug, :categoria, :resumo, :conteudo, :tempo, :status)'
+         (autor_usuario_id, titulo, slug, categoria, resumo, conteudo, tempo_leitura_min, imagem_capa_url, selo_editorial, cor_capa_default, status_publicacao)
+         VALUES (:autor_id, :titulo, :slug, :categoria, :resumo, :conteudo, :tempo, :imagem_capa, :selo, :cor_capa, :status)'
     );
     $stmt->execute([
-        ':autor_id'  => $autorId,
-        ':titulo'    => trim($payload['titulo']),
-        ':slug'      => $slug . '-' . time(),
-        ':categoria' => $payload['categoria'] ?? 'Acolhimento Inicial',
-        ':resumo'    => $payload['resumo'] ?? '',
-        ':conteudo'  => $payload['conteudo'],
-        ':tempo'     => (int) ($payload['tempo_leitura_min'] ?? 5),
-        ':status'    => $payload['status_publicacao'] ?? 'rascunho',
+        ':autor_id'    => $autorId,
+        ':titulo'      => trim($payload['titulo']),
+        ':slug'        => $slug . '-' . time(),
+        ':categoria'   => $payload['categoria'] ?? 'Acolhimento Inicial',
+        ':resumo'      => $payload['resumo'] ?? '',
+        ':conteudo'    => $payload['conteudo'],
+        ':tempo'       => (int) ($payload['tempo_leitura_min'] ?? 5),
+        ':imagem_capa' => !empty($payload['imagem_capa_url']) ? $payload['imagem_capa_url'] : null,
+        ':selo'        => $payload['selo_editorial'] ?? 'GUIA ESSENCIAL',
+        ':cor_capa'    => $payload['cor_capa_default'] ?? 'terracota',
+        ':status'      => $payload['status_publicacao'] ?? 'rascunho',
     ]);
     $novoId = (int) $db->lastInsertId();
 
@@ -167,6 +170,18 @@ if ($method === 'PATCH') {
     if (isset($payload['tempo_leitura_min'])) {
         $campos[] = 'tempo_leitura_min = :tempo';
         $params[':tempo'] = (int)$payload['tempo_leitura_min'];
+    }
+    if (isset($payload['imagem_capa_url'])) {
+        $campos[] = 'imagem_capa_url = :imagem_capa';
+        $params[':imagem_capa'] = !empty($payload['imagem_capa_url']) ? $payload['imagem_capa_url'] : null;
+    }
+    if (isset($payload['selo_editorial'])) {
+        $campos[] = 'selo_editorial = :selo';
+        $params[':selo'] = trim($payload['selo_editorial']);
+    }
+    if (isset($payload['cor_capa_default'])) {
+        $campos[] = 'cor_capa_default = :cor_capa';
+        $params[':cor_capa'] = trim($payload['cor_capa_default']);
     }
     if (isset($payload['status_publicacao'])) {
         $campos[] = 'status_publicacao = :status';
