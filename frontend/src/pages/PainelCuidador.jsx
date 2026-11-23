@@ -14,6 +14,7 @@ import { cuidadorService } from '../services/api';
 import CustomSelect from '../components/CustomSelect';
 import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
+import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 import { useNotify } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -1236,6 +1237,22 @@ export default function PainelCuidador() {
                 </div>
               </div>
             </div>
+
+            {/* INÍCIO BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD (FASE 1) */}
+            <CartaoDiagnosticoDownload
+              paciente={filhoAtivo}
+              cuidador={{
+                nome_responsavel: usuario?.nome_completo || 'Mariana Silva',
+                parentesco: filhoAtivo.parentesco || 'Mãe',
+                telefone_emergencia: filhoAtivo.contato_emergencia_telefone || usuario?.telefone || '(11) 97777-2001',
+              }}
+              alergias={filhoAtivo.alergias || []}
+              medicamentos={filhoAtivo.medicamentos || []}
+              isCuidador={true}
+              tituloSecao={`Cartão de Diagnóstico de ${filhoAtivo.nome_crianca} para Download`}
+              descricaoSecao="Documento oficial da criança com parâmetros de segurança, contato do responsável legal e orientações imediatas para portar na mochila escolar ou salvar no celular."
+            />
+            {/* FIM BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD */}
           </div>
         )}
 

@@ -129,6 +129,14 @@ export default function App() {
               }
             />
             <Route
+              path="/perfil-usuario"
+              element={
+                <ProtectedRoute allowedRoles={['diabetico', 'cuidador', 'paciente']}>
+                  <MeuPerfil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/minha-jornada"
               element={
                 <ProtectedRoute allowedRoles={['diabetico', 'cuidador', 'paciente']}>

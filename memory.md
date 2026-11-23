@@ -903,6 +903,39 @@ Sistema global de toasts empilhados no canto inferior direito (`.glico-toast-por
 - **Comportamento:** Auto-dismiss após 4.5 segundos com temporizador individual, botão de fechar manual (`✕`), animação de deslize e fade (`@keyframes glico-toast-in`), e suporte a leitura por leitores de tela (`aria-live="polite"` e `role="status"`).
 - **Provedores Globais:** `<ToastProvider>` e `<ConfirmProvider>` encapsulam a aplicação em `frontend/src/App.jsx`, disponibilizando os recursos em todas as rotas e páginas.
 
+---
+
+## 22. Card de Informações de Diagnóstico para Download (`CartaoDiagnosticoDownload.jsx`)
+
+### A. Objetivo & Relevância Clínica na Fase 1
+O **Card de Diagnóstico & Cuidado** consolida as informações médicas e terapêuticas essenciais da pessoa com diabetes ou da criança dependente em um formato compacto, oficial e altamente legível. É destinado a portar na carteira, salvar na galeria do celular ou fixar na tela de bloqueio para identificação em emergências, viagens, escolas e consultas.
+
+### B. Especificação do Componente (`frontend/src/components/CartaoDiagnosticoDownload.jsx`)
+1. **Cabeçalho Institucional:**
+   - Logotipo oficial GlicoCare + assinatura *"GlicoCare — Apoio Integrado em Diabetes"*.
+   - Selo em destaque: `CARTÃO DE DIAGNÓSTICO & CUIDADO`.
+2. **Identificação do Paciente & Responsável:**
+   - Nome completo, data de nascimento e idade calculada em linguagem natural.
+   - Quando for dependente ou perfil cuidador (`isCuidador`): destaque visual para o **Responsável Legal** e o **Telefone de Emergência** (`📞`).
+3. **Resumo Clínico Estruturado:**
+   - **Classificação & Diagnóstico:** Tipo de diabetes (DM1, DM2, LADA, Gestacional) + Tempo de diagnóstico calculado automaticamente via `calcularTempoDiagnostico(dataDiagnostico)` (ex: *"2 anos e 3 meses de jornada"*).
+   - **Terapia & Monitoramento:** Caneta MDI / Bomba de Insulina + Sensor contínuo (FreeStyle Libre) & Glicosímetro.
+   - **Parâmetros Clínicos:** Fator de Sensibilidade à Insulina (FSI) e Meta Glicêmica (ex: 70–140 mg/dL).
+   - **Bloco de Alerta de Alergias & Sensibilidades:** Destaque visual em terracota suave com borda `#C94A38` listando medicamentos, alimentos ou adesivos de sensores (ou confirmação de ausência de alergias).
+   - **Medicamentos & Insulinas Ativas:** Tabela limpa com nomes, tipos e horários habituais (Bolus e Basal).
+4. **Segurança & Emergência:**
+   - Protocolo imediato da **Regra dos 15g** para hipoglicemia (< 70 mg/dL ou sintomas de sudorese/tremores) com proibição expressa de aplicar insulina no episódio.
+   - Data e hora oficial de emissão no fuso de Brasília (`America/Sao_Paulo`) e selo de validade emergencial.
+
+### C. Exportação em Alta Resolução (PNG) e Impressão (PDF)
+- **`Baixar Card (PNG)`:** Utiliza a biblioteca `html2canvas` com `scale: 2` (alta resolução para telas retina e smartphones), forçando o fundo marfim acolhedor `#F6F3EE` e textos `#2E2824`. Dispara o download automático do arquivo `cartao-diagnostico-glicocare-{nome}.png` e notifica o usuário via `notificar.sucesso("Cartão de diagnóstico pronto!")`.
+- **`Salvar PDF / Imprimir`:** Dispara `window.print()` aplicando regras CSS dedicadas `@media print` que ocultam menus, botões e elementos da interface (`.cartao-no-print`) e isolam o cartão (`.cartao-diagnostico-print-area`) perfeitamente centralizado na página.
+
+### D. Telas Integradas
+- **`MeuPerfil.jsx` / `PerfilUsuario.jsx`:** Exibido com preview ao vivo na aba principal do Diário Inteligente, acompanhado de botão de navegação rápida no cabeçalho (*"🪪 Card de Diagnóstico (PNG/PDF)"*).
+- **`PainelCuidador.jsx`:** Exibido com preview ao vivo na aba principal do Diário da Criança e integrado também na aba do Cartão Escolar, exibindo em evidência os dados da mãe/pai e o telefone de emergência da família.
+
+
 
 
 

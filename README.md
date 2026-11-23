@@ -22,9 +22,10 @@ O **GlicoCare** foi concebido com uma missão clara: transformar a angústia ini
    - Onboarding rápido em 2 etapas com foco nos perfis **Diabético** e **Cuidador** (`RN-ACC-01`).
    - Redirecionamento inteligente por perfil (`admin` -> `/admin`, `cuidador` -> `/painel-cuidador`, `diabetico` -> `/meu-perfil`).
    - Configuração de perfil de saúde com cálculo em português do tempo de diagnóstico (`dateUtils.js`), registro de sensibilidades e alergias estruturadas (`medicamentos`, `alimentos`, `adesivos/insumos`), medicamentos/insulinas e vínculo de dependentes menores de 12 anos com convite familiar seguro.
-3. **Cuidado Diário, Central de Exames & Cartão Escolar:**
+3. **Cuidado Diário, Central de Exames & Cartões de Diagnóstico:**
    - Diário de glicemia com cálculo fisiológico de **Insulina Ativa (IOB)**, projeção pelo FSI, detecção de empilhamento de doses e setas de tendência rápida entre destros.
    - Central de Exames Laboratoriais com upload seguro de laudos (PDF/imagem até 10MB) e múltiplos marcadores históricos (HbA1c, glicemia de jejum, etc.).
+   - **Card Oficial de Diagnóstico & Cuidado (`<CartaoDiagnosticoDownload />`):** Identificação clínica estruturada com tipo de diabetes, tempo de diagnóstico, terapia/insulinas, FSI, metas, alergias e contato de emergência do responsável legal, com exportação direta em imagem de alta resolução (PNG via `html2canvas`) para salvar no smartphone e impressão/PDF com a Regra dos 15g.
    - Emissão e impressão direta (`window.print()`) do **Resumo Histórico de Saúde** e do **Cartão de Cuidado Escolar / Emergência** (com a Regra dos 15g de resgate de hipoglicemia).
 4. **Painel Administrativo Completo (`/admin`):**
    - Gestão restrita da curadoria (Priscila Manzoni Furlani).

@@ -15,6 +15,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from '../components/Button';
 import CentralExames from '../components/CentralExames';
 import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoCompartilhavel';
+import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
 import ModalTCLE from '../components/ModalTCLE';
 import CustomSelect from '../components/CustomSelect';
 import GlicoLoader from '../components/GlicoLoader';
@@ -814,6 +815,32 @@ export default function MeuPerfil() {
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               type="button"
+              onClick={() => {
+                setAbaAtiva('diario');
+                setTimeout(() => {
+                  document.getElementById('cartao-diagnostico-secao')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="gc-btn gc-btn--secundario"
+              style={{
+                fontSize: '0.88rem',
+                backgroundColor: '#F6F3EE',
+                color: '#7C533F',
+                border: '1.5px solid #7C533F',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.65rem 1.15rem',
+                borderRadius: '100px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              <span>🪪 Card de Diagnóstico (PNG/PDF)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setModalResumoCompartilhavelAberta(true)}
               className="gc-btn gc-btn--primario"
               style={{
@@ -825,7 +852,7 @@ export default function MeuPerfil() {
                 padding: '0.65rem 1.15rem',
               }}
             >
-              <span>📋 Gerar Resumo Histórico para Compartilhar (PDF / Impressão)</span>
+              <span>📋 Resumo Histórico Completo</span>
             </button>
             <Link to="/configurar-perfil" style={{ textDecoration: 'none' }}>
               <Button variante="secundario" style={{ fontSize: '0.88rem' }}>
@@ -1990,6 +2017,19 @@ export default function MeuPerfil() {
             </div>
           )}
         </div>
+
+        {/* INÍCIO BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD (FASE 1) */}
+        <div id="cartao-diagnostico-secao">
+          <CartaoDiagnosticoDownload
+            paciente={perfilSaude}
+            alergias={alergias}
+            medicamentos={medicamentos}
+            isCuidador={false}
+            tituloSecao="Meu Cartão de Diagnóstico & Cuidado para Download"
+            descricaoSecao="Documento clínico oficial com seus parâmetros terapêuticos, fator de sensibilidade e alergias. Faça o download em imagem (PNG) para salvar no celular ou imprima em PDF para portar na carteira."
+          />
+        </div>
+        {/* FIM BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD */}
           </>
         )}
 
