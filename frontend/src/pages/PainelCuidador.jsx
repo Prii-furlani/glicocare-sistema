@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { cuidadorService } from '../services/api';
 import CustomSelect from '../components/CustomSelect';
 import Button from '../components/Button';
+import GlicoLoader from '../components/GlicoLoader';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import { FEATURES } from '../config/features';
 
@@ -196,6 +197,11 @@ export default function PainelCuidador() {
   const [modalAssinarTCLE, setModalAssinarTCLE] = useState(false);
 
   // Estados dos Formulários
+  /* INÍCIO ESTADOS DE CARREGAMENTO (GLICOLOADER BOTAO) */
+  const [salvandoGlicemia, setSalvandoGlicemia] = useState(false);
+  const [salvandoFilho, setSalvandoFilho] = useState(false);
+  const [salvandoAlergia, setSalvandoAlergia] = useState(false);
+  /* FIM ESTADOS DE CARREGAMENTO (GLICOLOADER BOTAO) */
   const [formGlicemia, setFormGlicemia] = useState({
     valor_mg_dl: '',
     dose_insulina: '',
@@ -279,11 +285,12 @@ export default function PainelCuidador() {
   // 1. Envio de Nova Medição
   const handleRegistrarGlicemia = async (e) => {
     e.preventDefault();
-    if (!formGlicemia.valor_mg_dl) {
+    if (!formGlicemia.valor_mg_dl || salvandoGlicemia) {
       exibirFeedback('erro', 'Por favor, informe o valor medido de glicemia em mg/dL.');
       return;
     }
 
+    setSalvandoGlicemia(true);
     try {
       const payload = {
         perfil_saude_id: filhoAtivo.perfil_saude_id,
@@ -343,6 +350,8 @@ export default function PainelCuidador() {
       exibirFeedback('sucesso', `Medição de ${novoRegistro.valor_mg_dl} mg/dL registrada com sucesso para ${filhoAtivo.nome_crianca}!`);
     } catch (err) {
       exibirFeedback('erro', 'Não foi possível registrar a medição. Tente novamente.');
+    } finally {
+      setSalvandoGlicemia(false);
     }
   };
 
@@ -453,6 +462,29 @@ export default function PainelCuidador() {
       exibirFeedback('sucesso', 'Código de convite copiado para a área de transferência!');
     }
   };
+
+  /* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER PÁGINA) */
+  if (carregando && dependentes.length === 0) {
+    return (
+      <div
+        style={{
+          backgroundColor: 'var(--cor-fundo, #EAE4D9)',
+          minHeight: '80vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2.5rem 1.5rem',
+        }}
+      >
+        <GlicoLoader
+          variant="pagina"
+          mensagem="Acessando o espaço da sua família..."
+          submensagem="Organizando a rotina, diário e registros dos seus dependentes com carinho."
+        />
+      </div>
+    );
+  }
+  /* FIM BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER PÁGINA) */
 
   return (
     <div
@@ -1072,7 +1104,13 @@ export default function PainelCuidador() {
                     />
                   </div>
 
-                  <Button variante="primario" type="submit" style={{ width: '100%', padding: '0.75rem' }}>
+                  <Button
+                    variante="primario"
+                    type="submit"
+                    loading={salvandoGlicemia}
+                    disabled={salvandoGlicemia}
+                    style={{ width: '100%', padding: '0.75rem' }}
+                  >
                     ✓ Registrar para {filhoAtivo.nome_crianca}
                   </Button>
                 </form>

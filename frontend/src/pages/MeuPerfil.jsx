@@ -17,6 +17,7 @@ import CentralExames from '../components/CentralExames';
 import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoCompartilhavel';
 import ModalTCLE from '../components/ModalTCLE';
 import CustomSelect from '../components/CustomSelect';
+import GlicoLoader from '../components/GlicoLoader';
 import { useAuth } from '../context/AuthContext';
 import { FEATURES } from '../config/features';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
@@ -592,6 +593,29 @@ export default function MeuPerfil() {
 
   // Preview dinâmico enquanto digita o valor de glicemia
   const classificacaoAoDigitar = valorGlicemia ? obterClassificacaoGlicemica(valorGlicemia) : null;
+
+  /* INÍCIO BLOCO FEEDBACK CARREGAMENTO DA PÁGINA (GLICOLOADER PÁGINA) */
+  if (carregando && !perfilSaude) {
+    return (
+      <div
+        style={{
+          minHeight: 'calc(100vh - 140px)',
+          backgroundColor: 'var(--cor-fundo)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2.5rem 1.5rem',
+        }}
+      >
+        <GlicoLoader
+          variant="pagina"
+          mensagem="Acessando o seu espaço de cuidado seguro..."
+          submensagem="Organizando perfil de saúde, insulinas e histórico com carinho."
+        />
+      </div>
+    );
+  }
+  /* FIM BLOCO FEEDBACK CARREGAMENTO DA PÁGINA (GLICOLOADER PÁGINA) */
 
   return (
     <div
@@ -1725,6 +1749,7 @@ export default function MeuPerfil() {
             <Button
               variante="primario"
               tipo="submit"
+              loading={salvandoRegistro}
               disabled={salvandoRegistro || !valorGlicemia}
               style={{ alignSelf: 'flex-start', padding: '0.75rem 1.6rem', fontSize: '0.94rem' }}
             >
@@ -1759,8 +1784,9 @@ export default function MeuPerfil() {
             </span>
           </div>
 
+          {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON DIÁRIO) */}
           {carregando ? (
-            <p style={{ color: '#7C533F', fontSize: '0.95rem' }}>Carregando histórico do seu espaço...</p>
+            <GlicoLoader variant="skeleton" tipo="diario" quantidade={3} />
           ) : registros.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2.5rem', backgroundColor: '#FFF', borderRadius: '12px', border: '1px dashed #CCC' }}>
               <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>🌱</span>

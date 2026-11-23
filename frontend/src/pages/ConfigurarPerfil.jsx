@@ -1463,6 +1463,7 @@ export default function ConfigurarPerfil() {
             <Button
               variante="primario"
               onClick={handleSalvarPerfilCompleto}
+              loading={salvando}
               disabled={salvando}
               style={{ padding: '0.85rem 1.8rem', fontSize: '1rem', fontWeight: 700 }}
             >

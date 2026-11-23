@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import lufyMascote from '../assets/lufy-mascote.jpg';
 import Button from '../components/Button';
+import GlicoLoader from '../components/GlicoLoader';
 
 /* INÍCIO DO COMPONENTE DA PÁGINA DE LOGIN */
 export default function Login() {
@@ -296,13 +297,13 @@ export default function Login() {
               marginBottom: '0.6rem',
             }}
           >
-            Que bom ter você <span style={{ fontStyle: 'italic', color: '#7C533F' }}>de volta</span>.
+            Que bom ter você <span style={{ fontStyle: 'italic', color: 'var(--cor-primaria)' }}>de volta</span>.
           </h1>
 
           <p
             style={{
               fontSize: '0.92rem',
-              color: '#5A5049',
+              color: 'var(--cor-texto-suave)',
               lineHeight: 1.55,
               maxWidth: '420px',
               margin: '0 auto',
@@ -319,18 +320,18 @@ export default function Login() {
         {import.meta.env.DEV && (
           <div
             style={{
-              backgroundColor: '#EAE4D9',
+              backgroundColor: 'var(--cor-fundo)',
               borderRadius: '10px',
               padding: '0.75rem 1rem',
               marginBottom: '1.5rem',
-              border: '1px solid rgba(124, 83, 63, 0.15)',
+              border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.15))',
             }}
           >
             <div
               style={{
                 fontSize: '0.74rem',
                 fontWeight: 600,
-                color: '#7C533F',
+                color: 'var(--cor-primaria)',
                 marginBottom: '0.6rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -684,7 +685,7 @@ export default function Login() {
                   border: 'none',
                   padding: 0,
                   fontSize: '0.82rem',
-                  color: '#7C533F',
+                  color: 'var(--cor-primaria)',
                   cursor: 'pointer',
                   textDecoration: 'underline',
                 }}
@@ -756,7 +757,7 @@ export default function Login() {
               htmlFor="lembrar-login"
               style={{
                 fontSize: '0.86rem',
-                color: '#5A5049',
+                color: 'var(--cor-texto-suave)',
                 cursor: 'pointer',
                 userSelect: 'none',
               }}
@@ -765,11 +766,12 @@ export default function Login() {
             </label>
           </div>
 
-          {/* Botão de Envio (Pílula Verde Alívio #3B7E48) */}
+          {/* Botão de Envio (Pílula Verde Alívio #3B7E48 com GlicoLoader) */}
           <Button
             tipo="submit"
             variante="primario"
-            desabilitado={carregando}
+            loading={carregando}
+            disabled={carregando}
             style={{
               width: '100%',
               padding: '0.95rem 1.5rem',
@@ -792,10 +794,10 @@ export default function Login() {
           style={{
             marginTop: '2rem',
             paddingTop: '1.5rem',
-            borderTop: '1px solid rgba(124, 83, 63, 0.15)',
+            borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.15))',
             textAlign: 'center',
             fontSize: '0.88rem',
-            color: '#5A5049',
+            color: 'var(--cor-texto-suave)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.65rem',
@@ -806,7 +808,7 @@ export default function Login() {
             <Link
               to="/cadastro"
               style={{
-                color: '#3B7E48',
+                color: 'var(--cor-cta)',
                 fontWeight: 700,
                 textDecoration: 'underline',
               }}
@@ -820,7 +822,7 @@ export default function Login() {
             <Link
               to="/credenciamento"
               style={{
-                color: '#7C533F',
+                color: 'var(--cor-primaria)',
                 fontWeight: 600,
                 textDecoration: 'underline',
               }}

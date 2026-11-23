@@ -16,6 +16,7 @@ import CardConteudo from '../components/CardConteudo';
 import CardEspecialista from '../components/CardEspecialista';
 import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
+import GlicoLoader from '../components/GlicoLoader';
 import { FEATURES } from '../config/features';
 
 /* INÍCIO DOS DADOS ESTRUTURADOS FIÉIS ÀS IMAGENS DO PROTÓTIPO */
@@ -261,6 +262,9 @@ export default function Home() {
 
   // Lista de artigos publicados (carregados dinamicamente com fallback editorial)
   const [artigosLista, setArtigosLista] = useState(ARTIGOS_BIBLIOTECA);
+  /* INÍCIO CONTROLE DE CARREGAMENTO (GLICOLOADER SKELETON) */
+  const [carregandoArtigos, setCarregandoArtigos] = useState(true);
+  /* FIM CONTROLE DE CARREGAMENTO (GLICOLOADER SKELETON) */
 
   useEffect(() => {
     // 1. Carrega textos e imagens configuradas do CMS da Home
@@ -276,6 +280,7 @@ export default function Home() {
       });
 
     // 2. Carrega artigos publicados do banco de dados (artigos_conteudos)
+    setCarregandoArtigos(true);
     fetch('/backend/api/artigos/index.php')
       .then((res) => res.json())
       .then((resJson) => {
@@ -299,6 +304,9 @@ export default function Home() {
       })
       .catch((err) => {
         console.warn('Biblioteca de Conteúdos utilizando acervo editorial inicial:', err);
+      })
+      .finally(() => {
+        setCarregandoArtigos(false);
       });
   }, []);
 
@@ -1020,22 +1028,28 @@ export default function Home() {
 
           {/* Container Híbrido: Grid no Desktop -> Feed Vertical Contínuo no Mobile */}
           <div className="conteudos-hibrido-container">
-            {artigosExibidos.map((artigo) => (
-              <CardConteudo
-                key={artigo.id}
-                id={artigo.id}
-                seloSuperior={artigo.seloSuperior}
-                imagemCapa={artigo.imagemCapa}
-                numeroEditorial={artigo.numeroEditorial}
-                corTopo={artigo.corTopo}
-                iconeCategoria={artigo.iconeCategoria}
-                categoria={artigo.categoria}
-                tempoLeitura={artigo.tempoLeitura}
-                titulo={artigo.titulo}
-                resumo={artigo.resumo}
-                destaqueSetaSolida={artigo.destaqueSetaSolida}
-              />
-            ))}
+            {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON) */}
+            {carregandoArtigos ? (
+              <GlicoLoader variant="skeleton" tipo="grid" quantidade={6} />
+            ) : (
+              artigosExibidos.map((artigo) => (
+                <CardConteudo
+                  key={artigo.id}
+                  id={artigo.id}
+                  seloSuperior={artigo.seloSuperior}
+                  imagemCapa={artigo.imagemCapa}
+                  numeroEditorial={artigo.numeroEditorial}
+                  corTopo={artigo.corTopo}
+                  iconeCategoria={artigo.iconeCategoria}
+                  categoria={artigo.categoria}
+                  tempoLeitura={artigo.tempoLeitura}
+                  titulo={artigo.titulo}
+                  resumo={artigo.resumo}
+                  destaqueSetaSolida={artigo.destaqueSetaSolida}
+                />
+              ))
+            )}
+            {/* FIM BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON) */}
           </div>
 
           {/* CTA Secundário em Barra/Pílula Larga ("Sugerir um conteúdo ↗") */}

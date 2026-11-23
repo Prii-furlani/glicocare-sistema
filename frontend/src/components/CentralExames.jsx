@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
 import CustomSelect from './CustomSelect';
+import GlicoLoader from './GlicoLoader';
 
 // Dados demonstrativos padrão (espelhados com o seed do banco de dados TiDB)
 export const EXAMES_DEMO_INICIAIS = [
@@ -712,8 +713,10 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
           </div>
         )}
 
-        {/* Linha do Tempo: Cards de Exames */}
-        {examesFiltrados.length === 0 ? (
+        {/* Linha do Tempo: Cards de Exames com GlicoLoader Skeleton */}
+        {carregando ? (
+          <GlicoLoader variant="skeleton" tipo="exame" quantidade={2} />
+        ) : examesFiltrados.length === 0 ? (
           <div
             style={{
               padding: '2.5rem',
@@ -1342,6 +1345,7 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
                 <Button
                   type="submit"
                   variante="primario"
+                  loading={salvando}
                   disabled={salvando}
                   style={{ fontSize: '0.9rem' }}
                 >

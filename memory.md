@@ -829,6 +829,38 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
 - **FASE 1 (Blog/CMS + Perfis/Contas + Cuidado Diário):** Homologada, estabilizada e pronta para Go-Live imediato.
 - **FASE 2 (Teleatendimentos + Split Pix):** Preservada, protegida por feature flags e travas HTTP 503, e documentada para liberação posterior.
 
+---
+
+## 20. Sistema Padronizado de Loaders, Skeletons e Feedback Visual ("Porto Seguro")
+
+### A. Diretrizes de UX e Prevenção de CLS / Cliques Duplos
+Para evitar telas em branco ou estáticas durante requisições de rede ao TiDB Cloud e prevenir múltiplos envios acidentais em formulários de saúde e autenticação, a plataforma utiliza o componente padronizado `<GlicoLoader />` em 3 variantes integradas à paleta oficial (`#EAE4D9`, `#F6F3EE`, `#7C533F`, `#3B7E48` e versão Dark `#181513`, `#231F1C`, `#C88D6D`, `#4A9959`).
+
+### B. Variantes do Componente `<GlicoLoader />` (`frontend/src/components/GlicoLoader.jsx` + `index.css`)
+1. **Variante `pagina` (Carregamento Imersivo de Tela / Seção):**
+   * **Visual:** Container centralizado acolhedor com anel giratório duplo suave (`@keyframes glico-spin`) com borda superior em Verde Alívio (`--cor-cta`) e lateral em Terracota (`--cor-primaria`), envolvendo o avatar do mascote **Lufy** com animação de respiração serena (`@keyframes glico-pulse-lufy`).
+   * **Mensagens:** Tipografia editorial `Fraunces` com mensagem personalizável (padrão: *"Organizando tudo com calma para você..."*) e submensagem serena em `Plus Jakarta Sans`.
+   * **Utilização:** Exibido em `MeuPerfil.jsx` (durante consulta a perfil de saúde, insulinas e dependentes), `PainelCuidador.jsx` (carregamento inicial de dependentes), `PainelAdmin.jsx` (consolidação de KPIs e auditoria) e `ArtigoDetalhe.jsx`.
+2. **Variante `skeleton` (Esqueleto Shimmer Anti-CLS):**
+   * **Visual:** Gradiente com animação contínua de brilho (`@keyframes glico-shimmer`) sobre `--cor-superficie` e `--cor-superficie-elevada` (e fundo escuro `#231F1C` / `#2E2824` no Tema Dark).
+   * **Tipos Específicos:**
+     - `tipo="grid" | "card"`: Simula capa editorial, selo de categoria, título e linhas de resumo em grade responsiva. Usado em `Home.jsx` e `Biblioteca.jsx` enquanto consulta `/backend/api/artigos/index.php`.
+     - `tipo="diario"`: Simula itens de medição glicêmica com badges de valor em mg/dL, data/hora e IOB restante. Usado no histórico de `MeuPerfil.jsx`.
+     - `tipo="exame"`: Simula cards de baterias laboratoriais com data, laboratório e tags de marcadores clínicos. Usado em `CentralExames.jsx`.
+     - `tipo="linha"`: Simula parágrafos e linhas de texto genéricas.
+3. **Variante `botao` (Mini-Spinner Compacto Inline):**
+   * **Visual:** Spinner circular de `16px x 16px`, borda de `2px solid currentColor` com topo transparente (`border-top-color: transparent !important`) e animação suave `glico-spin`.
+   * **Integração no `<Button />` (`frontend/src/components/Button.jsx`):** Suporte nativo às props `loading` e `carregando`. Quando ativo, renderiza automaticamente o mini-spinner ao lado do texto e aplica `disabled={true}`, `opacity: 0.88` e `cursor: not-allowed` bloqueando cliques duplicados.
+   * **Utilização em Formulários Críticos:**
+     - `Login.jsx`: Botão *"Entrar no meu espaço seguro"* durante autenticação JWT.
+     - `Cadastro.jsx`: Botão *"Criar minha conta gratuita"* durante criação de conta.
+     - `MeuPerfil.jsx`: Botão *"Registrar medição no diário"*.
+     - `ConfigurarPerfil.jsx`: Botão *"Salvar perfil e ir para Meu Espaço"*.
+     - `CentralExames.jsx`: Botão *"Salvar e Anexar Exame"* durante envio de laudo e marcadores.
+     - `PainelCuidador.jsx`: Botões de registrar glicemia do filho, vincular dependente e cadastrar alergia.
+     - `PainelAdmin.jsx`: Botões *"Salvar Alterações na Home"*, *"Salvar Artigo no Acervo"* e aprovação/rejeição de depoimentos em moderação.
+
+
 
 
 

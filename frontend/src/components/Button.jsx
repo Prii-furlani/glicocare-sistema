@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import GlicoLoader from './GlicoLoader';
 
 /* INÍCIO DO COMPONENTE BUTTON */
 export default function Button({
@@ -19,10 +20,15 @@ export default function Button({
   tipo = null,                // Suporte a sinonímia em português ('submit', 'button')
   onClick,                    // Função disparada ao clicar no botão
   disabled = false,           // Desabilita interações quando verdadeiro
+  desabilitado = false,       // Suporte a sinonímia em português
+  loading = false,            // Exibe mini-spinner inline e bloqueia cliques duplicados
+  carregando = false,         // Suporte a sinonímia em português
   exibirSeta = false,         // Força a exibição da seta direcional (automático na variante 'pilula-seta')
   className = '',             // Permite injetar classes CSS adicionais se necessário
   style = {},                 // Permite ajustes pontuais de posicionamento via inline style
 }) {
+  const estaCarregando = Boolean(loading || carregando);
+  const estaDesabilitado = Boolean(disabled || desabilitado || estaCarregando);
   const tipoBotaoFinal = tipo || type || 'button';
   // Mapeia a prop 'variante' para a classe CSS correspondente definida em index.css
   const mapaVariantes = {
@@ -35,13 +41,13 @@ export default function Button({
   const classeVariante = mapaVariantes[variante] || mapaVariantes.primario;
 
   // Define se a seta direcional deve aparecer ao lado do texto
-  const mostrarSeta = variante === 'pilula-seta' || exibirSeta;
+  const mostrarSeta = !estaCarregando && (variante === 'pilula-seta' || exibirSeta);
 
   // Concatena todas as classes CSS aplicáveis ao elemento
-  const classesFinais = `gc-btn ${classeVariante} ${className}`.trim();
+  const classesFinais = `gc-btn ${classeVariante} ${estaCarregando ? 'gc-btn--carregando' : ''} ${className}`.trim();
 
   /* INÍCIO DA RENDERIZAÇÃO COMO LINK DE NAVEGAÇÃO */
-  if (to) {
+  if (to && !estaDesabilitado) {
     return (
       <Link to={to} className={classesFinais} style={style} onClick={onClick}>
         <span>{children}</span>
@@ -61,10 +67,19 @@ export default function Button({
     <button
       type={tipoBotaoFinal}
       onClick={onClick}
-      disabled={disabled}
+      disabled={estaDesabilitado}
       className={classesFinais}
-      style={style}
+      style={{
+        cursor: estaDesabilitado ? 'not-allowed' : 'pointer',
+        opacity: estaCarregando ? 0.88 : (estaDesabilitado ? 0.65 : 1),
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
+        ...style,
+      }}
     >
+      {estaCarregando && <GlicoLoader variant="botao" />}
       <span>{children}</span>
       {/* Seta indicativa de continuidade ou ação */}
       {mostrarSeta && (

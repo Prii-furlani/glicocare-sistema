@@ -12,6 +12,8 @@
   /* --- Paleta de Cores Oficial ("Porto Seguro" - memory.md & Design Editorial) --- */
   --cor-fundo: #EAE4D9;              /* Fundo principal: Bege neutro suave */
   --cor-superficie: #F6F3EE;         /* Superfícies e Cards: Branco acolhedor / marfim suave */
+  --cor-superficie-elevada: #FFFFFF; /* Superfície de contraste elevado para cards e shimmer */
+  --cor-footer-bg: #DFD8CA;          /* Fundo do rodapé institucional */
   --cor-texto: #2E2824;              /* Títulos editoriais e textos fortes: Café quente escuro */
   --cor-texto-suave: #5C534C;        /* Parágrafos e subtítulos serenos */
   --cor-primaria: #7C533F;           /* Destaques em itálico, subtítulos e selos: Terracota Executivo */
@@ -70,6 +72,8 @@
 body[data-theme='dark'] {
   --cor-fundo: #181513;              /* Fundo principal: Noturno sereno */
   --cor-superficie: #231F1C;         /* Superfícies e Cards: Marfim escurecido acolhedor */
+  --cor-superficie-elevada: #2E2824; /* Superfície de contraste elevado no tema escuro */
+  --cor-footer-bg: #1A1614;          /* Fundo do rodapé no modo noturno acolhedor */
   --cor-texto: #F6F3EE;              /* Textos principais claros e legíveis */
   --cor-texto-suave: #D2C6B8;        /* Subtítulos e parágrafos amenos */
   --cor-primaria: #C88D6D;           /* Terracota luminoso para contraste noturno */

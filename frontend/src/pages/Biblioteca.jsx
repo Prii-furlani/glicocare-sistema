@@ -11,15 +11,20 @@
 import React, { useState, useEffect } from 'react';
 import CardConteudo from '../components/CardConteudo';
 import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
+import GlicoLoader from '../components/GlicoLoader';
 import { ARTIGOS_BIBLIOTECA } from './Home';
 
 /* INÍCIO DA PÁGINA BIBLIOTECA */
 export default function Biblioteca() {
   const [artigosLista, setArtigosLista] = useState(ARTIGOS_BIBLIOTECA);
+  /* INÍCIO CONTROLE DE CARREGAMENTO (GLICOLOADER SKELETON) */
+  const [carregandoArtigos, setCarregandoArtigos] = useState(true);
+  /* FIM CONTROLE DE CARREGAMENTO (GLICOLOADER SKELETON) */
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
   const [busca, setBusca] = useState('');
 
   useEffect(() => {
+    setCarregandoArtigos(true);
     fetch('/backend/api/artigos/index.php')
       .then((res) => res.json())
       .then((resJson) => {
@@ -43,6 +48,9 @@ export default function Biblioteca() {
       })
       .catch((err) => {
         console.warn('Biblioteca utilizando acervo editorial inicial:', err);
+      })
+      .finally(() => {
+        setCarregandoArtigos(false);
       });
   }, []);
 
@@ -130,22 +138,28 @@ export default function Biblioteca() {
 
       {/* INÍCIO DO CONTAINER HÍBRIDO (GRID DESKTOP / FEED VERTICAL MOBILE) */}
       <section className="conteudos-hibrido-container">
-        {artigosFiltrados.map((artigo) => (
-          <CardConteudo
-            key={artigo.id}
-            id={artigo.id}
-            seloSuperior={artigo.seloSuperior}
-            imagemCapa={artigo.imagemCapa}
-            numeroEditorial={artigo.numeroEditorial}
-            corTopo={artigo.corTopo}
-            iconeCategoria={artigo.iconeCategoria}
-            categoria={artigo.categoria}
-            tempoLeitura={artigo.tempoLeitura}
-            titulo={artigo.titulo}
-            resumo={artigo.resumo}
-            destaqueSetaSolida={artigo.destaqueSetaSolida}
-          />
-        ))}
+        {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON) */}
+        {carregandoArtigos ? (
+          <GlicoLoader variant="skeleton" tipo="grid" quantidade={6} />
+        ) : (
+          artigosFiltrados.map((artigo) => (
+            <CardConteudo
+              key={artigo.id}
+              id={artigo.id}
+              seloSuperior={artigo.seloSuperior}
+              imagemCapa={artigo.imagemCapa}
+              numeroEditorial={artigo.numeroEditorial}
+              corTopo={artigo.corTopo}
+              iconeCategoria={artigo.iconeCategoria}
+              categoria={artigo.categoria}
+              tempoLeitura={artigo.tempoLeitura}
+              titulo={artigo.titulo}
+              resumo={artigo.resumo}
+              destaqueSetaSolida={artigo.destaqueSetaSolida}
+            />
+          ))
+        )}
+        {/* FIM BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON) */}
       </section>
       {/* FIM DO CONTAINER HÍBRIDO */}
 

@@ -16,6 +16,7 @@ import { analisarMensagemModerador } from '../utils/moderadorGlicoCare';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
+import GlicoLoader from '../components/GlicoLoader';
 import { ARTIGOS_BIBLIOTECA } from './Home';
 import lufyMascoteImg from '../assets/lufy-mascote.jpg';
 import familiaCuidadoImg from '../assets/familia-cuidado.jpg';
@@ -581,6 +582,10 @@ export default function ArtigoDetalhe() {
   const [erroCapa, setErroCapa] = useState(false);
   const [progressoLeitura, setProgressoLeitura] = useState(0);
   const [copiado, setCopiado] = useState(false);
+  /* INÍCIO ESTADOS DE CARREGAMENTO (GLICOLOADER) */
+  const [carregandoArtigo, setCarregandoArtigo] = useState(false);
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+  /* FIM ESTADOS DE CARREGAMENTO (GLICOLOADER) */
 
   const handleCompartilhar = () => {
     const shareData = {
@@ -617,7 +622,7 @@ export default function ArtigoDetalhe() {
   // Envio de comentário com moderação prévia (RN-MOD-01)
   const handleEnviarComentarioFamilia = async (e) => {
     e.preventDefault();
-    if (!nome.trim() || !cidade.trim() || !mensagem.trim()) return;
+    if (!nome.trim() || !cidade.trim() || !mensagem.trim() || enviandoComentario) return;
 
     const resultadoModerador = analisarMensagemModerador(mensagem);
     setParecerModeracao(resultadoModerador);
@@ -626,6 +631,7 @@ export default function ArtigoDetalhe() {
       return;
     }
 
+    setEnviandoComentario(true);
     const autorFormatado = `${nome.trim()} — ${cidade.trim()}`;
 
     try {
@@ -634,13 +640,17 @@ export default function ArtigoDetalhe() {
         nome_autor: autorFormatado,
         conteudo: mensagem.trim(),
       });
+      setNome('');
+      setCidade('');
+      setMensagem('');
     } catch {
       // Fallback gracioso local em modo de desenvolvimento
+      setNome('');
+      setCidade('');
+      setMensagem('');
+    } finally {
+      setEnviandoComentario(false);
     }
-
-    setNome('');
-    setCidade('');
-    setMensagem('');
   };
 
   return (
@@ -1023,8 +1033,13 @@ export default function ArtigoDetalhe() {
                   🔒 Ambiente protegido pela curadoria GlicoCare
                 </span>
 
-                <Button type="submit" variante="primario">
-                  Enviar mensagem →
+                <Button
+                  type="submit"
+                  variante="primario"
+                  loading={enviandoComentario}
+                  disabled={enviandoComentario}
+                >
+                  {enviandoComentario ? 'Acolhendo seu relato...' : 'Enviar mensagem →'}
                 </Button>
               </div>
             </form>

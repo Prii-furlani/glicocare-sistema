@@ -17,6 +17,7 @@ import { adminService } from '../services/api';
 import Button from '../components/Button';
 import CustomSelect from '../components/CustomSelect';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
+import GlicoLoader from '../components/GlicoLoader';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
 import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
 import { ARTIGOS_BIBLIOTECA, REDE_ESPECIALISTAS } from './Home';
@@ -33,6 +34,9 @@ export default function PainelAdmin() {
   const [carregandoGeral, setCarregandoGeral] = useState(true);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [mensagemErro, setMensagemErro] = useState('');
+  /* INÍCIO ESTADO DE MODERAÇÃO (GLICOLOADER BOTAO) */
+  const [moderandoDepoimentoId, setModerandoDepoimentoId] = useState(null);
+  /* FIM ESTADO DE MODERAÇÃO (GLICOLOADER BOTAO) */
 
   // ---------------------------------------------------------------------------
   // 1. DADOS DA ABA VISÃO GERAL & FINANÇAS
@@ -532,6 +536,7 @@ export default function PainelAdmin() {
   // HANDLERS DA ABA 5: MODERAÇÃO & USUÁRIOS
   // ===========================================================================
   const handleModerarDepoimento = async (id, acao, tipo = 'artigo_comentario') => {
+    setModerandoDepoimentoId(id);
     try {
       const res = await adminService.moderarDepoimento({ id, acao, tipo });
       if (res.data && res.data.sucesso) {
@@ -541,6 +546,8 @@ export default function PainelAdmin() {
       }
     } catch (err) {
       dispararAviso('Erro ao moderar depoimento.', 'erro');
+    } finally {
+      setModerandoDepoimentoId(null);
     }
   };
 
@@ -785,9 +792,28 @@ export default function PainelAdmin() {
           })}
         </nav>
 
-        {/* ===================================================================
-            ABA 1: VISÃO GERAL & FINANÇAS (KPIS, SPLIT E AUDITORIA)
-            =================================================================== */}
+        {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER PÁGINA) */}
+        {carregandoGeral ? (
+          <div
+            style={{
+              backgroundColor: 'var(--cor-superficie)',
+              borderRadius: '20px',
+              padding: '3rem 2rem',
+              border: '1px solid rgba(124, 83, 63, 0.15)',
+              boxShadow: '0 8px 30px rgba(46, 40, 36, 0.05)',
+            }}
+          >
+            <GlicoLoader
+              variant="pagina"
+              mensagem="Carregando painel de administração e auditoria..."
+              submensagem="Consolidando métricas, trilha de auditoria e configurações com segurança."
+            />
+          </div>
+        ) : (
+          <>
+            {/* ===================================================================
+                ABA 1: VISÃO GERAL & FINANÇAS (KPIS, SPLIT E AUDITORIA)
+                =================================================================== */}
         {abaAtiva === 'visao_geral' && (
           <div style={{ display: 'grid', gap: '2rem' }}>
             {/* GRID DE KPIS GLOBAIS */}
@@ -1171,6 +1197,7 @@ export default function PainelAdmin() {
                 <Button
                   variante="primario"
                   onClick={handleSalvarCMSHome}
+                  loading={salvandoHome}
                   disabled={salvandoHome}
                   style={{ padding: '0.65rem 1.65rem', fontSize: '0.92rem' }}
                 >
@@ -1492,6 +1519,7 @@ export default function PainelAdmin() {
               <Button
                 variante="primario"
                 onClick={handleSalvarCMSHome}
+                loading={salvandoHome}
                 disabled={salvandoHome}
                 style={{ padding: '0.85rem 2.25rem', fontSize: '1rem' }}
               >
@@ -2208,7 +2236,12 @@ export default function PainelAdmin() {
                 <Button variante="secundario" onClick={() => setModalArtigoAberto(false)}>
                   Cancelar
                 </Button>
-                <Button variante="primario" onClick={handleSalvarArtigo} disabled={salvandoArtigo}>
+                <Button
+                  variante="primario"
+                  onClick={handleSalvarArtigo}
+                  loading={salvandoArtigo}
+                  disabled={salvandoArtigo}
+                >
                   {salvandoArtigo ? 'Salvando...' : '✓ Salvar Artigo no Acervo'}
                 </Button>
               </div>
@@ -2519,6 +2552,8 @@ export default function PainelAdmin() {
                           <Button
                             variante="primario"
                             onClick={() => handleModerarDepoimento(dep.id, 'aprovar', dep.tipo_registro)}
+                            loading={moderandoDepoimentoId === dep.id}
+                            disabled={moderandoDepoimentoId !== null}
                             style={{ padding: '0.45rem 1rem', fontSize: '0.82rem' }}
                           >
                             ✓ Aprovar e Publicar
@@ -2526,6 +2561,7 @@ export default function PainelAdmin() {
                           <Button
                             variante="secundario"
                             onClick={() => handleModerarDepoimento(dep.id, 'rejeitar', dep.tipo_registro)}
+                            disabled={moderandoDepoimentoId !== null}
                             style={{ padding: '0.45rem 1rem', fontSize: '0.82rem', borderColor: '#C94A38', color: '#C94A38' }}
                           >
                             ✕ Rejeitar
@@ -2644,6 +2680,9 @@ export default function PainelAdmin() {
             )}
           </div>
         )}
+          </>
+        )}
+        {/* FIM BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER PÁGINA) */}
       </div>
     </div>
   );

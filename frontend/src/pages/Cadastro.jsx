@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import Button from '../components/Button';
+import GlicoLoader from '../components/GlicoLoader';
 import { useAuth } from '../context/AuthContext';
 import { FEATURES } from '../config/features';
 
@@ -458,12 +459,13 @@ export default function Cadastro() {
             </div>
           )}
 
-          {/* Botão de Criação */}
+          {/* Botão de Criação com GlicoLoader */}
           <Button
             variante="primario"
             type="submit"
             tipo="submit"
             onClick={handleSubmit}
+            loading={carregando}
             disabled={carregando}
             style={{
               width: '100%',

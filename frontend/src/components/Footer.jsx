@@ -20,7 +20,7 @@ export default function Footer() {
   return (
     <footer
       style={{
-        backgroundColor: '#DFD8CA', // Tom bege fendi suave idêntico à imagem do rodapé
+        backgroundColor: 'var(--cor-footer-bg, #DFD8CA)',
         borderTop: '1px solid var(--cor-borda)',
         padding: '4rem 0 2.5rem',
       }}

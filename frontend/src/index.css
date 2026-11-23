@@ -483,7 +483,7 @@ a {
   font-size: 0.9rem;
   font-weight: 600;
   border: 1px solid var(--cor-borda);
-  background-color: #EFECE5;
+  background-color: var(--cor-superficie, #EFECE5);
   color: var(--cor-texto);
   cursor: pointer;
   transition: all var(--transicao-padrao);
@@ -492,7 +492,21 @@ a {
 .filtro-pilula--ativo {
   background-color: var(--cor-cta);
   border-color: var(--cor-cta);
-  color: var(--cor-branco);
+  color: #FFFFFF !important;
+}
+
+:root[data-theme='dark'] .filtro-pilula,
+body[data-theme='dark'] .filtro-pilula {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto);
+  border-color: var(--cor-borda);
+}
+
+:root[data-theme='dark'] .filtro-pilula--ativo,
+body[data-theme='dark'] .filtro-pilula--ativo {
+  background-color: var(--cor-cta);
+  border-color: var(--cor-cta);
+  color: #FFFFFF !important;
 }
 /* FIM DOS BOTÕES E PÍLULAS */
 
@@ -2146,4 +2160,226 @@ section[id] {
 }
 /* ==========================================================================
    FIM DO GRID SPLIT RESPONSIVO DO PRONTUÁRIO LONGITUDINAL (RN-PRONT-01)
+   ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DO SISTEMA PADRONIZADO DE LOADERS E SKELETONS ("PORTO SEGURO")
+   Variantes: 'pagina' (Lufy + Halo giratório), 'skeleton' (Shimmer) e 'botao' (Mini-spinner)
+   Compatível com Tema Claro (#EAE4D9) e Tema Dark (#181513).
+   ========================================================================== */
+
+/* Animações Fundamentais */
+@keyframes glico-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes glico-pulse-lufy {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 18px rgba(124, 83, 63, 0.15);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 26px rgba(59, 126, 72, 0.25);
+  }
+}
+
+@keyframes glico-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 1. VARIANTE PÁGINA (TELA E SEÇÕES COMPLETAS) */
+.glico-loader-pagina {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  width: 100%;
+  min-height: 50vh;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.glico-loader-pagina__halo-container {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.glico-loader-pagina__halo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3.5px solid transparent;
+  border-top-color: var(--cor-cta, #3B7E48);
+  border-right-color: var(--cor-primaria, #7C533F);
+  border-bottom-color: rgba(59, 126, 72, 0.2);
+  border-left-color: rgba(124, 83, 63, 0.2);
+  animation: glico-spin 1.4s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+}
+
+.glico-loader-pagina__lufy-avatar {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--cor-borda-suave, #D8CFC0);
+  background-color: var(--cor-superficie, #F6F3EE);
+  animation: glico-pulse-lufy 2.4s ease-in-out infinite;
+  z-index: 1;
+}
+
+.glico-loader-pagina__mensagem {
+  font-family: var(--fonte-titulo, 'Fraunces', serif);
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  font-weight: 400;
+  color: var(--cor-texto, #2E2824);
+  margin-bottom: 0.45rem;
+  max-width: 520px;
+  line-height: 1.35;
+}
+
+.glico-loader-pagina__submensagem {
+  font-family: var(--fonte-corpo, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.92rem;
+  color: var(--cor-texto-suave, #5C534C);
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+/* 2. VARIANTE BOTÃO (MINI-SPINNER INLINE) */
+.glico-loader-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  vertical-align: middle;
+}
+
+.glico-loader-botao__spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent !important;
+  animation: glico-spin 0.75s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* 3. VARIANTE SKELETON (SHIMMER ACOLHEDOR ANTI-CLS) */
+.glico-skeleton-base {
+  background: linear-gradient(
+    90deg,
+    var(--cor-superficie, #F6F3EE) 0%,
+    var(--cor-superficie-elevada, #FFFFFF) 50%,
+    var(--cor-superficie, #F6F3EE) 100%
+  );
+  background-size: 200% 100%;
+  animation: glico-shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+:root[data-theme='dark'] .glico-skeleton-base,
+body[data-theme='dark'] .glico-skeleton-base {
+  background: linear-gradient(
+    90deg,
+    #231F1C 0%,
+    #2E2824 50%,
+    #231F1C 100%
+  );
+  background-size: 200% 100%;
+}
+
+.glico-skeleton-card {
+  background-color: var(--cor-superficie);
+  border-radius: 16px;
+  border: 1px solid var(--cor-borda-suave, #D8CFC0);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: var(--sombra-card);
+  box-sizing: border-box;
+}
+
+.glico-skeleton-card__capa {
+  width: 100%;
+  height: 190px;
+  border-radius: 12px;
+}
+
+.glico-skeleton-card__selo {
+  width: 90px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.glico-skeleton-card__titulo {
+  width: 85%;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.glico-skeleton-card__linha {
+  width: 100%;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.glico-skeleton-card__linha--curta {
+  width: 65%;
+}
+
+.glico-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.75rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .glico-skeleton-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* Skeleton para Linha de Diário de Glicemia */
+.glico-skeleton-diario-item {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-suave, #D8CFC0);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Skeleton para Central de Exames */
+.glico-skeleton-exame-card {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-suave, #D8CFC0);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+/* ==========================================================================
+   FIM DO SISTEMA PADRONIZADO DE LOADERS E SKELETONS ("PORTO SEGURO")
    ========================================================================== */
