@@ -13,6 +13,8 @@ import Footer from './components/Footer';
 import LufyChatbot from './components/LufyChatbot';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import Home from './pages/Home';
 import Biblioteca from './pages/Biblioteca';
 import ArtigoDetalhe from './pages/ArtigoDetalhe';
@@ -37,20 +39,22 @@ import EmPreparacaoLufy from './components/EmPreparacaoLufy';
 export default function App() {
   return (
     <AuthProvider>
-      <div
-        style={{
-          minHeight: '100vh',      // Garante que o layout ocupe toda a altura da tela
-          display: 'flex',
-          flexDirection: 'column', // Mantém o Footer empurrado para a base da janela
-        }}
-      >
-        {/* Barra de navegação adaptativa (horizontal, hambúrguer ou modo leitura) */}
-        <Navbar />
+      <ToastProvider>
+        <ConfirmProvider>
+          <div
+            style={{
+              minHeight: '100vh',      // Garante que o layout ocupe toda a altura da tela
+              display: 'flex',
+              flexDirection: 'column', // Mantém o Footer empurrado para a base da janela
+            }}
+          >
+            {/* Barra de navegação adaptativa (horizontal, hambúrguer ou modo leitura) */}
+            <Navbar />
 
-        {/* INÍCIO DO MAPEAMENTO DE ROTAS DAS PÁGINAS */}
-        <main style={{ flex: 1 }}>
-          <Routes>
-            {/* 1. Rotas Públicas (Acesso Visitante e Todos os Perfis) */}
+            {/* INÍCIO DO MAPEAMENTO DE ROTAS DAS PÁGINAS */}
+            <main style={{ flex: 1 }}>
+              <Routes>
+                {/* 1. Rotas Públicas (Acesso Visitante e Todos os Perfis) */}
             <Route path="/" element={<Home />} />
             <Route path="/biblioteca" element={<Biblioteca />} />
             <Route path="/conteudos" element={<Biblioteca />} />
@@ -193,6 +197,8 @@ export default function App() {
         {/* Rodapé institucional com aviso médico */}
         <Footer />
       </div>
+        </ConfirmProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

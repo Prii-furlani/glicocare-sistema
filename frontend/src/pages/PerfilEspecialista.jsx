@@ -17,6 +17,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/ToastContext';
 import { agendamentosService } from '../services/api';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
@@ -232,6 +233,7 @@ export default function PerfilEspecialista() {
   /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
 
   const { id } = useParams();
+  const notificar = useNotify();
   const idNum = Number(id) || 2;
   const profissional =
     PERFIS_DETALHADOS_REDE[idNum] || PERFIS_DETALHADOS_REDE[2];
@@ -281,7 +283,7 @@ export default function PerfilEspecialista() {
     e.preventDefault();
     if (!diaSelecionado || !horarioSelecionado || !nomeFamiliar.trim()) return;
     if (!aceiteConsentimento) {
-      alert('É obrigatório aceitar o Termo de Consentimento Livre e Esclarecido para Teleatendimento (CFM 2.314/2022).');
+      notificar.aviso('É obrigatório aceitar o Termo de Consentimento Livre e Esclarecido para Teleatendimento (CFM 2.314/2022).');
       return;
     }
 

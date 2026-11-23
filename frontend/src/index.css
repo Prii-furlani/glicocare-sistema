@@ -2383,3 +2383,283 @@ body[data-theme='dark'] .glico-skeleton-base {
 /* ==========================================================================
    FIM DO SISTEMA PADRONIZADO DE LOADERS E SKELETONS ("PORTO SEGURO")
    ========================================================================== */
+
+/* ==========================================================================
+   INÍCIO DO SISTEMA DE ALERTAS (ALERT), CONFIRMAÇÃO (ALERTDIALOG) E TOAST
+   Design System "Porto Seguro" — Compatível com Tema Claro e Dark Mode.
+   ========================================================================== */
+
+/* 1. COMPONENTE ALERT (ALERTAS INLINE) */
+.glico-alert {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--raio-medio, 12px);
+  border: 1px solid var(--cor-borda);
+  font-family: var(--fonte-corpo, sans-serif);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  line-height: 1.5;
+  transition: all var(--transicao-padrao, 0.2s ease);
+}
+
+.glico-alert__icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.glico-alert__content {
+  flex: 1;
+}
+
+.glico-alert__title {
+  font-family: var(--fonte-titulo, serif);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.glico-alert__description {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--cor-texto-suave);
+}
+
+.glico-alert__close {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  color: var(--cor-texto-suave);
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.glico-alert__close:hover {
+  opacity: 1;
+}
+
+/* Variantes do Alert */
+.glico-alert--default {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto);
+}
+.glico-alert--default .glico-alert__title {
+  color: var(--cor-primaria);
+}
+
+.glico-alert--success {
+  background-color: rgba(59, 126, 72, 0.1);
+  border-color: rgba(59, 126, 72, 0.35);
+  color: var(--cor-texto);
+}
+.glico-alert--success .glico-alert__title {
+  color: var(--cor-cta);
+}
+
+.glico-alert--warning {
+  background-color: rgba(217, 146, 59, 0.12);
+  border-color: rgba(217, 146, 59, 0.45);
+  color: var(--cor-texto);
+}
+.glico-alert--warning .glico-alert__title {
+  color: #C88D2A;
+}
+
+.glico-alert--destructive {
+  background-color: rgba(192, 72, 62, 0.12);
+  border-color: rgba(192, 72, 62, 0.45);
+  color: var(--cor-texto);
+}
+.glico-alert--destructive .glico-alert__title {
+  color: #C94A38;
+}
+
+/* 2. COMPONENTE ALERTDIALOG (MODAL DE CONFIRMAÇÃO CRÍTICA) */
+@keyframes glico-dialog-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes glico-dialog-scale-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.glico-alert-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(24, 21, 19, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: glico-dialog-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.glico-alert-dialog__content {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-card-grande, 22px);
+  padding: clamp(1.75rem, 4vw, 2.25rem);
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  animation: glico-dialog-scale-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-sizing: border-box;
+}
+
+.glico-alert-dialog__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.glico-alert-dialog__title {
+  font-family: var(--fonte-titulo, serif);
+  font-size: clamp(1.25rem, 2.5vw, 1.45rem);
+  font-weight: 700;
+  color: var(--cor-texto);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.glico-alert-dialog__description {
+  font-family: var(--fonte-corpo, sans-serif);
+  font-size: 0.94rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.glico-alert-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* 3. SISTEMA DE TOASTS (NOTIFICAÇÕES FLUTUANTES) */
+@keyframes glico-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.glico-toast-portal {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 380px;
+  width: calc(100% - 2.5rem);
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .glico-toast-portal {
+    top: auto;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    right: 1.25rem;
+    width: auto;
+  }
+}
+
+.glico-toast {
+  pointer-events: auto;
+  background-color: var(--cor-superficie-elevada, #FFFFFF);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda-suave, #D8CFC0);
+  border-left-width: 5px;
+  border-radius: var(--raio-medio, 12px);
+  padding: 0.85rem 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  animation: glico-toast-slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.glico-toast--success {
+  border-left-color: var(--cor-cta, #3B7E48);
+}
+.glico-toast--error {
+  border-left-color: #C94A38;
+}
+.glico-toast--warning {
+  border-left-color: #C88D2A;
+}
+.glico-toast--info {
+  border-left-color: var(--cor-primaria, #7C533F);
+}
+
+.glico-toast__icon {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.glico-toast__body {
+  flex: 1;
+}
+
+.glico-toast__title {
+  font-family: var(--fonte-corpo, sans-serif);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+  color: var(--cor-texto);
+}
+
+.glico-toast__message {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--cor-texto-suave);
+}
+
+.glico-toast__close-btn {
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+}
+
+.glico-toast__close-btn:hover {
+  opacity: 1;
+}
+/* ==========================================================================
+   FIM DO SISTEMA DE ALERTAS (ALERT), CONFIRMAÇÃO (ALERTDIALOG) E TOAST
+   ========================================================================== */

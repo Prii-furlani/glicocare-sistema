@@ -860,6 +860,49 @@ Para evitar telas em branco ou estáticas durante requisições de rede ao TiDB 
      - `PainelCuidador.jsx`: Botões de registrar glicemia do filho, vincular dependente e cadastrar alergia.
      - `PainelAdmin.jsx`: Botões *"Salvar Alterações na Home"*, *"Salvar Artigo no Acervo"* e aprovação/rejeição de depoimentos em moderação.
 
+---
+
+## 21. Sistema de Alertas, Confirmações e Notificações ("Porto Seguro")
+
+### A. Eliminação Definitiva de Diálogos Nativos do Navegador
+Para assegurar a máxima imersão acolhedora do Design System "Porto Seguro" e garantir conformidade com padrões de acessibilidade (ARIA, foco e fechamento por `Esc`), **todas as chamadas nativas de `window.alert()` e `window.confirm()` foram 100% eliminadas** de todas as páginas e componentes do front-end. Em seu lugar, foi implementada uma tríade de componentes modulares, responsivos e totalmente compatíveis com Tema Claro (`#EAE4D9`) e Dark Mode (`#181513`).
+
+### B. Componente `<Alert />` (`frontend/src/components/ui/Alert.jsx` + `index.css`)
+Componente modular inline com ícones laterais automáticos, `<AlertTitle />` e `<AlertDescription />`, suportando 4 variantes clínicas e emocionais:
+1. **`default` (Acolhedor / Lufy):** Fundo em `var(--cor-superficie)`, borda em `var(--cor-borda)` e ícone do Lufy ou informativo.
+2. **`success` (Verde Alívio):** Fundo suave translúcido em `rgba(59, 126, 72, 0.1)`, borda verde alívio e ícone `✓`. Usado para confirmação de salvamentos, cadastros e assinaturas de TCLE.
+3. **`warning` (Atenção Clínica):** Fundo âmbar suave (`rgba(200, 141, 42, 0.12)`), borda âmbar e ícone `⚠️`. Utilizado para o **Alerta de Insulina Ativa (IOB)** em `MeuPerfil.jsx` e `PainelCuidador.jsx` alertando sobre risco de empilhamento de doses.
+4. **`destructive` (Alerta Crítico / Emergencial):** Fundo terracota suave (`rgba(201, 74, 56, 0.12)`), borda crítica e ícone `🚨`. Utilizado para o **Alerta de Hipoglicemia (< 70 mg/dL)** com a **Regra dos 15g** imediata e para erros de autenticação ou anafilaxia.
+- Suporta a prop `dismissible` e callback `onDismiss` com botão discreto de fechamento (`✕`).
+
+### C. Modal Acessível `<AlertDialog />` e Hook Global `useConfirm()` (`ConfirmContext.jsx`)
+Substituto padrão e assíncrono para o antigo `window.confirm()`:
+- **Estrutura Modular:** `<AlertDialogContent />`, `<AlertDialogHeader />`, `<AlertDialogTitle />`, `<AlertDialogDescription />`, `<AlertDialogFooter />`, `<AlertDialogCancel />`, `<AlertDialogAction />`.
+- **UX & Acessibilidade:** Overlay escuro com desfoque de fundo (`backdrop-filter: blur(4px)`), animação suave de entrada (`@keyframes glico-dialog-fade`), travamento do scroll do body e captura da tecla `Escape` (`Esc`) para cancelamento seguro.
+- **Hook Global Promise-based (`useConfirm`):** Permite disparar diálogos de confirmação de qualquer componente sem duplicar estados de modal:
+  ```javascript
+  const { confirmar } = useConfirm();
+  const ok = await confirmar({
+    titulo: 'Excluir registro de glicemia?',
+    descricao: 'Esta ação não poderá ser desfeita e será auditada.',
+    variante: 'destructive',
+    confirmText: 'Sim, excluir',
+    cancelText: 'Cancelar'
+  });
+  if (!ok) return;
+  ```
+- **Integrado em:** Exclusão de registros de glicemia (`MeuPerfil.jsx`), revogação de TCLE (`MeuPerfil.jsx`), exclusão de artigos editoriais do CMS (`PainelAdmin.jsx`) e remoção de alergias de dependentes (`PainelCuidador.jsx`).
+
+### D. Notificações Flutuantes `<Toast />` e Hook `useNotify()` (`ToastContext.jsx`)
+Sistema global de toasts empilhados no canto inferior direito (`.glico-toast-portal` com `z-index: 9999`):
+- **4 Tipos Semânticos:**
+  * `notificar.sucesso(mensagem)`: Fundo translúcido com acento em Verde Alívio (`var(--cor-cta)`).
+  * `notificar.erro(mensagem)`: Fundo translúcido com acento Terracota crítico (`var(--cor-critica)`).
+  * `notificar.aviso(mensagem)`: Fundo translúcido com acento âmbar de atenção clínica.
+  * `notificar.info(mensagem)`: Fundo acolhedor neutro Porto Seguro.
+- **Comportamento:** Auto-dismiss após 4.5 segundos com temporizador individual, botão de fechar manual (`✕`), animação de deslize e fade (`@keyframes glico-toast-in`), e suporte a leitura por leitores de tela (`aria-live="polite"` e `role="status"`).
+- **Provedores Globais:** `<ToastProvider>` e `<ConfirmProvider>` encapsulam a aplicação em `frontend/src/App.jsx`, disponibilizando os recursos em todas as rotas e páginas.
+
 
 
 

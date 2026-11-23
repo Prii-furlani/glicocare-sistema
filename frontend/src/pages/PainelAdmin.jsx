@@ -18,6 +18,9 @@ import Button from '../components/Button';
 import CustomSelect from '../components/CustomSelect';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import GlicoLoader from '../components/GlicoLoader';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
+import { useNotify } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
 import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
 import { ARTIGOS_BIBLIOTECA, REDE_ESPECIALISTAS } from './Home';
@@ -26,6 +29,8 @@ import { FEATURES } from '../config/features';
 /* INÍCIO DO COMPONENTE PRINCIPAL PAINEL ADMIN */
 export default function PainelAdmin() {
   const { usuario, logout } = useAuth();
+  const notificar = useNotify();
+  const { confirmar } = useConfirm();
 
   // Controle de abas principais
   const [abaAtiva, setAbaAtiva] = useState('visao_geral'); // 'visao_geral' | 'cms_home' | 'artigos' | 'especialistas' | 'moderacao_usuarios'
@@ -299,9 +304,11 @@ export default function PainelAdmin() {
   const dispararAviso = (msg, tipo = 'sucesso') => {
     if (tipo === 'sucesso') {
       setMensagemSucesso(msg);
+      notificar.sucesso(msg);
       setTimeout(() => setMensagemSucesso(''), 5000);
     } else {
       setMensagemErro(msg);
+      notificar.erro(msg);
       setTimeout(() => setMensagemErro(''), 6000);
     }
   };
@@ -467,7 +474,15 @@ export default function PainelAdmin() {
   };
 
   const handleExcluirArtigo = async (id, titulo) => {
-    if (!window.confirm(`Tem certeza que deseja remover o artigo "${titulo}"?`)) return;
+    const ok = await confirmar({
+      titulo: 'Excluir Artigo Editorial?',
+      descricao: `Tem certeza que deseja remover o artigo "${titulo}"? Esta ação removerá o conteúdo da biblioteca pública.`,
+      variante: 'destructive',
+      confirmText: 'Sim, excluir artigo',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+
     try {
       await adminService.excluirArtigo(id);
       dispararAviso('Artigo removido com sucesso!');
@@ -693,54 +708,18 @@ export default function PainelAdmin() {
 
         {/* FEEDBACK DE SUCESSO / ERRO */}
         {mensagemSucesso && (
-          <div
-            style={{
-              backgroundColor: '#D1E7DD',
-              border: '1px solid #A3CFBB',
-              color: '#0F5132',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-            }}
-          >
-            <span>✓ {mensagemSucesso}</span>
-            <button
-              onClick={() => setMensagemSucesso('')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#0F5132' }}
-            >
-              ✕
-            </button>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <Alert variant="success" dismissible onDismiss={() => setMensagemSucesso('')}>
+              <AlertDescription>{mensagemSucesso}</AlertDescription>
+            </Alert>
           </div>
         )}
 
         {mensagemErro && (
-          <div
-            style={{
-              backgroundColor: '#F8D7DA',
-              border: '1px solid #F5C2C7',
-              color: '#842029',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-            }}
-          >
-            <span>⚠️ {mensagemErro}</span>
-            <button
-              onClick={() => setMensagemErro('')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#842029' }}
-            >
-              ✕
-            </button>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <Alert variant="destructive" dismissible onDismiss={() => setMensagemErro('')}>
+              <AlertDescription>{mensagemErro}</AlertDescription>
+            </Alert>
           </div>
         )}
 

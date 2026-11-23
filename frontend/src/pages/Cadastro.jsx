@@ -13,12 +13,15 @@ import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
 import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/ToastContext';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 import { FEATURES } from '../config/features';
 
 /* INÍCIO DO COMPONENTE CADASTRO */
 export default function Cadastro() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const notificar = useNotify();
 
   // Estados do formulário
   const [nome, setNome] = useState('');
@@ -101,6 +104,7 @@ export default function Cadastro() {
     try {
       // Efetua login no contexto com os dados retornados
       login(resData, true);
+      notificar.sucesso('Seu espaço seguro foi criado com carinho. Bem-vindo(a)!', 'Cadastro Concluído');
 
       // Redireciona conforme o perfil selecionado
       if (tipoUsuario === 'especialista') {
@@ -185,22 +189,12 @@ export default function Cadastro() {
           </p>
         </div>
 
-        {/* Feedback de erro */}
+        {/* Feedback de erro via Alert */}
         {mensagemErro && (
-          <div
-            style={{
-              backgroundColor: 'rgba(162, 59, 42, 0.08)',
-              border: '1px solid #A23B2A',
-              color: '#A23B2A',
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
-              marginBottom: '1.5rem',
-              fontSize: '0.88rem',
-              lineHeight: 1.5,
-            }}
-          >
-            🌿 {mensagemErro}
-          </div>
+          <Alert variant="destructive" onClose={() => setMensagemErro(null)}>
+            <AlertTitle>Não foi possível continuar</AlertTitle>
+            <AlertDescription>{mensagemErro}</AlertDescription>
+          </Alert>
         )}
 
         {/* Formulário de Cadastro */}

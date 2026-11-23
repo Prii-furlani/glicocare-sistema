@@ -17,6 +17,8 @@ import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import GlicoLoader from '../components/GlicoLoader';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
+import { useNotify } from '../context/ToastContext';
 import { ARTIGOS_BIBLIOTECA } from './Home';
 import lufyMascoteImg from '../assets/lufy-mascote.jpg';
 import familiaCuidadoImg from '../assets/familia-cuidado.jpg';
@@ -560,6 +562,7 @@ const COMENTARIOS_FAMILIAS_APROVADOS = [
    INÍCIO DO COMPONENTE PRINCIPAL ARTIGO DETALHE
    ========================================================================== */
 export default function ArtigoDetalhe() {
+  const notificar = useNotify();
   // Captura o slug ou ID na URL (/artigo/:slug ou /artigo/:id)
   const { slugOrId, id, slug } = useParams();
   const param = slugOrId || slug || id || '1';
@@ -628,6 +631,7 @@ export default function ArtigoDetalhe() {
     setParecerModeracao(resultadoModerador);
 
     if (!resultadoModerador.aprovada) {
+      notificar.aviso('A mensagem precisa de pequenos ajustes antes de ser enviada.', 'Ajuste Necessário');
       return;
     }
 
@@ -640,11 +644,13 @@ export default function ArtigoDetalhe() {
         nome_autor: autorFormatado,
         conteudo: mensagem.trim(),
       });
+      notificar.sucesso('Seu relato foi enviado com carinho para a moderação acolhedora (RN-MOD-01).', 'Depoimento Recebido');
       setNome('');
       setCidade('');
       setMensagem('');
     } catch {
       // Fallback gracioso local em modo de desenvolvimento
+      notificar.sucesso('Seu relato foi acolhido localmente para prévia.', 'Depoimento Recebido');
       setNome('');
       setCidade('');
       setMensagem('');
@@ -954,26 +960,19 @@ export default function ArtigoDetalhe() {
               Sua história pode ser o abraço que outra família precisa ler hoje.
             </p>
 
-            {/* Parecer do Moderador Oficial */}
+            {/* Parecer do Moderador Oficial via Alert Porto Seguro */}
             {parecerModeracao && (
-              <div
-                style={{
-                  backgroundColor: parecerModeracao.aprovada
-                    ? '#EDF7EE'
-                    : '#F9E6E3',
-                  color: parecerModeracao.aprovada ? '#1E4620' : '#9E3328',
-                  border: `1px solid ${
-                    parecerModeracao.aprovada ? '#B8E2BE' : '#C86D63'
-                  }`,
-                  padding: '0.9rem 1.15rem',
-                  borderRadius: '12px',
-                  marginBottom: '1.25rem',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                }}
+              <Alert
+                variant={parecerModeracao.aprovada ? 'success' : 'destructive'}
+                onClose={() => setParecerModeracao(null)}
               >
-                {parecerModeracao.saidaFormatada}
-              </div>
+                <AlertTitle>
+                  {parecerModeracao.aprovada ? 'Relato enviado para moderação' : 'Atenção ao conteúdo'}
+                </AlertTitle>
+                <AlertDescription>
+                  {parecerModeracao.saidaFormatada}
+                </AlertDescription>
+              </Alert>
             )}
 
             <form onSubmit={handleEnviarComentarioFamilia}>

@@ -14,6 +14,9 @@ import { cuidadorService } from '../services/api';
 import CustomSelect from '../components/CustomSelect';
 import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
+import { useNotify } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import { FEATURES } from '../config/features';
 
@@ -180,6 +183,8 @@ const DEPENDENTE_PADRAO_THEO = {
 export default function PainelCuidador() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
+  const notificar = useNotify();
+  const { confirmar } = useConfirm();
 
   // Estados principais
   const [dependentes, setDependentes] = useState([DEPENDENTE_PADRAO_THEO]);
@@ -265,12 +270,32 @@ export default function PainelCuidador() {
     carregarDependentes();
   }, []);
 
-  // Mostra mensagem temporária de feedback
+  // Mostra mensagem temporária de feedback e dispara Toast
   const exibirFeedback = (tipo, texto) => {
     setFeedbackMsg({ tipo, texto });
+    if (tipo === 'sucesso') notificar.sucesso(texto);
+    else if (tipo === 'erro') notificar.erro(texto);
+    else if (tipo === 'aviso') notificar.aviso(texto);
+    else notificar.info(texto);
     setTimeout(() => {
       setFeedbackMsg({ tipo: '', texto: '' });
     }, 5000);
+  };
+
+  const handleRemoverAlergia = async (alergiaId, nomeSubstancia) => {
+    const ok = await confirmar({
+      titulo: 'Remover Alergia?',
+      descricao: `Tem certeza que deseja remover o registro da alergia "${nomeSubstancia}" do perfil de ${filhoAtivo.nome_crianca}?`,
+      variante: 'destructive',
+      confirmText: 'Sim, remover',
+      cancelText: 'Cancelar'
+    });
+    if (!ok) return;
+
+    const depsAtualizados = [...dependentes];
+    depsAtualizados[indiceFilhoAtivo].alergias = (filhoAtivo.alergias || []).filter((a) => a.id !== alergiaId);
+    setDependentes(depsAtualizados);
+    notificar.sucesso(`Alergia "${nomeSubstancia}" removida com sucesso.`);
   };
 
   // Helper para cor do valor de glicemia (Porto Seguro)
@@ -562,23 +587,14 @@ export default function PainelCuidador() {
 
         {/* MENSAGEM TEMPORÁRIA DE FEEDBACK */}
         {feedbackMsg.texto && (
-          <div
-            style={{
-              backgroundColor: feedbackMsg.tipo === 'sucesso' ? '#D1E7DD' : '#F8D7DA',
-              color: feedbackMsg.tipo === 'sucesso' ? '#0F5132' : '#842029',
-              padding: '0.85rem 1.25rem',
-              borderRadius: '12px',
-              marginBottom: '1.5rem',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              border: `1px solid ${feedbackMsg.tipo === 'sucesso' ? '#BADBCC' : '#F5C2C7'}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span>{feedbackMsg.tipo === 'sucesso' ? '✓' : '⚠️'}</span>
-            <span>{feedbackMsg.texto}</span>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <Alert
+              variant={feedbackMsg.tipo === 'sucesso' ? 'success' : 'destructive'}
+              dismissible
+              onDismiss={() => setFeedbackMsg({ tipo: '', texto: '' })}
+            >
+              <AlertDescription>{feedbackMsg.texto}</AlertDescription>
+            </Alert>
           </div>
         )}
 
@@ -878,42 +894,15 @@ export default function PainelCuidador() {
           <div>
             {/* ALERTA VISUAL DE EMPILHAMENTO DE INSULINA (IOB) */}
             {filhoAtivo.alerta_empilhamento && (
-              <div
-                style={{
-                  backgroundColor: '#FFF4E5',
-                  border: '1.5px solid #C88D2A',
-                  borderRadius: '14px',
-                  padding: '1.25rem 1.5rem',
-                  marginBottom: '1.75rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '1rem',
-                  boxShadow: '0 4px 16px rgba(200, 141, 42, 0.08)',
-                }}
-              >
-                <div style={{ fontSize: '1.8rem', lineHeight: 1 }}>⚠️</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontWeight: 800, color: '#8A5D10', fontSize: '0.98rem' }}>
-                      Alerta de Segurança: Insulina Ativa ({filhoAtivo.alerta_empilhamento.iob_ativa} UI)
-                    </span>
-                    <span
-                      style={{
-                        backgroundColor: '#8A5D10',
-                        color: '#FFFFFF',
-                        borderRadius: '6px',
-                        padding: '1px 6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Prevenção de Empilhamento
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.88rem', color: '#2E2824', margin: 0, lineHeight: 1.5 }}>
+              <div style={{ marginBottom: '1.75rem' }}>
+                <Alert variant="warning">
+                  <AlertTitle>
+                    Alerta de Segurança: Insulina Ativa ({filhoAtivo.alerta_empilhamento.iob_ativa} UI) — Prevenção de Empilhamento
+                  </AlertTitle>
+                  <AlertDescription>
                     {filhoAtivo.alerta_empilhamento.mensagem}
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
               </div>
             )}
 
@@ -1103,6 +1092,30 @@ export default function PainelCuidador() {
                       onChange={(e) => setFormGlicemia({ ...formGlicemia, fator_contexto: e.target.value })}
                     />
                   </div>
+
+                  {/* ALERTA DE HIPOGLICEMIA (< 70 mg/dL) */}
+                  {Number(formGlicemia.valor_mg_dl) > 0 && Number(formGlicemia.valor_mg_dl) < 70 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <Alert variant="destructive">
+                        <AlertTitle>Glicemia Baixa (&lt; 70 mg/dL) — Atenção Imediata</AlertTitle>
+                        <AlertDescription>
+                          Aplicar a <strong>Regra dos 15g</strong> imediatamente: ofertar 15g de carboidrato de rápida absorção (1 sachê de mel, 150ml de suco integral ou 1 colher de sopa de açúcar na água). Aguarde 15 minutos em repouso e meça novamente.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
+
+                  {/* ALERTA DE INSULINA ATIVA (IOB) */}
+                  {filhoAtivo.iob_ativa > 0 && Number(formGlicemia.dose_insulina) > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <Alert variant="warning">
+                        <AlertTitle>Atenção: Insulina Ativa em Circulação ({filhoAtivo.iob_ativa} UI)</AlertTitle>
+                        <AlertDescription>
+                          {filhoAtivo.nome_crianca} ainda possui {filhoAtivo.iob_ativa} UI de insulina ativa no organismo. Administrar uma nova dose agora eleva o risco de hipoglicemia por empilhamento de doses.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
 
                   <Button
                     variante="primario"
@@ -1481,18 +1494,38 @@ export default function PainelCuidador() {
                           <span style={{ fontWeight: 800, color: '#2E2824', fontSize: '0.94rem' }}>
                             {al.substancia_ou_item}
                           </span>
-                          <span
-                            style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              borderRadius: '6px',
-                              padding: '2px 8px',
-                              backgroundColor: al.gravidade === 'GRAVE' ? '#F8D7DA' : al.gravidade === 'MODERADA' ? '#FFF3CD' : '#D1E7DD',
-                              color: al.gravidade === 'GRAVE' ? '#842029' : al.gravidade === 'MODERADA' ? '#856404' : '#0F5132',
-                            }}
-                          >
-                            {al.gravidade} • {al.categoria}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                borderRadius: '6px',
+                                padding: '2px 8px',
+                                backgroundColor: al.gravidade === 'GRAVE' ? '#F8D7DA' : al.gravidade === 'MODERADA' ? '#FFF3CD' : '#D1E7DD',
+                                color: al.gravidade === 'GRAVE' ? '#842029' : al.gravidade === 'MODERADA' ? '#856404' : '#0F5132',
+                              }}
+                            >
+                              {al.gravidade} • {al.categoria}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverAlergia(al.id, al.substancia_ou_item)}
+                              title="Remover alergia"
+                              aria-label={`Remover alergia ${al.substancia_ou_item}`}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#C94A38',
+                                fontSize: '0.85rem',
+                                padding: '2px 4px',
+                                borderRadius: '4px',
+                                lineHeight: 1,
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                         <p style={{ fontSize: '0.84rem', color: '#5A5049', margin: 0, lineHeight: 1.45 }}>
                           {al.reacao_observada || 'Reação clínica observada em episódios anteriores.'}

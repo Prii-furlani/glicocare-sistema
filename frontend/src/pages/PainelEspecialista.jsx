@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/ToastContext';
 import Button from '../components/Button';
 import CustomSelect from '../components/CustomSelect';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
@@ -35,6 +36,7 @@ const EXAMES_SUGERIDOS_ESPECIALISTA = [
 export default function PainelEspecialista() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const notificar = useNotify();
 
   // Aba principal do workspace: 'agenda', 'pacientes', 'horarios'
   const [abaPrincipal, setAbaPrincipal] = useState('agenda');
@@ -687,7 +689,7 @@ export default function PainelEspecialista() {
   const handleEmitirGuiaOficial = async (e) => {
     e.preventDefault();
     if (!tituloGuia.trim() || examesEscolhidos.length === 0) {
-      alert('Informe o título e ao menos um exame.');
+      notificar.aviso('Informe o título e ao menos um exame.');
       return;
     }
 
@@ -730,7 +732,7 @@ export default function PainelEspecialista() {
   const handleSalvarAdendo = async (e) => {
     e.preventDefault();
     if (!textoNovoAdendo.trim()) {
-      alert('Preencha o conteúdo do adendo clínico.');
+      notificar.aviso('Preencha o conteúdo do adendo clínico.');
       return;
     }
 

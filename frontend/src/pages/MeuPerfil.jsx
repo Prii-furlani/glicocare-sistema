@@ -18,6 +18,9 @@ import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoComparti
 import ModalTCLE from '../components/ModalTCLE';
 import CustomSelect from '../components/CustomSelect';
 import GlicoLoader from '../components/GlicoLoader';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
+import { useNotify } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { useAuth } from '../context/AuthContext';
 import { FEATURES } from '../config/features';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
@@ -88,6 +91,8 @@ export default function MeuPerfil() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const { usuario, token } = useAuth();
+  const notificar = useNotify();
+  const { confirmar } = useConfirm();
 
   // Controle de abas principais (Diário de Glicemia vs Central de Exames)
   const [abaAtiva, setAbaAtiva] = useState(queryParams.get('aba') === 'exames' ? 'exames' : 'diario');
@@ -342,13 +347,15 @@ export default function MeuPerfil() {
    * Revogação voluntária do TCLE (CFM nº 2.314/2022 & LGPD)
    */
   const handleRevogarTCLE = async () => {
-    if (
-      !window.confirm(
-        'Tem certeza que deseja revogar seu Termo de Consentimento Livre e Esclarecido (TCLE) para Teleassistência? Para futuras teleconsultas, você precisará formalizar um novo termo anual.'
-      )
-    ) {
-      return;
-    }
+    const aceitou = await confirmar({
+      titulo: 'Revogar Termo de Consentimento (TCLE)?',
+      descricao: 'Tem certeza que deseja revogar seu TCLE para Teleassistência? Para futuras teleconsultas, será necessário formalizar um novo termo anual.',
+      confirmText: 'Sim, revogar',
+      cancelText: 'Manter termo ativo',
+      variante: 'destructive',
+    });
+    if (!aceitou) return;
+
     setRevogandoTCLE(true);
     try {
       const resp = await fetch('/backend/api/agendamentos/verificar_tcle.php', {
@@ -358,13 +365,13 @@ export default function MeuPerfil() {
       });
       const json = await resp.json();
       if (json.sucesso) {
-        alert('Seu Termo de Consentimento foi revogado com sucesso.');
+        notificar.sucesso('Seu Termo de Consentimento foi revogado com sucesso.', 'TCLE Atualizado');
         setDadosTCLE((prev) => ({ ...prev, ativo: false, status: 'REVOGADO' }));
       } else {
-        alert(json.mensagem || 'Não foi possível revogar o termo.');
+        notificar.erro(json.mensagem || 'Não foi possível revogar o termo.', 'Falha');
       }
     } catch {
-      alert('Seu Termo de Consentimento foi revogado com sucesso.');
+      notificar.sucesso('Seu Termo de Consentimento foi revogado localmente.', 'TCLE Atualizado');
       setDadosTCLE((prev) => ({ ...prev, ativo: false, status: 'REVOGADO' }));
     } finally {
       setRevogandoTCLE(false);
@@ -486,9 +493,10 @@ export default function MeuPerfil() {
 
       setPerfilSaude(perfilAtualizado);
       localStorage.setItem('glicocare_perfil_saude', JSON.stringify(perfilAtualizado));
+      notificar.sucesso('Parâmetros clínicos salvos com segurança.', 'Configuração Salva');
       setModalConfigClinicaAberta(false);
     } catch (err) {
-      alert('Não foi possível salvar os parâmetros.');
+      notificar.erro('Não foi possível salvar os parâmetros clínicos.', 'Erro');
     } finally {
       setSalvandoConfigClinica(false);
     }
@@ -561,8 +569,9 @@ export default function MeuPerfil() {
         localStorage.setItem('glicocare_glicemia_registros', JSON.stringify(atualizados));
         return atualizados;
       });
+      notificar.sucesso(`Medição de ${v} mg/dL registrada no seu diário com sucesso!`, 'Glicemia Registrada');
     } catch (err) {
-      alert(err.message || 'Erro ao registrar medição.');
+      notificar.erro(err.message || 'Erro ao registrar medição.', 'Falha');
     } finally {
       setSalvandoRegistro(false);
     }
@@ -572,7 +581,15 @@ export default function MeuPerfil() {
    * Exclui um registro do histórico
    */
   const handleExcluirRegistro = async (id) => {
-    if (!window.confirm('Tem certeza de que deseja remover esta anotação do seu diário?')) return;
+    const aceitou = await confirmar({
+      titulo: 'Remover esta anotação?',
+      descricao: 'Tem certeza de que deseja remover esta anotação do seu diário glicêmico?',
+      confirmText: 'Sim, remover',
+      cancelText: 'Cancelar',
+      variante: 'destructive',
+    });
+    if (!aceitou) return;
+
     try {
       try {
         await fetch(`/backend/api/glicemia/index.php?id=${id}`, {
@@ -586,8 +603,9 @@ export default function MeuPerfil() {
         localStorage.setItem('glicocare_glicemia_registros', JSON.stringify(filtrados));
         return filtrados;
       });
+      notificar.sucesso('Anotação removida com sucesso.', 'Diário Atualizado');
     } catch (e) {
-      alert('Erro ao excluir anotação.');
+      notificar.erro('Não foi possível excluir a anotação.', 'Erro');
     }
   };
 
@@ -1611,6 +1629,26 @@ export default function MeuPerfil() {
               </div>
             </div>
           )}
+
+          {/* INÍCIO BLOCO DE ALERTAS CLÍNICOS AUTOMÁTICOS (SHADCN ALERT) */}
+          {valorGlicemia && parseInt(valorGlicemia, 10) > 0 && parseInt(valorGlicemia, 10) < 70 && (
+            <Alert variant="destructive">
+              <AlertTitle>Hipoglicemia Identificada ({valorGlicemia} mg/dL)</AlertTitle>
+              <AlertDescription>
+                Respire fundo: aplique a <strong>Regra dos 15</strong>. Ofereça 15g de carboidrato simples de ação rápida (150ml de suco ou sachê de glicose) e aguarde 15 minutos em repouso antes de medir novamente.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {infoIOB.iobTotal > 0 && doseInsulina && parseFloat(doseInsulina) > 0 && (
+            <Alert variant="warning">
+              <AlertTitle>Insulina Ativa (IOB) em Ação: {infoIOB.iobTotal.toFixed(1)} UI</AlertTitle>
+              <AlertDescription>
+                Você ainda possui insulina da aplicação anterior agindo no organismo (tempo restante estimado: ~{infoIOB.textoExpiracao}). Ao aplicar mais {doseInsulina} UI, atente-se ao risco de empilhamento de doses.
+              </AlertDescription>
+            </Alert>
+          )}
+          {/* FIM BLOCO DE ALERTAS CLÍNICOS AUTOMÁTICOS */}
 
           {/* Formulário Rápido de Registro */}
           <form onSubmit={handleRegistrarGlicemia} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

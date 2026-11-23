@@ -17,6 +17,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/ToastContext';
 import Button from '../components/Button';
 import ModalTCLE from '../components/ModalTCLE';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
@@ -37,6 +38,7 @@ export default function SalaTeleconsulta() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const notificar = useNotify();
 
   // Estados principais da sala e backend
   const [carregando, setCarregando] = useState(true);
@@ -585,7 +587,7 @@ export default function SalaTeleconsulta() {
   const handleSalvarProntuario = async (e) => {
     e.preventDefault();
     if (!queixaPrincipal.trim() || !condutaOrientacoes.trim()) {
-      alert('Por favor, preencha a Queixa Principal e as Condutas/Orientações antes de concluir.');
+      notificar.aviso('Por favor, preencha a Queixa Principal e as Condutas/Orientações antes de concluir.');
       return;
     }
 
@@ -632,7 +634,7 @@ export default function SalaTeleconsulta() {
   const handleSalvarSolicitacaoExames = async (e) => {
     e.preventDefault();
     if (!tituloPedidoExame.trim() || examesSelecionados.length === 0) {
-      alert('Informe o título do pedido e selecione pelo menos um exame para compor a guia médica.');
+      notificar.aviso('Informe o título do pedido e selecione pelo menos um exame para compor a guia médica.');
       return;
     }
 

@@ -18,16 +18,19 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useNotify } from '../context/ToastContext';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import lufyMascote from '../assets/lufy-mascote.jpg';
 import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 
 /* INÍCIO DO COMPONENTE DA PÁGINA DE LOGIN */
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const notificar = useNotify();
 
   /* INÍCIO DOS ESTADOS DO FORMULÁRIO */
   // E-mail inserido pelo usuário
@@ -195,6 +198,7 @@ export default function Login() {
         }
 
         setMensagemSucesso(mensagem || 'Login realizado com sucesso!');
+        notificar.sucesso(mensagem || 'Que bom ter você de volta!', 'Acesso Autorizado');
 
         // Redireciona para o painel correspondente ao perfil logado (RN-ACC-01)
         const perfilLogado = dados?.usuario?.tipo_usuario || dados?.usuario?.tipo_perfil;
@@ -210,7 +214,9 @@ export default function Login() {
         }, 750);
       }
     } catch (err) {
-      setMensagemErro('Não foi possível conectar ao servidor de login no momento. Tente novamente em instantes.');
+      const msgErro = 'Não foi possível conectar ao servidor de login no momento. Tente novamente em instantes.';
+      setMensagemErro(msgErro);
+      notificar.erro(msgErro, 'Falha no Acesso');
     } finally {
       setCarregando(false);
     }
@@ -546,80 +552,42 @@ export default function Login() {
         {/* FIM DO SELETOR DE CONTAS */}
 
         {/* ==================================================================
-            MENSAGENS DE FEEDBACK (ERRO, SUCESSO E AVISO DE ESPECIALISTA)
+            MENSAGENS DE FEEDBACK VIA SHADCN/UI ALERT PORTUGUÊS (PORTO SEGURO)
             ================================================================== */}
         {mensagemErro && (
-          <div
-            style={{
-              backgroundColor: '#FBEBEB',
-              border: '1px solid #E4B5B5',
-              color: '#842029',
-              borderRadius: '8px',
-              padding: '0.85rem 1rem',
-              marginBottom: '1.25rem',
-              fontSize: '0.88rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span>⚠️</span>
-            <span>{mensagemErro}</span>
-          </div>
+          <Alert variant="destructive" onClose={() => setMensagemErro('')}>
+            <AlertTitle>Não foi possível acessar</AlertTitle>
+            <AlertDescription>{mensagemErro}</AlertDescription>
+          </Alert>
         )}
 
         {mensagemSucesso && (
-          <div
-            style={{
-              backgroundColor: '#EDF7EE',
-              border: '1px solid #B8E2BE',
-              color: '#1E4620',
-              borderRadius: '8px',
-              padding: '0.85rem 1rem',
-              marginBottom: '1.25rem',
-              fontSize: '0.88rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span>✓</span>
-            <span>{mensagemSucesso}</span>
-          </div>
+          <Alert variant="success" onClose={() => setMensagemSucesso('')}>
+            <AlertTitle>Acesso Seguro</AlertTitle>
+            <AlertDescription>{mensagemSucesso}</AlertDescription>
+          </Alert>
         )}
 
         {avisoEspecialistaPendente && (
-          <div
-            style={{
-              backgroundColor: '#FFF8E6',
-              border: '1px solid #F5DCA3',
-              color: '#7C533F',
-              borderRadius: '10px',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              fontSize: '0.88rem',
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>📋</span>
-              <span>Cadastro em Processo de Moderação:</span>
-            </div>
-            <p style={{ margin: 0 }}>{avisoEspecialistaPendente}</p>
-            <div style={{ marginTop: '0.75rem' }}>
-              <Link
-                to="/credenciamento"
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  color: '#3B7E48',
-                  textDecoration: 'underline',
-                }}
-              >
-                Acompanhar status do meu credenciamento →
-              </Link>
-            </div>
-          </div>
+          <Alert variant="warning">
+            <AlertTitle>Cadastro em Processo de Moderação</AlertTitle>
+            <AlertDescription>
+              {avisoEspecialistaPendente}
+              <div style={{ marginTop: '0.5rem' }}>
+                <Link
+                  to="/credenciamento"
+                  style={{
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: 'var(--cor-cta)',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Acompanhar status do meu credenciamento →
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* ==================================================================
