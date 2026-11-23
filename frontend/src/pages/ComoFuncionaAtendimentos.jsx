@@ -13,6 +13,8 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FEATURES } from '../config/features';
+import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
 
 /* Ícones SVG embutidos para máxima fidelidade e leveza */
 function IconeBusca() {
@@ -95,6 +97,16 @@ function IconeChevron({ aberto }) {
 }
 
 export default function ComoFuncionaAtendimentos() {
+  /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+  if (!FEATURES.TELEMEDICINA_ATIVA) {
+    return (
+      <EmPreparacaoLufy
+        tituloCustomizado="Estamos estruturando o modelo acolhedor de teleatendimentos."
+      />
+    );
+  }
+  /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
   // Controle de abertura do FAQ em accordion
   const [faqAberto, setFaqAberto] = useState(null);
 

@@ -18,6 +18,7 @@ import ResumoHistoricoCompartilhavel from '../components/ResumoHistoricoComparti
 import ModalTCLE from '../components/ModalTCLE';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
+import { FEATURES } from '../config/features';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import {
   calcularInsulinaAtiva,
@@ -796,20 +797,22 @@ export default function MeuPerfil() {
             SELO DISCRETO DE TCLE TELEASSISTÊNCIA ANUAL (CFM 2.314/2022 & LGPD)
             Mostra vigência anual de 12 meses, PDF e ações de renovar ou revogar
             ================================================================== */}
-        <div
-          style={{
-            backgroundColor: '#F6F3EE',
-            border: '1px solid rgba(124, 83, 63, 0.2)',
-            borderRadius: '16px',
-            padding: '1rem 1.4rem',
-            boxShadow: '0 2px 8px rgba(46, 40, 36, 0.03)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}
-        >
+        {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+        {FEATURES.TELEMEDICINA_ATIVA && (
+          <div
+            style={{
+              backgroundColor: '#F6F3EE',
+              border: '1px solid rgba(124, 83, 63, 0.2)',
+              borderRadius: '16px',
+              padding: '1rem 1.4rem',
+              boxShadow: '0 2px 8px rgba(46, 40, 36, 0.03)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div
               style={{
@@ -945,6 +948,8 @@ export default function MeuPerfil() {
             )}
           </div>
         </div>
+      )}
+      {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
         {/* ==================================================================
             FAIXA DE SEGURANÇA CLÍNICA: ALERGIAS & SENSIBILIDADES (RN-ALE-01)
@@ -1935,19 +1940,22 @@ export default function MeuPerfil() {
           usuario={usuario}
         />
 
-        {/* Modal de Termo de Consentimento Livre e Esclarecido (TCLE Anual) */}
-        <ModalTCLE
-          aberto={modalTCLEAberta}
-          onFechar={() => setModalTCLEAberta(false)}
-          agendamentoId={1}
-          modoForcado={modoForcadoTCLE}
-          usuario={usuario}
-          perfilSaude={perfilSaude}
-          onSucessoAssinatura={() => {
-            setModalTCLEAberta(false);
-            carregarStatusTCLE(perfilSaude?.id);
-          }}
-        />
+        {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+        {FEATURES.TELEMEDICINA_ATIVA && (
+          <ModalTCLE
+            aberto={modalTCLEAberta}
+            onFechar={() => setModalTCLEAberta(false)}
+            agendamentoId={1}
+            modoForcado={modoForcadoTCLE}
+            usuario={usuario}
+            perfilSaude={perfilSaude}
+            onSucessoAssinatura={() => {
+              setModalTCLEAberta(false);
+              carregarStatusTCLE(perfilSaude?.id);
+            }}
+          />
+        )}
+        {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
       </div>
     </div>
   );

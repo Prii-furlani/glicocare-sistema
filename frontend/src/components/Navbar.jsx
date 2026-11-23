@@ -24,6 +24,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import Button from './Button';
 import { useAuth } from '../context/AuthContext';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DO COMPONENTE NAVBAR */
 export default function Navbar() {
@@ -46,9 +47,11 @@ export default function Navbar() {
     if (p === 'admin' || p === 'admin_moderador') {
       return { rota: '/admin', badge: 'Painel Admin', icone: '🛡️', rotulo: 'Painel Admin', ehAdmin: true };
     }
-    if (p === 'especialista') {
+    /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+    if (FEATURES.TELEMEDICINA_ATIVA && p === 'especialista') {
       return { rota: '/painel-especialista', badge: 'Especialista', icone: '🩺', rotulo: 'Meu Painel', ehAdmin: false };
     }
+    /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
     if (p === 'cuidador') {
       return { rota: '/painel-cuidador', badge: 'Cuidador', icone: '🤝', rotulo: 'Painel do Cuidador', ehAdmin: false };
     }
@@ -178,26 +181,34 @@ export default function Navbar() {
           >
             Conteúdos
           </a>
-          <Link
-            to="/especialistas"
-            className={`gc-navbar__link ${
-              location.pathname.startsWith('/especialistas')
-                ? 'gc-navbar__link--ativo'
-                : ''
-            }`}
-          >
-            Especialistas
-          </Link>
-          <Link
-            to="/como-funciona-atendimentos"
-            className={`gc-navbar__link ${
-              location.pathname === '/como-funciona-atendimentos'
-                ? 'gc-navbar__link--ativo'
-                : ''
-            }`}
-          >
-            Como Funciona
-          </Link>
+
+          {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+          {FEATURES.TELEMEDICINA_ATIVA && (
+            <>
+              <Link
+                to="/especialistas"
+                className={`gc-navbar__link ${
+                  location.pathname.startsWith('/especialistas')
+                    ? 'gc-navbar__link--ativo'
+                    : ''
+                }`}
+              >
+                Especialistas
+              </Link>
+              <Link
+                to="/como-funciona-atendimentos"
+                className={`gc-navbar__link ${
+                  location.pathname === '/como-funciona-atendimentos'
+                    ? 'gc-navbar__link--ativo'
+                    : ''
+                }`}
+              >
+                Como Funciona
+              </Link>
+            </>
+          )}
+          {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
+
           <a
             href="/#faq"
             onClick={(e) => handleNavegarSecaoSuave(e, 'faq')}
@@ -352,23 +363,29 @@ export default function Navbar() {
                 <span aria-hidden="true">→</span>
               </a>
 
-              <Link
-                to="/especialistas"
-                onClick={() => setDrawerOpen(false)}
-                className="gc-navbar__mobile-link"
-              >
-                <span>Especialistas</span>
-                <span aria-hidden="true">→</span>
-              </Link>
+              {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <>
+                  <Link
+                    to="/especialistas"
+                    onClick={() => setDrawerOpen(false)}
+                    className="gc-navbar__mobile-link"
+                  >
+                    <span>Especialistas</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
 
-              <Link
-                to="/como-funciona-atendimentos"
-                onClick={() => setDrawerOpen(false)}
-                className="gc-navbar__mobile-link"
-              >
-                <span>Como Funciona o Atendimento</span>
-                <span aria-hidden="true">→</span>
-              </Link>
+                  <Link
+                    to="/como-funciona-atendimentos"
+                    onClick={() => setDrawerOpen(false)}
+                    className="gc-navbar__mobile-link"
+                  >
+                    <span>Como Funciona o Atendimento</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                </>
+              )}
+              {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
               <a
                 href="/#planos"

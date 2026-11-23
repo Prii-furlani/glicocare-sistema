@@ -263,7 +263,8 @@ export default function ConfigurarPerfil() {
       localStorage.setItem('glicocare_alergias', JSON.stringify(payload.alergias));
 
       atualizarUsuario({ perfil_configurado: true, nome_completo: nomeCompleto });
-      navigate('/meu-perfil');
+      const destinoFinal = usuario?.tipo_usuario === 'cuidador' ? '/painel-cuidador' : '/meu-perfil';
+      navigate(destinoFinal);
     } catch (err) {
       setMensagemStatus({ tipo: 'erro', texto: err.message || 'Erro ao salvar perfil.' });
       setSalvando(false);

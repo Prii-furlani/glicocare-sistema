@@ -46,7 +46,8 @@ export default function BoasVindas() {
     } catch (e) {
       // Ignora falha de rede e prossegue normalmente
     }
-    navigate('/meu-perfil');
+    const destinoDepois = usuario?.tipo_usuario === 'cuidador' ? '/painel-cuidador' : '/meu-perfil';
+    navigate(destinoDepois);
   };
 
   return (

@@ -21,6 +21,8 @@ import { agendamentosService } from '../services/api';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import ModalTCLE from '../components/ModalTCLE';
+import { FEATURES } from '../config/features';
+import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
 
 /* INÍCIO DOS DADOS DETALHADOS DOS 4 ESPECIALISTAS DA REDE GLICOCARE */
 const PERFIS_DETALHADOS_REDE = {
@@ -219,6 +221,16 @@ const PERFIS_DETALHADOS_REDE = {
 
 /* INÍCIO DA PÁGINA DE PERFIL DO ESPECIALISTA */
 export default function PerfilEspecialista() {
+  /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+  if (!FEATURES.TELEMEDICINA_ATIVA) {
+    return (
+      <EmPreparacaoLufy
+        tituloCustomizado="Os perfis e agendamentos de especialistas estão em preparação com carinho."
+      />
+    );
+  }
+  /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
   const { id } = useParams();
   const idNum = Number(id) || 2;
   const profissional =

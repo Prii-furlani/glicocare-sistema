@@ -28,6 +28,19 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 $database = new Database();
 $db = $database->getConnection();
 
+/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (TRAVA DE SEGURANÇA FASE 1) */
+$telemedicinaAtiva = filter_var($_ENV['TELEMEDICINA_ATIVA'] ?? getenv('TELEMEDICINA_ATIVA') ?? 'false', FILTER_VALIDATE_BOOLEAN);
+if (!$telemedicinaAtiva) {
+    http_response_code(503);
+    echo json_encode([
+        'sucesso' => false,
+        'fase' => 'fase_1',
+        'mensagem' => 'O módulo de teleatendimentos e consultas online do GlicoCare está em fase de preparação com carinho no tom do Lufy e será liberado na Fase 2.'
+    ]);
+    exit;
+}
+/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
 $token = trim($_GET['token'] ?? '');
 if (empty($token)) {
     http_response_code(400);

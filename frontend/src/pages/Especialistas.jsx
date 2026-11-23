@@ -17,6 +17,8 @@ import { Link } from 'react-router-dom';
 import CardEspecialista from '../components/CardEspecialista';
 import CustomSelect from '../components/CustomSelect';
 import { REDE_ESPECIALISTAS } from './Home';
+import { FEATURES } from '../config/features';
+import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
 
 /* INÍCIO DAS LISTAS DE FILTROS AVANÇADOS DO MARKETPLACE */
 const ESPECIALIDADES_FILTRO = [
@@ -40,6 +42,16 @@ const TAGS_FOCO_DISPONIVEIS = [
 
 /* INÍCIO DA PÁGINA DE LISTAGEM DE ESPECIALISTAS */
 export default function Especialistas() {
+  /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+  if (!FEATURES.TELEMEDICINA_ATIVA) {
+    return (
+      <EmPreparacaoLufy
+        tituloCustomizado="Estamos preparando nossa Rede de Especialistas com carinho."
+      />
+    );
+  }
+  /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
   // Estados dos 3 filtros combinados do topo
   const [buscaNome, setBuscaNome] = useState('');
   const [especialidadeAtiva, setEspecialidadeAtiva] = useState('Todos');

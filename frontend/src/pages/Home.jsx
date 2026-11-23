@@ -15,6 +15,8 @@ import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
 import CardConteudo from '../components/CardConteudo';
 import CardEspecialista from '../components/CardEspecialista';
 import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
+import CapaEditorialDefault from '../components/CapaEditorialDefault';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DOS DADOS ESTRUTURADOS FIÉIS ÀS IMAGENS DO PROTÓTIPO */
 
@@ -257,7 +259,11 @@ export default function Home() {
     cta_final_botao: 'Conheça nossos planos e comece hoje',
   });
 
+  // Lista de artigos publicados (carregados dinamicamente com fallback editorial)
+  const [artigosLista, setArtigosLista] = useState(ARTIGOS_BIBLIOTECA);
+
   useEffect(() => {
+    // 1. Carrega textos e imagens configuradas do CMS da Home
     fetch('/backend/api/publico/home_config.php')
       .then((res) => res.json())
       .then((resJson) => {
@@ -268,10 +274,36 @@ export default function Home() {
       .catch((err) => {
         console.warn('CMS Dinâmico utilizando fallback padrão:', err);
       });
+
+    // 2. Carrega artigos publicados do banco de dados (artigos_conteudos)
+    fetch('/backend/api/artigos/index.php')
+      .then((res) => res.json())
+      .then((resJson) => {
+        if (resJson && resJson.sucesso && Array.isArray(resJson.dados) && resJson.dados.length > 0) {
+          const artigosNormalizados = resJson.dados.map((a, idx) => ({
+            id: a.id,
+            slug: a.slug,
+            seloSuperior: a.selo_editorial || 'GUIA ESSENCIAL',
+            imagemCapa: a.imagem_capa_url || null,
+            numeroEditorial: String(idx + 1).padStart(2, '0'),
+            corTopo: a.cor_capa_default || 'terracota',
+            iconeCategoria: a.categoria === 'Rotina Escolar' ? '🏫' : (a.categoria === 'Tecnologia & Autonomia' ? '💡' : '🐾'),
+            categoria: a.categoria,
+            tempoLeitura: `${a.tempo_leitura_min || 6} min de leitura`,
+            titulo: a.titulo,
+            resumo: a.resumo,
+            destaqueSetaSolida: idx === 0,
+          }));
+          setArtigosLista(artigosNormalizados);
+        }
+      })
+      .catch((err) => {
+        console.warn('Biblioteca de Conteúdos utilizando acervo editorial inicial:', err);
+      });
   }, []);
 
   // Filtra os artigos exibidos na grade Desktop / Feed Vertical Mobile
-  const artigosExibidos = ARTIGOS_BIBLIOTECA.filter(
+  const artigosExibidos = artigosLista.filter(
     (art) => filtroBiblioteca === 'Todos' || art.categoria === filtroBiblioteca
   );
 
@@ -1013,66 +1045,69 @@ export default function Home() {
       {/* FIM DA SEÇÃO DE CONTEÚDOS HÍBRIDA */}
 
       {/* =====================================================================
-          5. INÍCIO DA SEÇÃO "REDE DE ESPECIALISTAS GLICOCARE"
+          5. SEÇÃO "REDE DE ESPECIALISTAS GLICOCARE" (FASE 2)
           ===================================================================== */}
-      <section
-        id="especialistas-home"
-        className="section-spacing"
-        style={{
-          backgroundColor: 'var(--cor-superficie)',
-          borderTop: '1px solid var(--cor-borda-suave)',
-        }}
-      >
-        <div className="container">
-          <div style={{ maxWidth: 680, marginBottom: '2.5rem' }}>
-            <div className="section-line-eyebrow">
-              REDE DE ESPECIALISTAS GLICOCARE
+      {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+      {FEATURES.TELEMEDICINA_ATIVA && (
+        <section
+          id="especialistas-home"
+          className="section-spacing"
+          style={{
+            backgroundColor: 'var(--cor-superficie)',
+            borderTop: '1px solid var(--cor-borda-suave)',
+          }}
+        >
+          <div className="container">
+            <div style={{ maxWidth: 680, marginBottom: '2.5rem' }}>
+              <div className="section-line-eyebrow">
+                REDE DE ESPECIALISTAS GLICOCARE
+              </div>
+              <h2 style={{ marginBottom: '1rem' }}>
+                Um cuidado que conversa{' '}
+                <span className="texto-italico-terracota">entre si.</span>
+              </h2>
+              <p
+                style={{
+                  fontSize: '1.08rem',
+                  color: 'var(--cor-texto-suave)',
+                  marginBottom: '1.65rem',
+                }}
+              >
+                Profissionais verificados para apoiar diferentes dimensões da
+                rotina com DM1 — com escuta, clareza e atendimento online.
+              </p>
+
+              <Link
+                to="/especialistas"
+                className="gc-btn gc-btn--contorno-verde"
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                <span>Ver rede completa</span>
+                <span aria-hidden="true">↗</span>
+              </Link>
             </div>
-            <h2 style={{ marginBottom: '1rem' }}>
-              Um cuidado que conversa{' '}
-              <span className="texto-italico-terracota">entre si.</span>
-            </h2>
-            <p
-              style={{
-                fontSize: '1.08rem',
-                color: 'var(--cor-texto-suave)',
-                marginBottom: '1.65rem',
-              }}
-            >
-              Profissionais verificados para apoiar diferentes dimensões da
-              rotina com DM1 — com escuta, clareza e atendimento online.
-            </p>
 
-            <Link
-              to="/especialistas"
-              className="gc-btn gc-btn--contorno-verde"
-              style={{ padding: '0.75rem 1.5rem' }}
-            >
-              <span>Ver rede completa</span>
-              <span aria-hidden="true">↗</span>
-            </Link>
+            <div className="grid-2-colunas">
+              {REDE_ESPECIALISTAS.map((prof) => (
+                <CardEspecialista
+                  key={prof.id}
+                  id={prof.id}
+                  nome={prof.nome}
+                  especialidade={prof.especialidade}
+                  conselho={prof.conselho}
+                  nota={prof.nota}
+                  totalAvaliacoes={prof.totalAvaliacoes}
+                  fotoUrl={prof.fotoUrl}
+                  valorConsulta={prof.valorConsulta}
+                  ofereceRetornoIncluso={prof.ofereceRetornoIncluso}
+                  prazoRetornoDias={prof.prazoRetornoDias}
+                />
+              ))}
+            </div>
           </div>
-
-          <div className="grid-2-colunas">
-            {REDE_ESPECIALISTAS.map((prof) => (
-              <CardEspecialista
-                key={prof.id}
-                id={prof.id}
-                nome={prof.nome}
-                especialidade={prof.especialidade}
-                conselho={prof.conselho}
-                nota={prof.nota}
-                totalAvaliacoes={prof.totalAvaliacoes}
-                fotoUrl={prof.fotoUrl}
-                valorConsulta={prof.valorConsulta}
-                ofereceRetornoIncluso={prof.ofereceRetornoIncluso}
-                prazoRetornoDias={prof.prazoRetornoDias}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* FIM DA SEÇÃO "REDE DE ESPECIALISTAS GLICOCARE" */}
+        </section>
+      )}
+      {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
       {/* =====================================================================
           6. INÍCIO DA SEÇÃO ESCURA "ESCOLHA SEU PRÓXIMO PASSO — Um só propósito."
@@ -1443,24 +1478,48 @@ export default function Home() {
               ))}
             </ul>
 
-            <Link
-              to="/especialistas"
-              style={{
-                width: '100%',
-                border: '1px solid #5C524B',
-                borderRadius: 'var(--raio-pilula)',
-                padding: '1.05rem 1.6rem',
-                color: 'var(--cor-superficie)',
-                fontWeight: 600,
-                fontSize: '0.95rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>Explorar a curadoria</span>
-              <span aria-hidden="true">↗</span>
-            </Link>
+            {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+            {FEATURES.TELEMEDICINA_ATIVA ? (
+              <Link
+                to="/especialistas"
+                style={{
+                  width: '100%',
+                  border: '1px solid #5C524B',
+                  borderRadius: 'var(--raio-pilula)',
+                  padding: '1.05rem 1.6rem',
+                  color: 'var(--cor-superficie)',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span>Explorar a curadoria</span>
+                <span aria-hidden="true">↗</span>
+              </Link>
+            ) : (
+              <Link
+                to="/conteudos"
+                style={{
+                  width: '100%',
+                  border: '1px solid #5C524B',
+                  borderRadius: 'var(--raio-pilula)',
+                  padding: '1.05rem 1.6rem',
+                  color: 'var(--cor-superficie)',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  textDecoration: 'none',
+                }}
+              >
+                <span>Explorar Guias e Diário</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            )}
+            {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
           </article>
         </div>
       </section>

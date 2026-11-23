@@ -20,8 +20,20 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import ModalTCLE from '../components/ModalTCLE';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
+import { FEATURES } from '../config/features';
+import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
 
 export default function SalaTeleconsulta() {
+  /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+  if (!FEATURES.TELEMEDICINA_ATIVA) {
+    return (
+      <EmPreparacaoLufy
+        tituloCustomizado="A sala de teleconsulta nativa está em preparação com carinho."
+      />
+    );
+  }
+  /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
   const { token } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();

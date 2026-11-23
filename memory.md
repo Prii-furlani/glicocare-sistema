@@ -758,10 +758,56 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
 - **Seletor de Filhos no Topo:** Card acolhedor com dados de Theo Silva (ou outros filhos), botões `+ Adicionar Filho(a)` (com abas de cadastro ou código de convite) e `🔗 Convidar Familiar (Pai/Mãe)`.
 - **5 Abas Estruturadas:**
   1. *🩸 Diário & Insulina Ativa (IOB):* Alerta âmbar/ouro contra empilhamento com dose e horário da última aplicação, formulário rápido com cores imediatas (Verde 70-140, Amarelo 141-180, Terracota >180) e linha do tempo com badges de quem aplicou.
-  2. *🩺 Especialistas & Consultas:* Teleconsultas da criança, status do TCLE anual assinado pelo responsável legal, formulário de Pré-Atendimento e atalho para a sala criptografada `/sala-consulta/:token`.
+  2. *🩺 Especialistas & Consultas (Fase 2 Preservada):* Teleconsultas da criança, status do TCLE anual assinado pelo responsável legal, formulário de Pré-Atendimento e atalho para a sala criptografada `/sala-consulta/:token`.
   3. *🧪 Exames & Alergias:* Destaque de alergias (Dipirona, Adesivos FreeStyle Libre) com nível de gravidade e linha do tempo de exames laboratoriais (HbA1c).
   4. *🏫 Cartão de Cuidado Escolar (PDF):* Visualização limpa para a escola com dados do aluno, contatos diretos dos pais (WhatsApp), sinais de alarme de hipoglicemia, Regra dos 15g de resgate e botão para impressão direta (`window.print()`).
   5. *💬 Meus Comentários & Comunidade:* Histórico de depoimentos enviados pelo cuidador nos guias pedagógicos com status de moderação (`RN-MOD-01`).
+
+---
+
+## 18. Estratégia de Lançamento em Fases (Fase 1 Ativa vs Fase 2 Preservada/Comentada)
+
+### A. Controle Central de Fases & Feature Flags
+- **Arquivo Central (`frontend/src/config/features.js`):**
+  * `export const FEATURES = { TELEMEDICINA_ATIVA: false };`
+  * Permite chavear instantaneamente toda a camada de interface entre o modo de Lançamento Fase 1 e a liberação plena da Fase 2.
+- **Variável de Ambiente no Back-end (`backend/.env` e `backend/.env.example`):**
+  * `TELEMEDICINA_ATIVA=false`
+  * Carregada automaticamente pela classe `Database` via PDO.
+- **Trava de Segurança nos Endpoints PHP (`/backend/api/teleconsulta/*` e `/backend/api/pagamentos/*`):**
+  * Validação atômica de `$_ENV['TELEMEDICINA_ATIVA']`: caso `false`, retorna compulsoriamente código HTTP `503 Service Unavailable` em JSON amigável com `{ "sucesso": false, "fase": "fase_1", "mensagem": "..." }`, prevenindo qualquer consumo inadvertido das rotas de teleconsulta e split Pix antes da homologação ética final.
+
+### B. Componente Acolhedor "Em Preparação com Carinho" (`EmPreparacaoLufy.jsx`)
+- **Identidade Visual "Porto Seguro":** 100% aderente ao Design System GlicoCare, compatível com Tema Claro e Dark Mode, tipografia `Fraunces` + `Plus Jakarta Sans`, avatar do Mascote Lufy com selo FreeStyle Libre e botões em Verde Alívio (`#3B7E48`).
+- **Conteúdo e Tom de Voz Empático do Lufy:**
+  * **Selo Superior:** `EM PREPARAÇÃO COM CARINHO`.
+  * **Título (`Fraunces`):** *"Estamos preparando uma rede que realmente acolhe."*
+  * **Mensagem:** *"Oi, aqui é o Lufy! Respire fundo: estamos cuidando de cada detalhe clínico e ético para conectar você a especialistas que entendem a rotina do diabetes com calma e respeito. Enquanto preparamos esse espaço, nossos conteúdos práticos, seu diário de glicemia e sua central de exames já estão abertos para acompanhar você hoje."*
+- **Roteamento Inteligente de Apoio:**
+  * Botão Primário Verde Alívio: `Explorar Conteúdos e Guias →` (leva a `/conteudos`).
+  * Botão Secundário: `Ir para Meu Cuidado Diário` (direciona para `/painel-cuidador` se cuidador logado, `/meu-perfil` se diabético logado, ou `/cadastro` se visitante).
+- **Rotas Vinculadas:** `/especialistas`, `/especialistas/:id`, `/como-funciona`, `/como-funciona-atendimentos`, `/credenciamento`, `/sala-consulta/:token` e `/atendimento-nativo/:token`.
+
+### C. Os 3 Pilares Ativos da Fase 1
+1. **Pilar 1 — Blog & Biblioteca de Conteúdos + CMS Admin:**
+   * **`Home.jsx`:** Consumo dinâmico da tabela `configuracoes_home` via `/backend/api/publico/home_config.php` e dos artigos publicados em `artigos_conteudos` via `/backend/api/artigos/index.php`. Renderização automática de `<CapaEditorialDefault />` para artigos sem imagem de upload ou com falha de carregamento.
+   * **`ArtigoDetalhe.jsx`:** Layout editorial aberto sobre o bege acolhedor (`#EAE4D9`), barra superior de progresso de leitura fluida, blocos "Respiro do Guardião" e comentários enviados com moderação prévia (`RN-MOD-01`).
+   * **`PainelAdmin.jsx`:** Interface focada nas abas operacionais da Fase 1: *Visão Geral* (com KPIs de famílias, artigos e moderação), *Editar Tela Home (CMS)*, *Biblioteca de Conteúdos* (CRUD com editor de blocos e uploads até 8MB) e *Moderação de Depoimentos & Usuários*.
+2. **Pilar 2 — Criação de Contas & Perfis Especializados (Diabético e Cuidador):**
+   * **`Cadastro.jsx`:** Foco na experiência de onboarding das pessoas com DM1 e cuidadores de crianças.
+   * **`Login.jsx`:** Autenticação segura com direcionamento automático por perfil (`admin` -> `/admin`, `cuidador` -> `/painel-cuidador`, `diabetico` -> `/meu-perfil`).
+   * **`ConfigurarPerfil.jsx`:** Configuração completa com cálculo em linguagem natural do tempo de diagnóstico (`dateUtils.js`), registro estruturado de alergias (`alergias_usuario`), medicamentos ativos e fatores de sensibilidade.
+3. **Pilar 3 — Cuidado Diário:**
+   * **Diário de Glicemia & IOB (`MeuPerfil.jsx` e `glicemiaAnalytics.js`):** Estimativa fisiológica de Insulina Ativa em UI e tempo de expiração, projeção pelo FSI, seta de tendência de velocidade de variação entre destros e alertas contra empilhamento de doses e risco de hipoglicemia.
+   * **Central de Exames (`CentralExames.jsx` e `/backend/api/exames/`):** Upload de PDFs/fotos até 10MB com hash seguro, registro estruturado de marcadores clínicos (HbA1c, glicemia de jejum, vitaminas) e linha do tempo histórica.
+   * **Cartão de Cuidado Escolar (`PainelCuidador.jsx`) & Resumo Histórico (`ResumoHistoricoCompartilhavel.jsx`):** Exportação e impressão rápida (`window.print()`) com orientações de emergência (Regra dos 15g) e resumo médico completo.
+
+### D. Preservação Rigorosa do Código da Fase 2
+- Todos os arquivos, tabelas e regras de negócio da Fase 2 (Marketplace de Especialistas, Agendamentos com Retorno Incluso, Split Financeiro Pix 65/35, Sala de Vídeo Nativa e TCLE CFM 2.314/2022) permanecem integralmente preservados no repositório.
+- Nas interfaces do front-end (`Navbar.jsx`, `Home.jsx`, `MeuPerfil.jsx`, `PainelCuidador.jsx`, `PainelAdmin.jsx`, `Cadastro.jsx`), as seções e chamadas estão delimitadas por blocos comentados explícitos em português:
+  `{/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}`
+  `{/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}`
+
 
 
 

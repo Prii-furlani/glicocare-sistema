@@ -14,6 +14,7 @@ import { cuidadorService } from '../services/api';
 import CustomSelect from '../components/CustomSelect';
 import Button from '../components/Button';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DOS DADOS DEMONSTRATIVOS RESILIENTES (FALLBACK DE ALTA FIDELIDADE) */
 const DEPENDENTE_PADRAO_THEO = {
@@ -741,28 +742,32 @@ export default function PainelCuidador() {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setAbaAtiva('consultas')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px 12px 0 0',
-              border: 'none',
-              backgroundColor: abaAtiva === 'consultas' ? '#FFFFFF' : 'transparent',
-              borderBottom: abaAtiva === 'consultas' ? '3px solid #7C533F' : 'none',
-              color: abaAtiva === 'consultas' ? '#7C533F' : '#5A5049',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>🩺</span>
-            <span>Especialistas & Consultas ({filhoAtivo.consultas?.length || 0})</span>
-          </button>
+          {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+          {FEATURES.TELEMEDICINA_ATIVA && (
+            <button
+              type="button"
+              onClick={() => setAbaAtiva('consultas')}
+              style={{
+                padding: '0.75rem 1.25rem',
+                borderRadius: '12px 12px 0 0',
+                border: 'none',
+                backgroundColor: abaAtiva === 'consultas' ? '#FFFFFF' : 'transparent',
+                borderBottom: abaAtiva === 'consultas' ? '3px solid #7C533F' : 'none',
+                color: abaAtiva === 'consultas' ? '#7C533F' : '#5A5049',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>🩺</span>
+              <span>Especialistas & Consultas ({filhoAtivo.consultas?.length || 0})</span>
+            </button>
+          )}
+          {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
           <button
             type="button"
@@ -1184,9 +1189,10 @@ export default function PainelCuidador() {
         )}
 
         {/* ==================================================================
-            CONTEÚDO DA ABA 2: ESPECIALISTAS & CONSULTAS
+            CONTEÚDO DA ABA 2: ESPECIALISTAS & CONSULTAS (FASE 2)
             ================================================================== */}
-        {abaAtiva === 'consultas' && (
+        {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+        {FEATURES.TELEMEDICINA_ATIVA && abaAtiva === 'consultas' && (
           <div>
             <div
               style={{
@@ -1367,6 +1373,7 @@ export default function PainelCuidador() {
             )}
           </div>
         )}
+        {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
         {/* ==================================================================
             CONTEÚDO DA ABA 3: EXAMES & ALERGIAS DA CRIANÇA

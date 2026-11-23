@@ -9,7 +9,7 @@
      passos numerados individuais, banner escuro do Lufy e seção comunitária em 2 colunas.
    ========================================================================== */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { depoimentosService } from '../services/api';
 import { analisarMensagemModerador } from '../utils/moderadorGlicoCare';
@@ -579,6 +579,20 @@ export default function ArtigoDetalhe() {
   const [mensagem, setMensagem] = useState('');
   const [parecerModeracao, setParecerModeracao] = useState(null);
   const [erroCapa, setErroCapa] = useState(false);
+  const [progressoLeitura, setProgressoLeitura] = useState(0);
+
+  // Monitora a rolagem para a barra de progresso de leitura fluida
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        const progresso = (window.scrollY / totalHeight) * 100;
+        setProgressoLeitura(Math.min(100, Math.max(0, progresso)));
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Verifica se o artigo possui foto válida ou se deve exibir a Capa Editorial Padrão
   const fotoUrl = artigo.imagemCapa || artigo.imagem_capa_url || null;
@@ -615,6 +629,20 @@ export default function ArtigoDetalhe() {
 
   return (
     <div className="pagina-leitura-container">
+      {/* Barra de Progresso de Leitura Fluida */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '4px',
+          width: `${progressoLeitura}%`,
+          backgroundColor: 'var(--cor-cta, #3B7E48)',
+          zIndex: 9999,
+          transition: 'width 0.1s ease-out',
+          boxShadow: '0 1px 4px rgba(59, 126, 72, 0.35)',
+        }}
+      />
       {/* ====================================================================
           1. INÍCIO DO CABEÇALHO EDITORIAL DO ARTIGO (Centralizado, ~820px)
           ==================================================================== */}

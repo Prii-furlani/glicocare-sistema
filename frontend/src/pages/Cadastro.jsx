@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DO COMPONENTE CADASTRO */
 export default function Cadastro() {
@@ -284,38 +285,42 @@ export default function Cadastro() {
                 />
               </div>
 
-              {/* Opção C: Especialista de Saúde */}
-              <div
-                onClick={() => setTipoUsuario('especialista')}
-                style={{
-                  border: tipoUsuario === 'especialista' ? '2px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.2)',
-                  backgroundColor: tipoUsuario === 'especialista' ? '#EAE4D9' : '#FFF',
-                  borderRadius: '12px',
-                  padding: '0.85rem 1rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <span style={{ fontSize: '1.4rem' }}>🩺</span>
-                <div style={{ flex: 1 }}>
-                  <strong style={{ fontSize: '0.92rem', color: '#2E2824', display: 'block' }}>
-                    Especialista de Saúde
-                  </strong>
-                  <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
-                    Sou médico(a), nutri, educador(a) físico ou psicólogo(a) e quero atender famílias.
-                  </span>
+              {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                /* Opção C: Especialista de Saúde */
+                <div
+                  onClick={() => setTipoUsuario('especialista')}
+                  style={{
+                    border: tipoUsuario === 'especialista' ? '2px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.2)',
+                    backgroundColor: tipoUsuario === 'especialista' ? '#EAE4D9' : '#FFF',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '1.4rem' }}>🩺</span>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontSize: '0.92rem', color: '#2E2824', display: 'block' }}>
+                      Especialista de Saúde
+                    </strong>
+                    <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
+                      Sou médico(a), nutri, educador(a) físico ou psicólogo(a) e quero atender famílias.
+                    </span>
+                  </div>
+                  <input
+                    type="radio"
+                    name="perfil_escolha"
+                    checked={tipoUsuario === 'especialista'}
+                    onChange={() => setTipoUsuario('especialista')}
+                    style={{ accentColor: '#3B7E48' }}
+                  />
                 </div>
-                <input
-                  type="radio"
-                  name="perfil_escolha"
-                  checked={tipoUsuario === 'especialista'}
-                  onChange={() => setTipoUsuario('especialista')}
-                  style={{ accentColor: '#3B7E48' }}
-                />
-              </div>
+              )}
+              {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
             </div>
           </div>
 

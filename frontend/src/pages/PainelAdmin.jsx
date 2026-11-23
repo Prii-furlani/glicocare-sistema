@@ -20,6 +20,7 @@ import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
 import familiaCuidadoFoto from '../assets/familia-cuidado.jpg';
 import { ARTIGOS_BIBLIOTECA, REDE_ESPECIALISTAS } from './Home';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL PAINEL ADMIN */
 export default function PainelAdmin() {
@@ -750,10 +751,12 @@ export default function PainelAdmin() {
           aria-label="Abas do Painel Administrativo"
         >
           {[
-            { id: 'visao_geral', label: '📊 Visão Geral & Finanças' },
+            { id: 'visao_geral', label: '📊 Visão Geral' },
             { id: 'cms_home', label: '🎨 Editar Tela Home (CMS)' },
             { id: 'artigos', label: `📚 Biblioteca de Conteúdos (${artigos.length})` },
-            { id: 'especialistas', label: `🩺 Especialistas & Curadoria (${especialistas.length})` },
+            /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+            ...(FEATURES.TELEMEDICINA_ATIVA ? [{ id: 'especialistas', label: `🩺 Especialistas & Curadoria (${especialistas.length})` }] : []),
+            /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
             { id: 'moderacao_usuarios', label: `💬 Moderação & Usuários (${depoimentos.length})` },
           ].map((tab) => {
             const ativa = abaAtiva === tab.id;
@@ -816,7 +819,7 @@ export default function PainelAdmin() {
                 </div>
               </div>
 
-              {/* Card 2 */}
+              {/* Card Fase 1: Biblioteca de Conteúdos */}
               <div
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -827,18 +830,17 @@ export default function PainelAdmin() {
                 }}
               >
                 <div style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Especialistas de Saúde
+                  Artigos & Guias Publicados
                 </div>
                 <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#2E2824', fontFamily: 'var(--fonte-titulo)' }}>
-                  {dashboardData.kpis.especialistas_ativos || 4}{' '}
-                  <span style={{ fontSize: '1rem', color: '#3B7E48', fontWeight: 600 }}>Ativos</span>
+                  {artigos.length || 6}
                 </div>
-                <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
-                  {dashboardData.kpis.especialistas_pendentes || 0} aguardando curadoria de conselho
+                <div style={{ fontSize: '0.82rem', color: '#3B7E48', fontWeight: 600, marginTop: '0.35rem' }}>
+                  Pilar 1 Ativo • Trilha Pedagógica
                 </div>
               </div>
 
-              {/* Card 3 */}
+              {/* Card Fase 1: Moderação Comunitária */}
               <div
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -849,115 +851,168 @@ export default function PainelAdmin() {
                 }}
               >
                 <div style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Teleconsultas na Plataforma
+                  Vozes & Depoimentos
                 </div>
                 <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#2E2824', fontFamily: 'var(--fonte-titulo)' }}>
-                  {dashboardData.kpis.consultas_realizadas || 8}
+                  {depoimentos.length || 3}
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
-                  {dashboardData.kpis.consultas_agendadas || 3} agendadas para os próximos dias
+                  Moderação ética ativa (RN-MOD-01)
                 </div>
               </div>
 
-              {/* Card 4 (Finanças e Split) */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  border: '1px solid rgba(59, 126, 72, 0.3)',
-                  boxShadow: '0 4px 16px rgba(59, 126, 72, 0.08)',
-                  background: 'linear-gradient(135deg, #FFFFFF 0%, #F5FBF6 100%)',
-                }}
-              >
-                <div style={{ fontSize: '0.8rem', color: '#3B7E48', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Receita Líquida GlicoCare (35%)
-                </div>
-                <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#1E4620', fontFamily: 'var(--fonte-titulo)' }}>
-                  R$ {Number(dashboardData.split_financeiro.taxa_glicocare_valor || 448).toFixed(2)}
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
-                  De R$ {Number(dashboardData.split_financeiro.total_processado || 1280).toFixed(2)} em consultas processadas
-                </div>
-              </div>
-            </div>
-
-            {/* CARD EXPLICATIVO DO SPLIT 65% / 35% */}
-            <div
-              style={{
-                backgroundColor: 'var(--cor-superficie)',
-                borderRadius: '16px',
-                padding: '1.85rem',
-                border: '1px solid rgba(124, 83, 63, 0.18)',
-              }}
-            >
-              <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.35rem', color: 'var(--cor-texto)', marginBottom: '0.5rem' }}>
-                Resumo da Repartição Financeira (RN-FIN-03)
-              </h2>
-              <p style={{ fontSize: '0.9rem', color: '#5A5049', marginBottom: '1.5rem' }}>
-                Cada teleconsulta é processada em custódia segura. 65% do valor bruto é repassado diretamente ao especialista após a conclusão do prontuário, e 35% sustenta a infraestrutura e a segurança da plataforma GlicoCare.
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
-                {/* Barra Visual */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#7C533F' }}>Repasse Especialistas (65%)</span>
-                    <span style={{ color: '#3B7E48' }}>Taxa GlicoCare (35%)</span>
-                  </div>
-                  <div style={{ height: '24px', borderRadius: '12px', overflow: 'hidden', display: 'flex', backgroundColor: '#EAE4D9' }}>
-                    <div
-                      style={{
-                        width: '65%',
-                        backgroundColor: '#7C533F',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFF',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      65% (R$ {Number(dashboardData.split_financeiro.repasse_especialista_valor || 832).toFixed(2)})
+              {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <>
+                  {/* Card 2 */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      padding: '1.5rem',
+                      border: '1px solid rgba(124, 83, 63, 0.15)',
+                      boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      Especialistas de Saúde
                     </div>
-                    <div
-                      style={{
-                        width: '35%',
-                        backgroundColor: '#3B7E48',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFF',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      35% (R$ {Number(dashboardData.split_financeiro.taxa_glicocare_valor || 448).toFixed(2)})
+                    <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#2E2824', fontFamily: 'var(--fonte-titulo)' }}>
+                      {dashboardData.kpis.especialistas_ativos || 4}{' '}
+                      <span style={{ fontSize: '1rem', color: '#3B7E48', fontWeight: 600 }}>Ativos</span>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
+                      {dashboardData.kpis.especialistas_pendentes || 0} aguardando curadoria de conselho
                     </div>
                   </div>
-                </div>
 
-                {/* Resumo em Pílulas */}
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  <div style={{ backgroundColor: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(124, 83, 63, 0.15)', flex: 1 }}>
-                    <span style={{ fontSize: '0.75rem', color: '#7C533F', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
-                      Especialistas (65%)
-                    </span>
-                    <strong style={{ fontSize: '1.25rem', color: '#2E2824' }}>
-                      R$ {Number(dashboardData.split_financeiro.repasse_especialista_valor || 832).toFixed(2)}
-                    </strong>
+                  {/* Card 3 */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      padding: '1.5rem',
+                      border: '1px solid rgba(124, 83, 63, 0.15)',
+                      boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      Teleconsultas na Plataforma
+                    </div>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#2E2824', fontFamily: 'var(--fonte-titulo)' }}>
+                      {dashboardData.kpis.consultas_realizadas || 8}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
+                      {dashboardData.kpis.consultas_agendadas || 3} agendadas para os próximos dias
+                    </div>
                   </div>
-                  <div style={{ backgroundColor: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(59, 126, 72, 0.25)', flex: 1 }}>
-                    <span style={{ fontSize: '0.75rem', color: '#3B7E48', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
-                      Plataforma (35%)
-                    </span>
-                    <strong style={{ fontSize: '1.25rem', color: '#1E4620' }}>
+
+                  {/* Card 4 (Finanças e Split) */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '16px',
+                      padding: '1.5rem',
+                      border: '1px solid rgba(59, 126, 72, 0.3)',
+                      boxShadow: '0 4px 16px rgba(59, 126, 72, 0.08)',
+                      background: 'linear-gradient(135deg, #FFFFFF 0%, #F5FBF6 100%)',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.8rem', color: '#3B7E48', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                      Receita Líquida GlicoCare (35%)
+                    </div>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 800, color: '#1E4620', fontFamily: 'var(--fonte-titulo)' }}>
                       R$ {Number(dashboardData.split_financeiro.taxa_glicocare_valor || 448).toFixed(2)}
-                    </strong>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#5A5049', marginTop: '0.35rem' }}>
+                      De R$ {Number(dashboardData.split_financeiro.total_processado || 1280).toFixed(2)} em consultas processadas
+                    </div>
+                  </div>
+                </>
+              )}
+              {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
+            </div>
+
+            {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+            {FEATURES.TELEMEDICINA_ATIVA && (
+              /* CARD EXPLICATIVO DO SPLIT 65% / 35% */
+              <div
+                style={{
+                  backgroundColor: 'var(--cor-superficie)',
+                  borderRadius: '16px',
+                  padding: '1.85rem',
+                  border: '1px solid rgba(124, 83, 63, 0.18)',
+                }}
+              >
+                <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.35rem', color: 'var(--cor-texto)', marginBottom: '0.5rem' }}>
+                  Resumo da Repartição Financeira (RN-FIN-03)
+                </h2>
+                <p style={{ fontSize: '0.9rem', color: '#5A5049', marginBottom: '1.5rem' }}>
+                  Cada teleconsulta é processada em custódia segura. 65% do valor bruto é repassado diretamente ao especialista após a conclusão do prontuário, e 35% sustenta a infraestrutura e a segurança da plataforma GlicoCare.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
+                  {/* Barra Visual */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                      <span style={{ color: '#7C533F' }}>Repasse Especialistas (65%)</span>
+                      <span style={{ color: '#3B7E48' }}>Taxa GlicoCare (35%)</span>
+                    </div>
+                    <div style={{ height: '24px', borderRadius: '12px', overflow: 'hidden', display: 'flex', backgroundColor: '#EAE4D9' }}>
+                      <div
+                        style={{
+                          width: '65%',
+                          backgroundColor: '#7C533F',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#FFF',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        65% (R$ {Number(dashboardData.split_financeiro.repasse_especialista_valor || 832).toFixed(2)})
+                      </div>
+                      <div
+                        style={{
+                          width: '35%',
+                          backgroundColor: '#3B7E48',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#FFF',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        35% (R$ {Number(dashboardData.split_financeiro.taxa_glicocare_valor || 448).toFixed(2)})
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resumo em Pílulas */}
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(124, 83, 63, 0.15)', flex: 1 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#7C533F', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                        Especialistas (65%)
+                      </span>
+                      <strong style={{ fontSize: '1.25rem', color: '#2E2824' }}>
+                        R$ {Number(dashboardData.split_financeiro.repasse_especialista_valor || 832).toFixed(2)}
+                      </strong>
+                    </div>
+                    <div style={{ backgroundColor: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(59, 126, 72, 0.25)', flex: 1 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#3B7E48', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                        Plataforma (35%)
+                      </span>
+                      <strong style={{ fontSize: '1.25rem', color: '#1E4620' }}>
+                        R$ {Number(dashboardData.split_financeiro.taxa_glicocare_valor || 448).toFixed(2)}
+                      </strong>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+            {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
             {/* VISUALIZADOR DOS LOGS DE AUDITORIA IMUTÁVEIS (RN-AUD-01) */}
             <div
@@ -2164,7 +2219,8 @@ export default function PainelAdmin() {
         {/* ===================================================================
             ABA 4: ESPECIALISTAS & CURADORIA (RN-ESP-01 / RN-FIN-03)
             =================================================================== */}
-        {abaAtiva === 'especialistas' && (
+        {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+        {FEATURES.TELEMEDICINA_ATIVA && abaAtiva === 'especialistas' && (
           <div
             style={{
               backgroundColor: 'var(--cor-superficie)',
@@ -2371,6 +2427,7 @@ export default function PainelAdmin() {
             </div>
           </div>
         )}
+        {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
         {/* ===================================================================
             ABA 5: MODERAÇÃO & USUÁRIOS (RN-MOD-01 / CONTAS)

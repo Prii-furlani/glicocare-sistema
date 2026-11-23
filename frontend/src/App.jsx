@@ -30,6 +30,8 @@ import PainelEspecialista from './pages/PainelEspecialista';
 import PainelAdmin from './pages/PainelAdmin';
 import PainelCuidador from './pages/PainelCuidador';
 import SalaTeleconsulta from './pages/SalaTeleconsulta';
+import { FEATURES } from './config/features';
+import EmPreparacaoLufy from './components/EmPreparacaoLufy';
 
 /* INÍCIO DO COMPONENTE PRINCIPAL APP */
 export default function App() {
@@ -56,14 +58,41 @@ export default function App() {
             <Route path="/artigo/:slug" element={<ArtigoDetalhe />} />
             <Route path="/conteudo/:slugOrId" element={<ArtigoDetalhe />} />
             <Route path="/conteudo/:id" element={<ArtigoDetalhe />} />
-            <Route path="/especialistas" element={<Especialistas />} />
-            <Route path="/especialistas/:id" element={<PerfilEspecialista />} />
-            <Route path="/como-funciona-atendimentos" element={<ComoFuncionaAtendimentos />} />
-            <Route path="/credenciamento" element={<Credenciamento />} />
+
+            {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+            {/* Enquanto FEATURES.TELEMEDICINA_ATIVA === false, exibe tela acolhedora do Lufy */}
+            <Route
+              path="/especialistas"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <Especialistas /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/especialistas/:id"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <PerfilEspecialista /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/como-funciona"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <ComoFuncionaAtendimentos /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/como-funciona-atendimentos"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <ComoFuncionaAtendimentos /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/credenciamento"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <Credenciamento /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/sala-consulta/:token"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <SalaTeleconsulta /> : <EmPreparacaoLufy />}
+            />
+            <Route
+              path="/atendimento-nativo/:token"
+              element={FEATURES.TELEMEDICINA_ATIVA ? <SalaTeleconsulta /> : <EmPreparacaoLufy />}
+            />
+            {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
+
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/sala-consulta/:token" element={<SalaTeleconsulta />} />
-            <Route path="/atendimento-nativo/:token" element={<SalaTeleconsulta />} />
 
             {/* 2. Rotas Protegidas por Perfil (RBAC - RN-ACC-01) */}
             {/* Boas-Vindas Pós-Cadastro (Etapa 2: Configurar Agora vs Depois) */}

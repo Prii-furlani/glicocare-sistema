@@ -24,6 +24,8 @@ import { Link } from 'react-router-dom';
 import { especialistasService } from '../services/api';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
+import { FEATURES } from '../config/features';
+import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
 
 /* INÍCIO DAS OPÇÕES DE CONSELHOS, ESPECIALIDADES, FOCOS E HORÁRIOS */
 const OPCOES_ESPECIALIDADE_DM1 = [
@@ -103,6 +105,16 @@ function gerarSlugAmigavel(nome, idGerado) {
 
 /* INÍCIO DA PÁGINA DO MÓDULO DE CREDENCIAMENTO */
 export default function Credenciamento() {
+  /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
+  if (!FEATURES.TELEMEDICINA_ATIVA) {
+    return (
+      <EmPreparacaoLufy
+        tituloCustomizado="O credenciamento de profissionais está em preparação com carinho."
+      />
+    );
+  }
+  /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
+
   // Controla a etapa ativa do Workflow (1 = Submissão, 2 = Back-Office, 3 = Ativação/Slug, 4 = Gestão de Agenda)
   const [etapaWorkflow, setEtapaWorkflow] = useState(1);
 
