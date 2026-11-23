@@ -61,4 +61,30 @@
   --largura-leitura: 760px;
   --transicao-padrao: 0.22s ease;
 }
+
+/* ==========================================================================
+   TEMA DARK ("NOTURNO ACOLHEDOR" — PORTO SEGURO)
+   Paleta: #181513 (Fundo), #231F1C (Superfície), #C88D6D (Terracota), #4A9959 (Verde)
+   ========================================================================== */
+:root[data-theme='dark'],
+body[data-theme='dark'] {
+  --cor-fundo: #181513;              /* Fundo principal: Noturno sereno */
+  --cor-superficie: #231F1C;         /* Superfícies e Cards: Marfim escurecido acolhedor */
+  --cor-texto: #F6F3EE;              /* Textos principais claros e legíveis */
+  --cor-texto-suave: #D2C6B8;        /* Subtítulos e parágrafos amenos */
+  --cor-primaria: #C88D6D;           /* Terracota luminoso para contraste noturno */
+  --cor-primaria-hover: #DBA182;
+  --cor-cta: #4A9959;                /* Verde alívio com contraste refinado */
+  --cor-cta-hover: #3D854A;
+  --cor-cta-suave: #1F3323;
+  --cor-taupe: #B3A292;
+  --cor-branco: #2A2522;
+
+  --cor-borda: #423A34;              /* Borda sutil de baixo contraste */
+  --cor-borda-suave: #332C27;
+  --cor-borda-foco: #C88D6D;
+  --sombra-card: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --sombra-card-hover: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --sombra-flutuante: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
 /* FIM DOS DESIGN TOKENS (VARIÁVEIS GLOBAIS) */

@@ -299,6 +299,13 @@ CREATE TABLE IF NOT EXISTS `depoimentos_moderacao` (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Fila de moderação de depoimentos RN-MOD-01';
 
+-- Compatibilidade e Sincronização: View de alias para depoimentos_artigos (Fase 1)
+CREATE OR REPLACE VIEW `depoimentos_artigos` AS 
+SELECT `id`, `artigo_id`, `usuario_id`, `nome_exibicao_familiar`, `parentesco_contexto`, 
+       `relato`, `status_moderacao`, `observacao_moderador`, `motivo_moderacao`, 
+       `moderado_por_usuario_id`, `moderado_em`, `criado_em`, `atualizado_em` 
+FROM `depoimentos_moderacao`;
+
 -- =============================================================================
 -- TABELA 6: agendamentos
 -- Consultas, bloqueio de slots (RN-AGD-02), financeiro (RN-FIN-03) e vídeo nativo (RN-ATD-04)

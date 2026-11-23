@@ -580,6 +580,22 @@ export default function ArtigoDetalhe() {
   const [parecerModeracao, setParecerModeracao] = useState(null);
   const [erroCapa, setErroCapa] = useState(false);
   const [progressoLeitura, setProgressoLeitura] = useState(0);
+  const [copiado, setCopiado] = useState(false);
+
+  const handleCompartilhar = () => {
+    const shareData = {
+      title: `${artigo.titulo} — GlicoCare`,
+      text: artigo.resumo,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(window.location.href);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 3000);
+    }
+  };
 
   // Monitora a rolagem para a barra de progresso de leitura fluida
   useEffect(() => {
@@ -672,18 +688,45 @@ export default function ArtigoDetalhe() {
         </p>
 
         {/* Metadados do autor (Avatar circular Verde Alívio + Nome + Ano) */}
-        <div className="artigo-meta-autor">
-          <div className="artigo-avatar-autor">
-            {conteudo.autor?.iniciais || 'GC'}
-          </div>
-          <div className="artigo-info-autor">
-            <div className="artigo-nome-autor">
-              {conteudo.autor?.nome || 'Equipe Editorial GlicoCare'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginTop: '1.25rem' }}>
+          <div className="artigo-meta-autor" style={{ marginTop: 0 }}>
+            <div className="artigo-avatar-autor">
+              {conteudo.autor?.iniciais || 'GC'}
             </div>
-            <div className="artigo-atualizacao-autor">
-              {conteudo.autor?.atualizacao || 'Atualizado em 2026'}
+            <div className="artigo-info-autor">
+              <div className="artigo-nome-autor">
+                {conteudo.autor?.nome || 'Equipe Editorial GlicoCare'}
+              </div>
+              <div className="artigo-atualizacao-autor">
+                {conteudo.autor?.atualizacao || 'Atualizado em 2026'}
+              </div>
             </div>
           </div>
+
+          {/* Botão de Compartilhamento Fluido (Desktop / Mobile) */}
+          <button
+            type="button"
+            onClick={handleCompartilhar}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'var(--cor-superficie, #F6F3EE)',
+              border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+              borderRadius: '9999px',
+              padding: '6px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: 'var(--cor-primaria, #7C533F)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+            }}
+            title="Compartilhar este guia acolhedor"
+          >
+            <span>🔗</span>
+            <span>{copiado ? '✓ Link copiado com carinho!' : 'Compartilhar guia'}</span>
+          </button>
         </div>
       </header>
       {/* FIM DO CABEÇALHO EDITORIAL */}

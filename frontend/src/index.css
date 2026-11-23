@@ -828,6 +828,51 @@ textarea:focus,
   box-shadow: 0 0 0 3px rgba(124, 83, 63, 0.14);
 }
 
+/* ==========================================================================
+   SUPORTE DE CONTRASTE AO MODO NOTURNO ACOLHEDOR (DARK THEME)
+   ========================================================================== */
+[data-theme='dark'] input[type="text"],
+[data-theme='dark'] input[type="email"],
+[data-theme='dark'] input[type="password"],
+[data-theme='dark'] input[type="number"],
+[data-theme='dark'] input[type="date"],
+[data-theme='dark'] input[type="time"],
+[data-theme='dark'] input[type="datetime-local"],
+[data-theme='dark'] input[type="search"],
+[data-theme='dark'] input[type="tel"],
+[data-theme='dark'] input[type="url"],
+[data-theme='dark'] input:not([type]),
+[data-theme='dark'] textarea,
+[data-theme='dark'] .gc-input,
+[data-theme='dark'] .gc-textarea {
+  background-color: #2A2522 !important;
+  border-color: #4A4038 !important;
+  color: #F6F3EE !important;
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: rgba(246, 243, 238, 0.45) !important;
+}
+
+[data-theme='dark'] label,
+[data-theme='dark'] .gc-label {
+  color: #EAE4D9 !important;
+}
+
+[data-theme='dark'] .gc-card,
+[data-theme='dark'] .comentario-familia-card {
+  background-color: #231F1C !important;
+  border-color: #3D352F !important;
+  color: #F6F3EE !important;
+}
+
+[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85) sepia(0.2) hue-rotate(60deg) !important;
+}
+
 /* Ícone de calendário / relógio nativo em inputs date e time */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,

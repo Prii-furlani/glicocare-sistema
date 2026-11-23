@@ -1,0 +1,23 @@
+# =============================================================================
+# GlicoCare — Bloqueio de Execução de Scripts na Pasta de Uploads
+# =============================================================================
+
+# Bloqueia execução de scripts PHP, Perl, Python, Shell e executáveis
+<FilesMatch "(?i)\.(php|php[0-9]|phtml|pl|py|cgi|sh|bash|exe)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Desativa motor PHP se disponível como módulo Apache
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Desabilita listagem de diretório e execução de CGIs
+Options -ExecCGI -Indexes

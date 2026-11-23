@@ -28,6 +28,7 @@ class Database {
 
     public function __construct() {
         $this->carregarEnv(__DIR__ . '/../.env');
+        date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'America/Sao_Paulo');
 
         $this->host     = getenv('DB_HOST') ?: 'localhost';
         $this->port     = getenv('DB_PORT') ?: '3306';

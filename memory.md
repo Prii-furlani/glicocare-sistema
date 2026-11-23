@@ -808,6 +808,28 @@ Em conformidade estrita com o modelo oficial de consentimento informado, com a R
   `{/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}`
   `{/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}`
 
+---
+
+## 19. Auditoria Técnica e Validação de Go-Live da Fase 1
+
+### A. Checklist de Infraestrutura & Segurança Back-end
+- **TiDB Cloud & Sincronização SQL:** Script `backend/database_tidb.sql` e `migrar_banco.mjs` totalmente alinhados com todas as tabelas ativas da Fase 1: `usuarios`, `perfis_saude`, `cuidadores_dependentes`, `alergias_usuario`, `medicamentos_usuario`, `registros_glicemia`, `exames_paciente`, `exames_resultados_itens`, `artigos_conteudos`, `depoimentos_moderacao`, `depoimentos_artigos` (view), `configuracoes_home` e `logs_auditoria`.
+- **Proteção da Pasta de Uploads (`/backend/uploads/`):** Arquivo `.htaccess` ativo bloqueando a execução de scripts `.php`, `.phtml`, `.cgi`, `.sh` e `.py`, prevenindo vulnerabilidades de Remote Code Execution (RCE).
+- **Variáveis de Ambiente Documentadas:** `backend/.env.example` atualizado com todas as chaves de produção (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_SSL`, `APP_TIMEZONE=America/Sao_Paulo`, `JWT_SECRET`, `CORS_ALLOWED_ORIGIN`, `TELEMEDICINA_ATIVA=false`).
+
+### B. Validações Ponta a Ponta Concluídas ([V01] a [V06])
+- **[V01] Build de Produção:** Testada via `npm run build` no `frontend/` com 0 erros e 133 módulos compilados com sucesso.
+- **[V02] Fluxo de Visitante & Fase 2 Protegida:** Acesso à Home, leitura de artigos, moderação de comentários e proteção ativa das rotas `/especialistas`, `/como-funciona` e `/sala-consulta/:token` renderizando `<EmPreparacaoLufy />` sem links quebrados.
+- **[V03] Jornada do Perfil Diabético:** Fluxo completo de cadastro, login, cálculo de tempo de diagnóstico em português, gerenciamento de alergias e insulinas, lançamento no diário de glicemia com IOB e exportação do Resumo Histórico de Saúde.
+- **[V04] Jornada do Perfil Cuidador (< 12 anos):** Cadastro de dependentes infantis, geração de código de convite familiar amigável (ex: `THEO-FAM-2026`), identificação visual de quem administrou a insulina/destro e impressão do Cartão de Cuidado Escolar com a Regra dos 15g.
+- **[V05] Jornada do Admin (CMS & Curadoria):** Edição em tempo real da Home (`configuracoes_home`), publicação de artigos editoriais com `<CapaEditorialDefault />` automática, moderação prévia de comentários (`RN-MOD-01`) e consulta da trilha imutável `logs_auditoria`.
+- **[V06] Consistência Visual (Claro & Dark):** Alternância instantânea de tema no botão flutuante da Navbar (☀️ / 🌙) com persistência em `localStorage` e estilização refinada em `#181513` / `#231F1C` / `#C88D6D` / `#4A9959`.
+
+### C. Status Oficial
+- **FASE 1 (Blog/CMS + Perfis/Contas + Cuidado Diário):** Homologada, estabilizada e pronta para Go-Live imediato.
+- **FASE 2 (Teleatendimentos + Split Pix):** Preservada, protegida por feature flags e travas HTTP 503, e documentada para liberação posterior.
+
+
 
 
 

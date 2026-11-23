@@ -23,14 +23,25 @@ $method = $_SERVER['REQUEST_METHOD'];
    MÉTODO GET: Consulta pública e filtragem de artigos
    ============================================================================= */
 if ($method === 'GET') {
-    if (!empty($_GET['id'])) {
-        $stmt = $db->prepare(
-            'SELECT a.*, u.nome_completo AS autor_nome
-             FROM artigos_conteudos a
-             LEFT JOIN usuarios u ON a.autor_usuario_id = u.id
-             WHERE a.id = :id AND a.status_publicacao = "publicado"'
-        );
-        $stmt->execute([':id' => (int) $_GET['id']]);
+    $idOrSlug = trim($_GET['id'] ?? ($_GET['slug'] ?? ''));
+    if (!empty($idOrSlug)) {
+        if (is_numeric($idOrSlug)) {
+            $stmt = $db->prepare(
+                'SELECT a.*, u.nome_completo AS autor_nome
+                 FROM artigos_conteudos a
+                 LEFT JOIN usuarios u ON a.autor_usuario_id = u.id
+                 WHERE a.id = :id AND a.status_publicacao = "publicado"'
+            );
+            $stmt->execute([':id' => (int) $idOrSlug]);
+        } else {
+            $stmt = $db->prepare(
+                'SELECT a.*, u.nome_completo AS autor_nome
+                 FROM artigos_conteudos a
+                 LEFT JOIN usuarios u ON a.autor_usuario_id = u.id
+                 WHERE a.slug = :slug AND a.status_publicacao = "publicado"'
+            );
+            $stmt->execute([':slug' => $idOrSlug]);
+        }
         $artigo = $stmt->fetch();
 
         if (!$artigo) {

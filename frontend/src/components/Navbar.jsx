@@ -37,6 +37,25 @@ export default function Navbar() {
   // Controla a barra de aviso de liberação imediata do Guia Gratuito
   const [guiaAvisoAberto, setGuiaAvisoAberto] = useState(false);
 
+  // Controle de Tema (Claro vs Noturno Acolhedor)
+  const [temaEscuro, setTemaEscuro] = useState(() => {
+    return localStorage.getItem('glicocare_tema') === 'dark';
+  });
+
+  useEffect(() => {
+    if (temaEscuro) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
+      localStorage.setItem('glicocare_tema', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.removeAttribute('data-theme');
+      localStorage.setItem('glicocare_tema', 'light');
+    }
+  }, [temaEscuro]);
+
+  const toggleTema = () => setTemaEscuro((prev) => !prev);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -280,6 +299,33 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* Botão de Alternância de Tema (Claro / Noturno Acolhedor) */}
+          <button
+            type="button"
+            onClick={toggleTema}
+            style={{
+              background: 'none',
+              border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.05rem',
+              backgroundColor: 'var(--cor-superficie, #F6F3EE)',
+              color: 'var(--cor-texto, #2E2824)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s ease',
+              flexShrink: 0,
+            }}
+            title={temaEscuro ? 'Alternar para Modo Claro' : 'Alternar para Modo Noturno Acolhedor'}
+            aria-label={temaEscuro ? 'Alternar para Modo Claro' : 'Alternar para Modo Noturno Acolhedor'}
+          >
+            {temaEscuro ? '☀️' : '🌙'}
+          </button>
+
           {/* Ação 2: Botão Principal em Destaque Verde Alívio */}
           <div className="gc-navbar__desktop-cta">
             <Button
@@ -516,6 +562,31 @@ export default function Navbar() {
                 </div>
               )}
 
+              {/* Botão de Alternância de Tema no Mobile */}
+              <div style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={toggleTema}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'var(--cor-superficie, #F6F3EE)',
+                    border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                    borderRadius: '12px',
+                    color: 'var(--cor-texto, #2E2824)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>{temaEscuro ? '☀️ Tema Claro' : '🌙 Modo Noturno Acolhedor'}</span>
+                  <span style={{ fontSize: '1.2rem' }}>{temaEscuro ? '☀️' : '🌙'}</span>
+                </button>
+              </div>
+
               <hr className="gc-navbar__mobile-divider" />
 
               <Link
@@ -526,13 +597,17 @@ export default function Navbar() {
                 📚 Acessar Acervo Completo da Biblioteca
               </Link>
 
-              <Link
-                to="/credenciamento"
-                onClick={() => setDrawerOpen(false)}
-                className="gc-navbar__mobile-sublink"
-              >
-                ✓ Seja um Especialista GlicoCare (Credenciamento)
-              </Link>
+              {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <Link
+                  to="/credenciamento"
+                  onClick={() => setDrawerOpen(false)}
+                  className="gc-navbar__mobile-sublink"
+                >
+                  ✓ Seja um Especialista GlicoCare (Credenciamento)
+                </Link>
+              )}
+              {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
             </nav>
 
             {/* Botão de Destaque na Parte Inferior da Gaveta Mobile */}

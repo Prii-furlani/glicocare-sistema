@@ -8,17 +8,45 @@
      com o polegar, cards empilhados com border-radius de 12px e fundo #F6F3EE.
    ========================================================================== */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CardConteudo from '../components/CardConteudo';
 import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
 import { ARTIGOS_BIBLIOTECA } from './Home';
 
 /* INÍCIO DA PÁGINA BIBLIOTECA */
 export default function Biblioteca() {
+  const [artigosLista, setArtigosLista] = useState(ARTIGOS_BIBLIOTECA);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('Todos');
   const [busca, setBusca] = useState('');
 
-  const artigosFiltrados = ARTIGOS_BIBLIOTECA.filter((artigo) => {
+  useEffect(() => {
+    fetch('/backend/api/artigos/index.php')
+      .then((res) => res.json())
+      .then((resJson) => {
+        if (resJson && resJson.sucesso && Array.isArray(resJson.dados) && resJson.dados.length > 0) {
+          const artigosNormalizados = resJson.dados.map((a, idx) => ({
+            id: a.id,
+            slug: a.slug,
+            seloSuperior: a.selo_editorial || 'GUIA ESSENCIAL',
+            imagemCapa: a.imagem_capa_url || null,
+            numeroEditorial: String(idx + 1).padStart(2, '0'),
+            corTopo: a.cor_capa_default || 'terracota',
+            iconeCategoria: a.categoria === 'Rotina Escolar' ? '🏫' : (a.categoria === 'Tecnologia & Autonomia' ? '💡' : '🐾'),
+            categoria: a.categoria,
+            tempoLeitura: `${a.tempo_leitura_min || 6} min de leitura`,
+            titulo: a.titulo,
+            resumo: a.resumo,
+            destaqueSetaSolida: idx === 0,
+          }));
+          setArtigosLista(artigosNormalizados);
+        }
+      })
+      .catch((err) => {
+        console.warn('Biblioteca utilizando acervo editorial inicial:', err);
+      });
+  }, []);
+
+  const artigosFiltrados = artigosLista.filter((artigo) => {
     const matchCategoria =
       categoriaSelecionada === 'Todos' ||
       artigo.categoria === categoriaSelecionada;
