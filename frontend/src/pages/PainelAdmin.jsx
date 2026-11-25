@@ -18,6 +18,10 @@ import Button from '../components/Button';
 import CustomSelect from '../components/CustomSelect';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import GlicoLoader from '../components/GlicoLoader';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import { Badge } from '../components/ui/Badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 import { useNotify } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -724,52 +728,40 @@ export default function PainelAdmin() {
         )}
 
         {/* ===================================================================
-            BARRA DE NAVEGAÇÃO ENTRE AS 5 ABAS PRINCIPAIS
+            BARRA DE NAVEGAÇÃO ENTRE AS ABAS PRINCIPAIS (TABS SHADCN STYLE)
             =================================================================== */}
-        <nav
-          style={{
-            display: 'flex',
-            gap: '0.65rem',
-            marginBottom: '2rem',
-            overflowX: 'auto',
-            paddingBottom: '0.35rem',
-          }}
-          aria-label="Abas do Painel Administrativo"
-        >
-          {[
-            { id: 'visao_geral', label: '📊 Visão Geral' },
-            { id: 'cms_home', label: '🎨 Editar Tela Home (CMS)' },
-            { id: 'artigos', label: `📚 Biblioteca de Conteúdos (${artigos.length})` },
-            /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
-            ...(FEATURES.TELEMEDICINA_ATIVA ? [{ id: 'especialistas', label: `🩺 Especialistas & Curadoria (${especialistas.length})` }] : []),
-            /* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */
-            { id: 'moderacao_usuarios', label: `💬 Moderação & Usuários (${depoimentos.length})` },
-          ].map((tab) => {
-            const ativa = abaAtiva === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setAbaAtiva(tab.id)}
-                style={{
-                  padding: '0.75rem 1.4rem',
-                  borderRadius: '24px',
-                  border: ativa ? '1px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.22)',
-                  backgroundColor: ativa ? '#3B7E48' : '#F6F3EE',
-                  color: ativa ? '#FFFFFF' : '#2E2824',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: ativa ? '0 4px 14px rgba(59, 126, 72, 0.25)' : 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+        <div style={{ marginBottom: '2rem' }}>
+          <Tabs value={abaAtiva} onValueChange={(val) => setAbaAtiva(val)}>
+            <TabsList style={{ width: 'auto', flexWrap: 'wrap' }}>
+              <TabsTrigger value="visao_geral">
+                <span>Visão Geral</span>
+              </TabsTrigger>
+              <TabsTrigger value="cms_home">
+                <span>Editar Home (CMS)</span>
+              </TabsTrigger>
+              <TabsTrigger value="artigos">
+                <span>Biblioteca de Conteúdos</span>
+                <Badge variant="secondary" style={{ fontSize: '11px', padding: '0 5px' }}>
+                  {artigos.length}
+                </Badge>
+              </TabsTrigger>
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <TabsTrigger value="especialistas">
+                  <span>Especialistas</span>
+                  <Badge variant="secondary" style={{ fontSize: '11px', padding: '0 5px' }}>
+                    {especialistas.length}
+                  </Badge>
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="moderacao_usuarios">
+                <span>Moderação & Usuários</span>
+                <Badge variant="secondary" style={{ fontSize: '11px', padding: '0 5px' }}>
+                  {depoimentos.length}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER PÁGINA) */}
         {carregandoGeral ? (

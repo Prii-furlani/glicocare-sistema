@@ -983,6 +983,39 @@ Refatoração completa das telas de acompanhamento clínico da Fase 1 (`PerfilUs
 - Todos os gráficos SVG e elementos de contraste utilizam estritamente variáveis semânticas CSS (`--cor-fundo`, `--cor-superficie`, `--cor-texto`, `--cor-primaria`, `--cor-cta`, `--cor-borda-suave`).
 - Total legibilidade garantida tanto no Tema Claro (`#EAE4D9` / `#F6F3EE`) quanto no Dark Mode ("Noturno Acolhedor", `#181513` / `#231F1D`).
 
+---
+
+## 24. Arquitetura Visual e Primitivos no Padrão `shadcn/ui` ("Porto Seguro")
+
+### A. Gramática e Filosofia de Design
+A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, espaçamentos e padrões de interação do `shadcn/ui`, revestida com a paleta terrosa e acolhedora "Porto Seguro" (Tema Claro `#EAE4D9` / `#F6F3EE` e Tema Dark `#181513` / `#231F1C` + Terracota `#7C533F` + Verde Alívio `#3B7E48`).
+
+### B. Primitivos Base em `frontend/src/components/ui/`
+1. **`Card.jsx` (`Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`):**
+   - Superfície limpa (`var(--cor-superficie-elevada)`), borda única sutil (`1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))`), raio `12px` e sombra mínima (`0 1px 2px rgba(46, 40, 36, 0.04)`).
+   - **Regra de Ouro:** Proibido o aninhamento de um Card com borda dentro de outro Card com borda, garantindo hierarquia plana e escaneável.
+2. **`Tabs.jsx` (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`):**
+   - Estilo *Segmented Control* compacto (`padding: 4px`, `border-radius: 10px`, fundo translúcido `rgba(124, 83, 63, 0.08)`).
+   - Gatilho ativo elevado com `background: var(--cor-superficie-elevada)`, sombra sutil e tipografia nítida.
+3. **`Badge.jsx`:**
+   - Pílulas compactas (`font-size: 12px`, `font-weight: 500`, `padding: 2px 10px`, `border-radius: 999px`) nas variantes `default`, `secondary`, `outline`, `success` (Verde Alívio), `destructive` (Terracota crítico) e `warning` (Atenção clínica).
+4. **`Table.jsx` (`Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`):**
+   - Tabela minimalista sem bordas verticais, cabeçalho discreto (`font-size: 12px`, `color: var(--cor-texto-suave)`), linhas separadas apenas por divisor horizontal e efeito hover sutil.
+5. **`Sheet.jsx` (`Sheet`, `SheetTrigger`, `SheetContent`, `SheetHeader`, `SheetTitle`, `SheetDescription`, `SheetFooter`):**
+   - Gaveta lateral deslizante à direita para formulários de criação/edição sem poluir ou empilhar a tela principal. Suporte a backdrop desfocado (`backdrop-filter: blur(4px)`) e fechamento via tecla `Esc`.
+6. **`Dialog.jsx` (`Dialog`, `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`):**
+   - Modal acessível centrado com backdrop blur e suporte a fechamento por clique externo e `Esc`.
+
+### C. Telas Clínicas e Dashboards no Padrão shadcn
+- **`PerfilUsuario.jsx` & `PainelCuidador.jsx`:**
+  * **Header Compacto:** Linha única limpa com avatar, tipografia `Fraunces`, metadados terapêuticos em linha única, selo discreto de alergias e botões de ação compactos no padrão shadcn (`outline` para download de documentos e `primary` Verde Alívio para *+ Registrar Glicemia / Dose*).
+  * **Bento Grid de KPIs (3 colunas):** Cards separados para Última Glicemia, Insulina Ativa (IOB com barra fina de 4px) e Tempo no Alvo (TIR com micro-barra segmentada de 4px).
+  * **Gráficos Estilo `shadcn/ui Charts`:** SVG responsivo tipo `AreaChart` com preenchimento em degradê translúcido, linhas de grade pontilhadas (`stroke-dasharray="3 3"`), faixa-alvo (70–180 mg/dL), seletor de períodos em `Tabs` e Tooltips flutuantes no design system.
+  * **Formulários em `Sheet`:** O registro de glicemias e doses é acionado pelo botão primário e executado dentro da gaveta lateral, mantendo o feed e o dashboard despoluídos.
+- **`PainelAdmin.jsx`:**
+  * Navegação entre seções da moderação e CMS refatorada com o primitivo `<Tabs />` no estilo segmented control e contadores de itens em `<Badge />`.
+
+
 
 
 

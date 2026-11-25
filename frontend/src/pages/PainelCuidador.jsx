@@ -17,6 +17,26 @@ import GlicoLoader from '../components/GlicoLoader';
 import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
 import GraficoCurvaGlicemia from '../components/GraficoCurvaGlicemia';
 import ComparativoExames from '../components/ComparativoExames';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import { Badge } from '../components/ui/Badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '../components/ui/Sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/Dialog';
 import {
   Activity,
   FileText,
@@ -248,6 +268,7 @@ export default function PainelCuidador() {
   const [modalNovaAlergia, setModalNovaAlergia] = useState(false);
   const [modalPreAtendimento, setModalPreAtendimento] = useState(false);
   const [modalAssinarTCLE, setModalAssinarTCLE] = useState(false);
+  const [sheetNovaMedicaoAberta, setSheetNovaMedicaoAberta] = useState(false);
 
   // Estados dos Formulários
   /* INÍCIO ESTADOS DE CARREGAMENTO (GLICOLOADER BOTAO) */
@@ -420,6 +441,7 @@ export default function PainelCuidador() {
         observacoes: '',
       });
 
+      setSheetNovaMedicaoAberta(false);
       exibirFeedback('sucesso', `Medição de ${novoRegistro.valor_mg_dl} mg/dL registrada com sucesso para ${filhoAtivo.nome_crianca}!`);
     } catch (err) {
       exibirFeedback('erro', 'Não foi possível registrar a medição. Tente novamente.');
@@ -728,21 +750,39 @@ export default function PainelCuidador() {
               </div>
             )}
 
+            <Button
+              variante="sucesso"
+              onClick={() => setSheetNovaMedicaoAberta(true)}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                padding: '0.45rem 1rem',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              <span>Registrar Medição</span>
+            </Button>
+
             <button
               type="button"
               onClick={() => setAbaAtiva('escola')}
               style={{
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 fontWeight: 600,
-                backgroundColor: 'var(--cor-fundo)',
-                color: 'var(--cor-primaria)',
-                border: '1px solid var(--cor-borda-suave)',
+                backgroundColor: 'transparent',
+                color: 'var(--cor-texto, #2E2824)',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
-                padding: '0.45rem 0.95rem',
+                padding: '0.45rem 0.9rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
+                transition: 'all 0.15s ease',
               }}
             >
               <FileText size={14} strokeWidth={1.75} />
@@ -753,17 +793,18 @@ export default function PainelCuidador() {
               type="button"
               onClick={() => setModalNovoFilho(true)}
               style={{
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 fontWeight: 600,
                 backgroundColor: 'transparent',
-                color: 'var(--cor-texto)',
-                border: '1px solid var(--cor-borda-suave)',
+                color: 'var(--cor-texto-suave, #5C534C)',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
                 padding: '0.45rem 0.85rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
+                transition: 'all 0.15s ease',
               }}
             >
               <Plus size={13} strokeWidth={2} />
@@ -786,150 +827,44 @@ export default function PainelCuidador() {
         )}
 
         {/* ==================================================================
-            NAVEGAÇÃO EM 5 ABAS CLARAS ("PORTO SEGURO")
+            NAVEGAÇÃO EM TABS SEGMENTADAS (SHADCN SEGMENTED CONTROL)
             ================================================================== */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            borderBottom: '2px solid rgba(124, 83, 63, 0.15)',
-            marginBottom: '1.75rem',
-            overflowX: 'auto',
-            paddingBottom: '0.2rem',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setAbaAtiva('diario')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px 12px 0 0',
-              border: 'none',
-              backgroundColor: abaAtiva === 'diario' ? '#FFFFFF' : 'transparent',
-              borderBottom: abaAtiva === 'diario' ? '3px solid #3B7E48' : 'none',
-              color: abaAtiva === 'diario' ? '#3B7E48' : '#5A5049',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>🩸</span>
-            <span>Diário & Insulina Ativa (IOB)</span>
-            {filhoAtivo.iob_ativa > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#C88D2A',
-                  color: '#FFFFFF',
-                  fontSize: '0.72rem',
-                  borderRadius: '10px',
-                  padding: '1px 6px',
-                  fontWeight: 800,
-                }}
-              >
-                {filhoAtivo.iob_ativa} UI
-              </span>
-            )}
-          </button>
+        <div style={{ marginBottom: '1.75rem' }}>
+          <Tabs value={abaAtiva} onValueChange={(val) => setAbaAtiva(val)}>
+            <TabsList>
+              <TabsTrigger value="diario">
+                <Activity size={15} strokeWidth={1.75} />
+                <span>Diário & IOB</span>
+                {filhoAtivo.iob_ativa > 0 && (
+                  <Badge variant="warning" style={{ fontSize: '10px', padding: '0 5px' }}>
+                    {filhoAtivo.iob_ativa} UI
+                  </Badge>
+                )}
+              </TabsTrigger>
 
-          {/* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */}
-          {FEATURES.TELEMEDICINA_ATIVA && (
-            <button
-              type="button"
-              onClick={() => setAbaAtiva('consultas')}
-              style={{
-                padding: '0.75rem 1.25rem',
-                borderRadius: '12px 12px 0 0',
-                border: 'none',
-                backgroundColor: abaAtiva === 'consultas' ? '#FFFFFF' : 'transparent',
-                borderBottom: abaAtiva === 'consultas' ? '3px solid #7C533F' : 'none',
-                color: abaAtiva === 'consultas' ? '#7C533F' : '#5A5049',
-                fontWeight: 700,
-                fontSize: '0.92rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span>🩺</span>
-              <span>Especialistas & Consultas ({filhoAtivo.consultas?.length || 0})</span>
-            </button>
-          )}
-          {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <TabsTrigger value="consultas">
+                  <User size={15} strokeWidth={1.75} />
+                  <span>Especialistas ({filhoAtivo.consultas?.length || 0})</span>
+                </TabsTrigger>
+              )}
 
-          <button
-            type="button"
-            onClick={() => setAbaAtiva('exames')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px 12px 0 0',
-              border: 'none',
-              backgroundColor: abaAtiva === 'exames' ? '#FFFFFF' : 'transparent',
-              borderBottom: abaAtiva === 'exames' ? '3px solid #3B7E48' : 'none',
-              color: abaAtiva === 'exames' ? '#3B7E48' : '#5A5049',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>🧪</span>
-            <span>Exames & Alergias ({filhoAtivo.alergias?.length || 0})</span>
-          </button>
+              <TabsTrigger value="exames">
+                <FileText size={15} strokeWidth={1.75} />
+                <span>Exames & Alergias ({filhoAtivo.alergias?.length || 0})</span>
+              </TabsTrigger>
 
-          <button
-            type="button"
-            onClick={() => setAbaAtiva('escola')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px 12px 0 0',
-              border: 'none',
-              backgroundColor: abaAtiva === 'escola' ? '#FFFFFF' : 'transparent',
-              borderBottom: abaAtiva === 'escola' ? '3px solid #7C533F' : 'none',
-              color: abaAtiva === 'escola' ? '#7C533F' : '#5A5049',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>🏫</span>
-            <span>Cartão de Cuidado Escolar (PDF)</span>
-          </button>
+              <TabsTrigger value="escola">
+                <Calendar size={15} strokeWidth={1.75} />
+                <span>Cartão Escolar</span>
+              </TabsTrigger>
 
-          <button
-            type="button"
-            onClick={() => setAbaAtiva('comunidade')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '12px 12px 0 0',
-              border: 'none',
-              backgroundColor: abaAtiva === 'comunidade' ? '#FFFFFF' : 'transparent',
-              borderBottom: abaAtiva === 'comunidade' ? '3px solid #2E2824' : 'none',
-              color: abaAtiva === 'comunidade' ? '#2E2824' : '#5A5049',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>💬</span>
-            <span>Meus Comentários & Comunidade</span>
-          </button>
+              <TabsTrigger value="comunidade">
+                <span>💬</span>
+                <span>Comunidade</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* ==================================================================
@@ -951,13 +886,13 @@ export default function PainelCuidador() {
               </div>
             )}
 
-            {/* /* INÍCIO DO COMPONENTE: BARRA DE KPIS MINIMALISTAS (FASE 1) */}
+            {/* /* INÍCIO DO COMPONENTE: BENTO GRID COM 3 KPI CARDS (SHADCN STYLE) */}
             {(() => {
               const leituras = filhoAtivo.leituras_recentes || [];
               const ultima = leituras[0] || { valor_mg_dl: 142, data_hora_medicao: '10:30', momento_medicao: 'Pré-prandial' };
               const v = Number(ultima.valor_mg_dl) || 142;
-              const statusCor = v < 70 ? '#C94A38' : v > 180 ? '#C88D2A' : '#3B7E48';
-              const statusBg = v < 70 ? 'rgba(201, 74, 56, 0.12)' : v > 180 ? 'rgba(200, 141, 42, 0.12)' : 'rgba(59, 126, 72, 0.12)';
+              const statusCor = v < 70 ? '#C94A38' : v > 180 ? '#C88D2A' : 'var(--cor-cta, #3B7E48)';
+              const statusVariante = v < 70 ? 'destructive' : v > 180 ? 'warning' : 'success';
               const statusTexto = v < 70 ? 'Hipo' : v > 180 ? 'Atenção' : 'No Alvo';
 
               const totalL = leituras.length || 1;
@@ -973,234 +908,258 @@ export default function PainelCuidador() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                     gap: '1rem',
                     marginBottom: '1.75rem',
                   }}
                 >
                   {/* KPI 1: Última Glicemia */}
-                  <div
-                    style={{
-                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
-                      borderRadius: '16px',
-                      padding: '1.25rem 1.5rem',
-                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Última Glicemia
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          backgroundColor: statusBg,
-                          color: statusCor,
-                        }}
-                      >
-                        {statusTexto}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontSize: '2rem',
-                          fontWeight: 800,
-                          fontFamily: 'Plus Jakarta Sans, sans-serif',
-                          fontVariantNumeric: 'tabular-nums',
-                          color: statusCor,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {v}
-                      </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#7C533F' }}>mg/dL</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.75rem', color: '#5A5049' }}>
-                      <Activity size={13} color="#3B7E48" />
-                      <span>{ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao} • ↘ Tendência estável</span>
-                    </div>
-                  </div>
+                  <Card>
+                    <CardContent style={{ padding: '1.25rem 1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Última Glicemia
+                        </span>
+                        <Badge variant={statusVariante}>
+                          {statusTexto}
+                        </Badge>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                        <span
+                          style={{
+                            fontSize: '2.25rem',
+                            fontWeight: 800,
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: statusCor,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {v}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                        <Activity size={13} color="var(--cor-cta, #3B7E48)" />
+                        <span>{ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao} • ↘ Tendência estável</span>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* KPI 2: Insulina Ativa (IOB) */}
-                  <div
-                    style={{
-                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
-                      borderRadius: '16px',
-                      padding: '1.25rem 1.5rem',
-                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Insulina Ativa (IOB)
-                      </span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#5A5049' }}>
-                        expira em 2h15
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontSize: '2rem',
-                          fontWeight: 800,
-                          fontFamily: 'Plus Jakarta Sans, sans-serif',
-                          fontVariantNumeric: 'tabular-nums',
-                          color: '#2E2824',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {iobVal}
-                      </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#7C533F' }}>UI</span>
-                    </div>
-                    {/* Barra de progresso do decaimento da insulina */}
-                    <div style={{ marginTop: '0.65rem' }}>
-                      <div
-                        style={{
-                          height: '6px',
-                          borderRadius: '3px',
-                          backgroundColor: 'rgba(124, 83, 63, 0.1)',
-                          overflow: 'hidden',
-                        }}
-                      >
+                  <Card>
+                    <CardContent style={{ padding: '1.25rem 1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Insulina Ativa (IOB)
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                          expira em 2h15
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                        <span
+                          style={{
+                            fontSize: '2.25rem',
+                            fontWeight: 800,
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: 'var(--cor-texto, #2E2824)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {iobVal}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>UI</span>
+                      </div>
+                      {/* Barra de progresso fina de 4px */}
+                      <div style={{ marginTop: '0.65rem' }}>
                         <div
                           style={{
-                            width: `${Math.min(100, Math.round((iobVal / 4) * 100))}%`,
-                            height: '100%',
-                            backgroundColor: '#3B7E48',
-                            borderRadius: '3px',
+                            height: '4px',
+                            borderRadius: '999px',
+                            backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                            overflow: 'hidden',
                           }}
-                        />
+                        >
+                          <div
+                            style={{
+                              width: `${Math.min(100, Math.round((iobVal / 4) * 100))}%`,
+                              height: '100%',
+                              backgroundColor: 'var(--cor-cta, #3B7E48)',
+                              borderRadius: '999px',
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                          <span>Ação rápida</span>
+                          <span>Prevenção empilhamento</span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.7rem', color: '#5A5049' }}>
-                        <span>Ação rápida</span>
-                        <span>Prevenção empilhamento</span>
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
 
                   {/* KPI 3: Tempo no Alvo (TIR — 7 dias) */}
-                  <div
-                    style={{
-                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
-                      borderRadius: '16px',
-                      padding: '1.25rem 1.5rem',
-                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Tempo no Alvo (TIR)
-                      </span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3B7E48' }}>
-                        Meta &ge; 70%
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontSize: '2rem',
-                          fontWeight: 800,
-                          fontFamily: 'Plus Jakarta Sans, sans-serif',
-                          fontVariantNumeric: 'tabular-nums',
-                          color: tirPct >= 70 ? '#3B7E48' : '#C88D2A',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {tirPct}%
-                      </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#5A5049' }}>70–180 mg/dL</span>
-                    </div>
-                    {/* Micro-barra segmentada */}
-                    <div style={{ marginTop: '0.65rem' }}>
-                      <div
-                        style={{
-                          height: '6px',
-                          borderRadius: '3px',
-                          display: 'flex',
-                          overflow: 'hidden',
-                          backgroundColor: 'rgba(124, 83, 63, 0.1)',
-                        }}
-                      >
-                        <div style={{ width: `${abaixoPct}%`, backgroundColor: '#C94A38' }} title={`Abaixo: ${abaixoPct}%`} />
-                        <div style={{ width: `${tirPct}%`, backgroundColor: '#3B7E48' }} title={`No alvo: ${tirPct}%`} />
-                        <div style={{ width: `${acimaPct}%`, backgroundColor: '#C88D2A' }} title={`Acima: ${acimaPct}%`} />
+                  <Card>
+                    <CardContent style={{ padding: '1.25rem 1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Tempo no Alvo (TIR)
+                        </span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--cor-cta, #3B7E48)' }}>
+                          Meta &ge; 70%
+                        </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.7rem', color: '#5A5049' }}>
-                        <span style={{ color: '#C94A38' }}>{abaixoPct}% &lt;70</span>
-                        <span style={{ color: '#3B7E48', fontWeight: 700 }}>{tirPct}% no alvo</span>
-                        <span style={{ color: '#C88D2A' }}>{acimaPct}% &gt;180</span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                        <span
+                          style={{
+                            fontSize: '2.25rem',
+                            fontWeight: 800,
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: tirPct >= 70 ? 'var(--cor-cta, #3B7E48)' : '#C88D2A',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {tirPct}%
+                        </span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-texto-suave, #5C534C)' }}>70–180 mg/dL</span>
                       </div>
-                    </div>
-                  </div>
+                      {/* Micro-barra segmentada fina de 4px */}
+                      <div style={{ marginTop: '0.65rem' }}>
+                        <div
+                          style={{
+                            height: '4px',
+                            borderRadius: '999px',
+                            display: 'flex',
+                            overflow: 'hidden',
+                            backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                          }}
+                        >
+                          <div style={{ width: `${abaixoPct}%`, backgroundColor: '#C94A38' }} title={`Abaixo: ${abaixoPct}%`} />
+                          <div style={{ width: `${tirPct}%`, backgroundColor: 'var(--cor-cta, #3B7E48)' }} title={`No alvo: ${tirPct}%`} />
+                          <div style={{ width: `${acimaPct}%`, backgroundColor: '#C88D2A' }} title={`Acima: ${acimaPct}%`} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                          <span style={{ color: '#C94A38' }}>{abaixoPct}% &lt;70</span>
+                          <span style={{ color: 'var(--cor-cta, #3B7E48)', fontWeight: 700 }}>{tirPct}% no alvo</span>
+                          <span style={{ color: '#C88D2A' }}>{acimaPct}% &gt;180</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               );
             })()}
-            {/* /* FIM DO COMPONENTE: BARRA DE KPIS MINIMALISTAS */}
+            {/* /* FIM DO COMPONENTE: BENTO GRID COM 3 KPI CARDS */}
 
-            {/* /* INÍCIO DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA (SVG INTERATIVO) */}
+            {/* /* INÍCIO DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA (SVG INTERATIVO SHADCN) */}
             <div style={{ marginBottom: '1.75rem' }}>
               <GraficoCurvaGlicemia registros={filhoAtivo.leituras_recentes || []} />
             </div>
             {/* /* FIM DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA */}
 
-            {/* /* INÍCIO DO FORMULÁRIO ENXUTO DE NOVO REGISTRO (FASE 1) */}
-            <div
-              style={{
-                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
-                marginBottom: '1.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div>
-                  <h3
+            {/* /* INÍCIO DO HISTÓRICO DE LEITURAS RECENTES (<Table /> SHADCN STYLE) */}
+            <Card style={{ marginBottom: '1.75rem' }}>
+              <CardHeader>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <CardTitle>Linha do Tempo Familiar & Auditoria</CardTitle>
+                    <CardDescription>
+                      {filhoAtivo.leituras_recentes?.length || 0} registros sincronizados entre mãe, pai e cuidadores autorizados.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variante="sucesso"
+                    onClick={() => setSheetNovaMedicaoAberta(true)}
                     style={{
-                      fontFamily: 'var(--fonte-titulo, Fraunces)',
-                      fontSize: '1.2rem',
-                      color: 'var(--cor-texto, #2E2824)',
-                      margin: 0,
+                      fontSize: '0.78rem',
+                      padding: '0.4rem 0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
                     }}
                   >
-                    Registrar Medição / Dose para {filhoAtivo.nome_crianca}
-                  </h3>
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#5A5049' }}>
-                    Registro com identificação auditável do responsável conectado.
-                  </p>
+                    <Plus size={14} strokeWidth={2} />
+                    <span>Nova Medição</span>
+                  </Button>
                 </div>
+              </CardHeader>
 
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#3B7E48',
-                    backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                    borderRadius: '8px',
-                    padding: '3px 8px',
-                    fontWeight: 700,
-                  }}
-                >
-                  Registrado por: {usuario?.nome_completo || 'Mariana Silva'} ({filhoAtivo.parentesco || 'Responsável'})
-                </span>
-              </div>
+              <CardContent style={{ padding: 0 }}>
+                {filhoAtivo.leituras_recentes?.length === 0 ? (
+                  <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--cor-texto-suave, #5C534C)', fontSize: '0.86rem' }}>
+                    Nenhuma medição registrada até o momento.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Glicemia</TableHead>
+                        <TableHead>Momento</TableHead>
+                        <TableHead>Dose / Carbos</TableHead>
+                        <TableHead>Registrado Por</TableHead>
+                        <TableHead style={{ textAlign: 'right' }}>Horário</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filhoAtivo.leituras_recentes?.map((leitura) => (
+                        <TableRow key={leitura.id}>
+                          <TableCell style={{ whiteSpace: 'nowrap' }}>
+                            <span
+                              style={{
+                                fontSize: '1.15rem',
+                                fontWeight: 800,
+                                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                                fontVariantNumeric: 'tabular-nums',
+                                color: obterCorGlicemia(leitura.valor_mg_dl),
+                              }}
+                            >
+                              {leitura.valor_mg_dl}{' '}
+                              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {leitura.momento_medicao}
+                            </Badge>
+                          </TableCell>
+                          <TableCell style={{ color: 'var(--cor-texto-suave, #5C534C)' }}>
+                            {leitura.dose_insulina ? `${leitura.dose_insulina} UI • ` : ''}
+                            {leitura.carboidratos_g ? `${leitura.carboidratos_g}g carbos • ` : ''}
+                            {leitura.fator_contexto || '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={leitura.registrado_por_rotulo?.includes('Pai') ? 'outline' : 'success'}>
+                              {leitura.registrado_por_rotulo || 'Responsável'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell style={{ textAlign: 'right', color: 'var(--cor-primaria, #7C533F)', fontVariantNumeric: 'tabular-nums' }}>
+                            {leitura.data_hora_medicao?.split(' ')[1] || leitura.data_hora_medicao}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+            {/* /* FIM DO HISTÓRICO DE LEITURAS RECENTES */}
 
-              <form onSubmit={handleRegistrarGlicemia}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '1rem',
-                    marginBottom: '1.25rem',
-                  }}
-                >
+            {/* /* INÍCIO DA GAVETA LATERAL (SHEET) PARA NOVO REGISTRO DO FILHO */}
+            <Sheet open={sheetNovaMedicaoAberta} onOpenChange={setSheetNovaMedicaoAberta}>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Registrar Medição para {filhoAtivo.nome_crianca}</SheetTitle>
+                  <SheetDescription>
+                    Registro com identificação auditável do responsável conectado ({usuario?.nome_completo || 'Mariana Silva'}).
+                  </SheetDescription>
+                </SheetHeader>
+
+                <form onSubmit={handleRegistrarGlicemia} style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '1.75rem', gap: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
-                      Glicemia (mg/dL) *
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.4rem' }}>
+                      Glicemia Medida (mg/dL) *
                     </label>
                     <input
                       type="number"
@@ -1212,20 +1171,20 @@ export default function PainelCuidador() {
                       max="600"
                       style={{
                         width: '100%',
-                        fontSize: '1.1rem',
+                        fontSize: '1.15rem',
                         fontWeight: 700,
                         color: obterCorGlicemia(formGlicemia.valor_mg_dl),
                         borderRadius: '10px',
-                        border: '1.5px solid rgba(124, 83, 63, 0.25)',
-                        padding: '0.55rem 0.85rem',
+                        border: '1.5px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                        padding: '0.65rem 0.85rem',
                         backgroundColor: 'var(--cor-fundo, #FAF8F5)',
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
-                      Momento
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.4rem' }}>
+                      Momento da Medição
                     </label>
                     <select
                       value={formGlicemia.momento_medicao}
@@ -1234,9 +1193,10 @@ export default function PainelCuidador() {
                         width: '100%',
                         fontSize: '0.88rem',
                         borderRadius: '10px',
-                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
                         padding: '0.65rem 0.85rem',
                         backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                        color: 'var(--cor-texto, #2E2824)',
                       }}
                     >
                       <option value="Jejum">Jejum matinal</option>
@@ -1248,53 +1208,57 @@ export default function PainelCuidador() {
                     </select>
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
-                      Carboidratos (g)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 35"
-                      value={formGlicemia.carboidratos_g}
-                      onChange={(e) => setFormGlicemia({ ...formGlicemia, carboidratos_g: e.target.value })}
-                      min="0"
-                      max="300"
-                      style={{
-                        width: '100%',
-                        fontSize: '0.92rem',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(124, 83, 63, 0.25)',
-                        padding: '0.65rem 0.85rem',
-                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
-                      }}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.4rem' }}>
+                        Carboidratos (g)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 35"
+                        value={formGlicemia.carboidratos_g}
+                        onChange={(e) => setFormGlicemia({ ...formGlicemia, carboidratos_g: e.target.value })}
+                        min="0"
+                        max="300"
+                        style={{
+                          width: '100%',
+                          fontSize: '0.92rem',
+                          borderRadius: '10px',
+                          border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                          padding: '0.65rem 0.85rem',
+                          backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                          color: 'var(--cor-texto, #2E2824)',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.4rem' }}>
+                        Insulina (UI)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        placeholder="Ex: 1.5"
+                        value={formGlicemia.dose_insulina}
+                        onChange={(e) => setFormGlicemia({ ...formGlicemia, dose_insulina: e.target.value })}
+                        min="0"
+                        max="50"
+                        style={{
+                          width: '100%',
+                          fontSize: '0.92rem',
+                          borderRadius: '10px',
+                          border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                          padding: '0.65rem 0.85rem',
+                          backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                          color: 'var(--cor-texto, #2E2824)',
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
-                      Insulina (UI)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      placeholder="Ex: 1.5"
-                      value={formGlicemia.dose_insulina}
-                      onChange={(e) => setFormGlicemia({ ...formGlicemia, dose_insulina: e.target.value })}
-                      min="0"
-                      max="50"
-                      style={{
-                        width: '100%',
-                        fontSize: '0.92rem',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(124, 83, 63, 0.25)',
-                        padding: '0.65rem 0.85rem',
-                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.4rem' }}>
                       Observação / Contexto
                     </label>
                     <input
@@ -1306,139 +1270,37 @@ export default function PainelCuidador() {
                         width: '100%',
                         fontSize: '0.88rem',
                         borderRadius: '10px',
-                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
                         padding: '0.65rem 0.85rem',
                         backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                        color: 'var(--cor-texto, #2E2824)',
                       }}
                     />
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                  <Button
-                    tipo="submit"
-                    variante="sucesso"
-                    carregando={salvandoGlicemia}
-                    style={{
-                      padding: '0.65rem 1.75rem',
-                      fontSize: '0.9rem',
-                      fontWeight: 700,
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>Registrar Medição</span>
-                  </Button>
-                </div>
-              </form>
-            </div>
-            {/* /* FIM DO FORMULÁRIO ENXUTO DE NOVO REGISTRO */}
-
-            {/* /* INÍCIO DO HISTÓRICO DE LEITURAS RECENTES (TABELA LIMPA) */}
-            <div
-              style={{
-                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
-                marginBottom: '1.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3
-                  style={{
-                    fontFamily: 'var(--fonte-titulo, Fraunces)',
-                    fontSize: '1.15rem',
-                    color: 'var(--cor-texto, #2E2824)',
-                    margin: 0,
-                  }}
-                >
-                  Linha do Tempo Familiar & Auditoria
-                </h3>
-                <span style={{ fontSize: '0.78rem', color: '#5A5049' }}>
-                  {filhoAtivo.leituras_recentes?.length || 0} registros sincronizados
-                </span>
-              </div>
-
-              <div style={{ display: 'grid', gap: '0.6rem' }}>
-                {filhoAtivo.leituras_recentes?.map((leitura) => (
-                  <div
-                    key={leitura.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      padding: '0.85rem 1.15rem',
-                      borderRadius: '12px',
-                      backgroundColor: 'var(--cor-fundo, #FAF8F5)',
-                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.08))',
-                      gap: '0.75rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div
-                        style={{
-                          fontSize: '1.25rem',
-                          fontWeight: 800,
-                          fontFamily: 'Plus Jakarta Sans, sans-serif',
-                          fontVariantNumeric: 'tabular-nums',
-                          color: obterCorGlicemia(leitura.valor_mg_dl),
-                          minWidth: '75px',
-                        }}
-                      >
-                        {leitura.valor_mg_dl}{' '}
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#7C533F' }}>mg/dL</span>
-                      </div>
-
-                      <div>
-                        <span
-                          style={{
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: 'rgba(124, 83, 63, 0.08)',
-                            color: '#7C533F',
-                            marginRight: '0.5rem',
-                          }}
-                        >
-                          {leitura.momento_medicao}
-                        </span>
-
-                        <span style={{ fontSize: '0.78rem', color: '#5A5049' }}>
-                          {leitura.dose_insulina ? `${leitura.dose_insulina} UI • ` : ''}
-                          {leitura.carboidratos_g ? `${leitura.carboidratos_g}g carbos • ` : ''}
-                          {leitura.fator_contexto || ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '3px 8px',
-                          borderRadius: '8px',
-                          backgroundColor: leitura.registrado_por_rotulo?.includes('Pai') ? 'rgba(44, 76, 108, 0.1)' : 'rgba(59, 126, 72, 0.1)',
-                          color: leitura.registrado_por_rotulo?.includes('Pai') ? '#2C4C6C' : '#1E4620',
-                        }}
-                      >
-                        {leitura.registrado_por_rotulo || 'Responsável'}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', color: '#7C533F', fontFamily: 'Plus Jakarta Sans, sans-serif', fontVariantNumeric: 'tabular-nums' }}>
-                        {leitura.data_hora_medicao?.split(' ')[1] || leitura.data_hora_medicao}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* /* FIM DO HISTÓRICO DE LEITURAS RECENTES */}
+                  <SheetFooter style={{ marginTop: 'auto', padding: 0 }}>
+                    <Button
+                      variante="secundario"
+                      tipo="button"
+                      onClick={() => setSheetNovaMedicaoAberta(false)}
+                      style={{ fontSize: '0.88rem' }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      variante="sucesso"
+                      tipo="submit"
+                      loading={salvandoGlicemia}
+                      disabled={salvandoGlicemia || !formGlicemia.valor_mg_dl}
+                      style={{ fontSize: '0.88rem', fontWeight: 700 }}
+                    >
+                      Salvar Medição
+                    </Button>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
+            </Sheet>
+            {/* /* FIM DA GAVETA LATERAL (SHEET) */}
 
             {/* INÍCIO BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD (FASE 1) */}
             <CartaoDiagnosticoDownload

@@ -2,16 +2,18 @@
    ARQUIVO: GraficoCurvaGlicemia.jsx
    LOCALIZAÇÃO: /frontend/src/components/GraficoCurvaGlicemia.jsx
    PROJETO: GlicoCare — Apoio em Diabetes & Cuidado Integrado
-   OBJETIVO: Gráfico interativo e responsivo em SVG puro (sem bibliotecas pesadas)
-             para visualização da curva glicêmica contínua, com faixa-alvo sombreada
-             (70–180 mg/dL), curva Bezier suave, seletor de período (Hoje, 7 dias,
-             30 dias) e tooltips flutuantes com dados de carboidratos e insulina.
+   OBJETIVO: Gráfico de Curva Glicêmica Estilo shadcn/ui Charts (AreaChart SVG)
+             com preenchimento degradê translúcido, linhas de grade pontilhadas (3 3),
+             faixa de meta (70–180 mg/dL), seletor de período em Tabs e Tooltip shadcn.
    ========================================================================== */
 
 /* INÍCIO DO COMPONENTE GRAFICOCURVAGLICEMIA */
 
 import React, { useState, useMemo } from 'react';
-import { Activity, Clock, Zap, Utensils, Info, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Activity, Clock, Zap, Utensils } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/Card';
+import { Tabs, TabsList, TabsTrigger } from './ui/Tabs';
+import { Badge } from './ui/Badge';
 
 export default function GraficoCurvaGlicemia({
   registros = [],
@@ -20,8 +22,8 @@ export default function GraficoCurvaGlicemia({
   metaMax = 180,
   onPontoClick,
 }) {
-  // Controle de período selecionado (Hoje, 7 dias, 30 dias)
-  const [periodo, setPeriodo] = useState('hoje'); // 'hoje' | '7dias' | '30dias'
+  // Controle de período selecionado (Tabs shadcn: hoje, 7dias, 30dias)
+  const [periodo, setPeriodo] = useState('hoje');
 
   // Ponto ativo sob foco / hover (para exibição do tooltip minimalista)
   const [pontoAtivo, setPontoAtivo] = useState(null);
@@ -73,7 +75,6 @@ export default function GraficoCurvaGlicemia({
         { id: 'h5', valor: 142, timeMs: agora - 2 * 3600 * 1000, momento: 'Lanche da Tarde', carbos: 20, insulina: 1.5, obs: 'Iogurte com castanhas' },
         { id: 'h6', valor: 128, timeMs: agora - 35 * 60 * 1000, momento: 'Atual', carbos: 0, insulina: 0, obs: 'Sensação serena' },
       ];
-      // Mescla com registros reais se houver
       return [...baseHoje.filter(b => !filtrados.some(f => Math.abs(f.timeMs - b.timeMs) < 3600000)), ...filtrados].sort((a, b) => a.timeMs - b.timeMs);
     } else if (periodo === '7dias') {
       const dias = [
@@ -123,8 +124,8 @@ export default function GraficoCurvaGlicemia({
 
   // Dimensões do SVG
   const svgWidth = 840;
-  const svgHeight = 250;
-  const padding = { top: 25, right: 35, bottom: 35, left: 50 };
+  const svgHeight = 240;
+  const padding = { top: 20, right: 30, bottom: 30, left: 45 };
   const graphWidth = svgWidth - padding.left - padding.right;
   const graphHeight = svgHeight - padding.top - padding.bottom;
 
@@ -150,510 +151,322 @@ export default function GraficoCurvaGlicemia({
     return padding.left + ratio * graphWidth;
   };
 
-  // Coordenadas calculadas dos pontos
-  const pontosCoord = useMemo(() => {
+  // Pontos processados (coordenadas x, y no plano SVG)
+  const pontosProcessados = useMemo(() => {
     return dadosGrafico.map((d, i) => ({
       ...d,
       x: getX(d.timeMs, i),
       y: getY(d.valor),
     }));
-  }, [dadosGrafico, minTime, maxTime]);
+  }, [dadosGrafico]);
 
-  /**
-   * Gera curva de Bezier suave (Cubic Spline simples) conectando os pontos
-   */
+  // Geração do caminho Bezier suave e da área sombreada
   const { pathD, areaD } = useMemo(() => {
-    if (pontosCoord.length === 0) return { pathD: '', areaD: '' };
-    if (pontosCoord.length === 1) {
-      const p = pontosCoord[0];
+    if (!pontosProcessados || pontosProcessados.length === 0) return { pathD: '', areaD: '' };
+    if (pontosProcessados.length === 1) {
+      const p = pontosProcessados[0];
       return { pathD: `M ${p.x} ${p.y}`, areaD: '' };
     }
 
-    let d = `M ${pontosCoord[0].x} ${pontosCoord[0].y}`;
+    let d = `M ${pontosProcessados[0].x} ${pontosProcessados[0].y}`;
 
-    for (let i = 0; i < pontosCoord.length - 1; i++) {
-      const p0 = pontosCoord[i === 0 ? 0 : i - 1];
-      const p1 = pontosCoord[i];
-      const p2 = pontosCoord[i + 1];
-      const p3 = pontosCoord[i + 2 < pontosCoord.length ? i + 2 : i + 1];
+    for (let i = 0; i < pontosProcessados.length - 1; i++) {
+      const p0 = pontosProcessados[i === 0 ? 0 : i - 1];
+      const p1 = pontosProcessados[i];
+      const p2 = pontosProcessados[i + 1];
+      const p3 = pontosProcessados[i + 2 < pontosProcessados.length ? i + 2 : i + 1];
 
-      // Tensão da curva suave (0.2)
-      const cp1x = p1.x + (p2.x - p0.x) * 0.18;
-      const cp1y = p1.y + (p2.y - p0.y) * 0.18;
-      const cp2x = p2.x - (p3.x - p1.x) * 0.18;
-      const cp2y = p2.y - (p3.y - p1.y) * 0.18;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
 
-      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     }
 
-    // Cria a área sombreada abaixo da linha até a base do gráfico
-    const yBase = getY(yMinDomain);
-    const firstX = pontosCoord[0].x;
-    const lastX = pontosCoord[pontosCoord.length - 1].x;
-    const area = `${d} L ${lastX.toFixed(1)} ${yBase} L ${firstX.toFixed(1)} ${yBase} Z`;
+    const yBottom = padding.top + graphHeight;
+    const firstPoint = pontosProcessados[0];
+    const lastPoint = pontosProcessados[pontosProcessados.length - 1];
+
+    const area = `${d} L ${lastPoint.x} ${yBottom} L ${firstPoint.x} ${yBottom} Z`;
 
     return { pathD: d, areaD: area };
-  }, [pontosCoord]);
+  }, [pontosProcessados]);
 
-  // Faixa-alvo (70 a 180 mg/dL)
+  // Linhas de grade horizontais pontilhadas (shadcn style strokeDasharray="3 3")
+  const gridYValues = [70, 100, 140, 180, 220];
   const yMetaMin = getY(metaMin);
   const yMetaMax = getY(metaMax);
   const alturaFaixa = yMetaMin - yMetaMax;
 
-  // Formatação de hora e data amigável
-  const formatarHoraPonto = (timeMs) => {
-    const data = new Date(timeMs);
-    if (periodo === 'hoje') {
-      return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
-
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--cor-superficie)',
-        borderRadius: '16px',
-        padding: '1.5rem',
-        border: '1px solid var(--cor-borda-suave)',
-        boxShadow: 'var(--sombra-card, 0 4px 16px rgba(46, 40, 36, 0.04))',
-        position: 'relative',
-      }}
-    >
-      {/* ====================================================================
-          CABEÇALHO DO GRÁFICO: TÍTULO FRAUNCES + SELETOR EM PÍLULAS
-          ==================================================================== */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1.25rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div
+    <Card className="gc-chart-card">
+      <CardHeader style={{ paddingBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(59, 126, 72, 0.12)',
+                color: 'var(--cor-cta, #3B7E48)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Activity size={18} strokeWidth={1.75} />
+            </div>
+            <div>
+              <CardTitle>Curva Glicêmica & Tendência</CardTitle>
+              <CardDescription>
+                Faixa-alvo clínica: {metaMin}–{metaMax} mg/dL • {metricas.tir}% no alvo ({periodo === 'hoje' ? '24h' : periodo === '7dias' ? '7 dias' : '30 dias'})
+              </CardDescription>
+            </div>
+          </div>
+
+          {/* Seletor de Período em Tabs Segmentadas (shadcn style) */}
+          <Tabs value={periodo} onValueChange={(val) => { setPeriodo(val); setPontoAtivo(null); }}>
+            <TabsList>
+              <TabsTrigger value="hoje">Hoje (24h)</TabsTrigger>
+              <TabsTrigger value="7dias">7 dias</TabsTrigger>
+              <TabsTrigger value="30dias">30 dias</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </CardHeader>
+
+      <CardContent style={{ position: 'relative', paddingTop: '0.75rem' }}>
+        {/* ÁREA DO GRÁFICO SVG RESPONSIVO */}
+        <div style={{ position: 'relative', width: '100%', overflowX: 'auto' }}>
+          <svg
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              backgroundColor: 'var(--cor-cta-suave)',
-              color: 'var(--cor-cta)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              overflow: 'visible',
             }}
           >
-            <Activity size={18} strokeWidth={1.75} />
-          </div>
-          <div>
-            <h3
-              style={{
-                fontFamily: 'var(--fonte-titulo)',
-                fontSize: '1.2rem',
-                color: 'var(--cor-texto)',
-                margin: 0,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Curva Glicêmica & Tendência
-            </h3>
-            <p
-              style={{
-                fontSize: '0.8rem',
-                color: 'var(--cor-texto-suave)',
-                margin: 0,
-              }}
-            >
-              Faixa-alvo recomendada: {metaMin}–{metaMax} mg/dL
-            </p>
-          </div>
-        </div>
+            <defs>
+              {/* Gradiente translúcido estilo shadcn AreaChart */}
+              <linearGradient id="gradienteAreaChart" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--cor-cta, #3B7E48)" stopOpacity="0.22" />
+                <stop offset="60%" stopColor="var(--cor-cta, #3B7E48)" stopOpacity="0.06" />
+                <stop offset="100%" stopColor="var(--cor-cta, #3B7E48)" stopOpacity="0.00" />
+              </linearGradient>
 
-        {/* Pílulas de Seleção de Período */}
-        <div
-          style={{
-            display: 'inline-flex',
-            backgroundColor: 'var(--cor-fundo)',
-            borderRadius: '999px',
-            padding: '3px',
-            border: '1px solid var(--cor-borda-suave)',
-          }}
-        >
-          {[
-            { id: 'hoje', label: 'Hoje (24h)' },
-            { id: '7dias', label: '7 dias' },
-            { id: '30dias', label: '30 dias' },
-          ].map((item) => {
-            const ativo = periodo === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setPeriodo(item.id);
-                  setPontoAtivo(null);
-                }}
-                style={{
-                  backgroundColor: ativo ? 'var(--cor-superficie)' : 'transparent',
-                  color: ativo ? 'var(--cor-primaria)' : 'var(--cor-texto-suave)',
-                  fontWeight: ativo ? 700 : 500,
-                  fontSize: '0.78rem',
-                  border: 'none',
-                  borderRadius: '999px',
-                  padding: '0.35rem 0.85rem',
-                  cursor: 'pointer',
-                  boxShadow: ativo ? '0 2px 6px rgba(46, 40, 36, 0.08)' : 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+              {/* Gradiente da linha Bezier */}
+              <linearGradient id="gradienteLinhaChart" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--cor-cta, #3B7E48)" />
+                <stop offset="100%" stopColor="var(--cor-primaria, #7C533F)" />
+              </linearGradient>
+            </defs>
 
-      {/* ====================================================================
-          ÁREA DO GRÁFICO SVG RESPONSIVO COM FAIXA-ALVO TRANSLÚCIDA
-          ==================================================================== */}
-      <div style={{ position: 'relative', width: '100%', overflowX: 'auto' }}>
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-            overflow: 'visible',
-          }}
-        >
-          <defs>
-            {/* Gradiente da área sob a curva */}
-            <linearGradient id="gradienteCurva" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--cor-cta)" stopOpacity="0.22" />
-              <stop offset="60%" stopColor="var(--cor-cta)" stopOpacity="0.06" />
-              <stop offset="100%" stopColor="var(--cor-cta)" stopOpacity="0.00" />
-            </linearGradient>
-
-            {/* Gradiente da linha Bezier */}
-            <linearGradient id="gradienteLinha" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--cor-cta)" />
-              <stop offset="100%" stopColor="var(--cor-primaria)" />
-            </linearGradient>
-          </defs>
-
-          {/* Faixa-alvo sombreada em Verde Alívio translúcido (70 a 180 mg/dL) */}
-          <rect
-            x={padding.left}
-            y={yMetaMax}
-            width={graphWidth}
-            height={alturaFaixa}
-            fill="var(--cor-cta)"
-            fillOpacity="0.09"
-            rx="4"
-          />
-
-          {/* Linha tracejada superior (180 mg/dL) */}
-          <line
-            x1={padding.left}
-            y1={yMetaMax}
-            x2={padding.left + graphWidth}
-            y2={yMetaMax}
-            stroke="var(--cor-cta)"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-            opacity="0.45"
-          />
-          <text
-            x={padding.left - 6}
-            y={yMetaMax + 4}
-            textAnchor="end"
-            fontSize="10"
-            fill="var(--cor-texto-suave)"
-            fontFamily="var(--fonte-corpo)"
-          >
-            180
-          </text>
-
-          {/* Linha tracejada inferior (70 mg/dL) */}
-          <line
-            x1={padding.left}
-            y1={yMetaMin}
-            x2={padding.left + graphWidth}
-            y2={yMetaMin}
-            stroke="var(--cor-cta)"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-            opacity="0.45"
-          />
-          <text
-            x={padding.left - 6}
-            y={yMetaMin + 4}
-            textAnchor="end"
-            fontSize="10"
-            fill="var(--cor-texto-suave)"
-            fontFamily="var(--fonte-corpo)"
-          >
-            70
-          </text>
-
-          {/* Linha de centro 100 mg/dL de referência */}
-          <line
-            x1={padding.left}
-            y1={getY(glicemiaAlvo)}
-            x2={padding.left + graphWidth}
-            y2={getY(glicemiaAlvo)}
-            stroke="var(--cor-borda-suave)"
-            strokeWidth="0.75"
-            strokeDasharray="2 3"
-            opacity="0.3"
-          />
-          <text
-            x={padding.left - 6}
-            y={getY(glicemiaAlvo) + 4}
-            textAnchor="end"
-            fontSize="10"
-            fill="var(--cor-texto-suave)"
-            fontFamily="var(--fonte-corpo)"
-            opacity="0.6"
-          >
-            {glicemiaAlvo}
-          </text>
-
-          {/* Rótulo da Faixa-Alvo na extremidade direita */}
-          <text
-            x={padding.left + graphWidth - 6}
-            y={yMetaMax + 14}
-            textAnchor="end"
-            fontSize="9"
-            fontWeight="600"
-            fill="var(--cor-cta)"
-            opacity="0.8"
-            letterSpacing="0.04em"
-          >
-            FAIXA-ALVO (70–180)
-          </text>
-
-          {/* Área preenchida sob a curva */}
-          {areaD && <path d={areaD} fill="url(#gradienteCurva)" />}
-
-          {/* Traçado da Curva Bezier Suave */}
-          {pathD && (
-            <path
-              d={pathD}
-              fill="none"
-              stroke="url(#gradienteLinha)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            {/* Faixa-alvo sombreada em Verde Alívio suave (70 a 180 mg/dL) */}
+            <rect
+              x={padding.left}
+              y={yMetaMax}
+              width={graphWidth}
+              height={alturaFaixa}
+              fill="var(--cor-cta, #3B7E48)"
+              fillOpacity="0.07"
+              rx="4"
             />
-          )}
 
-          {/* Rótulos do Eixo X (Horários / Dias) */}
-          {pontosCoord.map((p, idx) => (
-            <g key={`x-${p.id || idx}`}>
-              <line
-                x1={p.x}
-                y1={padding.top + graphHeight}
-                x2={p.x}
-                y2={padding.top + graphHeight + 4}
-                stroke="var(--cor-borda-suave)"
-                strokeWidth="1"
-              />
-              <text
-                x={p.x}
-                y={padding.top + graphHeight + 17}
-                textAnchor="middle"
-                fontSize="10"
-                fill="var(--cor-texto-suave)"
-                fontFamily="var(--fonte-corpo)"
-              >
-                {formatarHoraPonto(p.timeMs)}
-              </text>
-            </g>
-          ))}
-
-          {/* Pontos Interativos (Hover e Clique) */}
-          {pontosCoord.map((p) => {
-            const noAlvo = p.valor >= metaMin && p.valor <= metaMax;
-            const isHipo = p.valor < metaMin;
-            const corPonto = noAlvo ? 'var(--cor-cta)' : isHipo ? '#A23B2A' : '#C2410C';
-            const isHovered = pontoAtivo?.id === p.id;
-
-            return (
-              <g
-                key={p.id}
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setPontoAtivo(p)}
-                onClick={() => {
-                  setPontoAtivo(p);
-                  if (onPontoClick) onPontoClick(p);
-                }}
-              >
-                {/* Halo de foco para ampliação de toque */}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={isHovered ? 16 : 10}
-                  fill="transparent"
+            {/* Linhas de Grade Horizontais Pontilhadas (shadcn style strokeDasharray="3 3") */}
+            {gridYValues.map((yVal) => (
+              <g key={`grid-${yVal}`}>
+                <line
+                  x1={padding.left}
+                  y1={getY(yVal)}
+                  x2={padding.left + graphWidth}
+                  y2={getY(yVal)}
+                  stroke="var(--cor-borda-suave, rgba(124, 83, 63, 0.12))"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
                 />
+                <text
+                  x={padding.left - 8}
+                  y={getY(yVal) + 4}
+                  textAnchor="end"
+                  fontSize="11"
+                  fill="var(--cor-texto-suave, #5C534C)"
+                  fontFamily="Plus Jakarta Sans, sans-serif"
+                  fontVariantNumeric="tabular-nums"
+                >
+                  {yVal}
+                </text>
+              </g>
+            ))}
 
-                {/* Halo pulsante quando ativo */}
-                {isHovered && (
+            {/* Rótulo da Faixa-Alvo na extremidade direita */}
+            <text
+              x={padding.left + graphWidth - 6}
+              y={yMetaMax + 14}
+              textAnchor="end"
+              fontSize="10"
+              fontWeight="600"
+              fill="var(--cor-cta, #3B7E48)"
+              opacity="0.85"
+              letterSpacing="0.04em"
+            >
+              FAIXA-ALVO (70–180)
+            </text>
+
+            {/* Área preenchida sob a curva (AreaChart) */}
+            {areaD && <path d={areaD} fill="url(#gradienteAreaChart)" />}
+
+            {/* Traçado da Curva Bezier Suave */}
+            {pathD && (
+              <path
+                d={pathD}
+                fill="none"
+                stroke="url(#gradienteLinhaChart)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+
+            {/* Linha vertical tracejada do ponto sob hover */}
+            {pontoAtivo && (
+              <line
+                x1={pontoAtivo.x}
+                y1={padding.top}
+                x2={pontoAtivo.x}
+                y2={padding.top + graphHeight}
+                stroke="var(--cor-texto-suave, #5C534C)"
+                strokeWidth="1"
+                strokeDasharray="3 3"
+                opacity="0.45"
+              />
+            )}
+
+            {/* Pontos interativos circulares */}
+            {pontosProcessados.map((p) => {
+              const noAlvo = p.valor >= metaMin && p.valor <= metaMax;
+              const isHipo = p.valor < metaMin;
+              const corPonto = noAlvo ? 'var(--cor-cta, #3B7E48)' : isHipo ? '#C94A38' : '#C88D2A';
+              const isHovered = pontoAtivo?.id === p.id;
+
+              return (
+                <g
+                  key={p.id}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setPontoAtivo(p)}
+                  onClick={() => {
+                    setPontoAtivo(p);
+                    if (onPontoClick) onPontoClick(p);
+                  }}
+                >
+                  {/* Halo invisível para facilitar o toque/hover */}
+                  <circle cx={p.x} cy={p.y} r={isHovered ? 16 : 10} fill="transparent" />
+
+                  {/* Halo de foco quando ativo */}
+                  {isHovered && (
+                    <circle cx={p.x} cy={p.y} r={9} fill={corPonto} opacity="0.25" />
+                  )}
+
+                  {/* Ponto principal */}
                   <circle
                     cx={p.x}
                     cy={p.y}
-                    r={9}
-                    fill={corPonto}
-                    opacity="0.25"
+                    r={isHovered ? 5.5 : 4}
+                    fill="var(--cor-superficie-elevada, #FFFFFF)"
+                    stroke={corPonto}
+                    strokeWidth={isHovered ? 2.5 : 2}
+                    style={{ transition: 'all 0.15s ease' }}
                   />
-                )}
+                </g>
+              );
+            })}
+          </svg>
 
-                {/* Ponto principal */}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={isHovered ? 5.5 : 4}
-                  fill="var(--cor-superficie)"
-                  stroke={corPonto}
-                  strokeWidth={isHovered ? 2.5 : 2}
-                  style={{ transition: 'all 0.15s ease' }}
-                />
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* ==================================================================
-            TOOLTIP FLUTUANTE MINIMALISTA (POSICIONADO SOBRE O PONTO ATIVO)
-            ================================================================== */}
-        {pontoAtivo && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `${Math.min(82, Math.max(12, (pontoAtivo.x / svgWidth) * 100))}%`,
-              top: `${Math.max(10, (pontoAtivo.y / svgHeight) * 100 - 45)}%`,
-              transform: 'translate(-50%, -100%)',
-              backgroundColor: 'var(--cor-superficie-elevada)',
-              color: 'var(--cor-texto)',
-              border: '1px solid var(--cor-borda)',
-              borderRadius: '10px',
-              padding: '0.65rem 0.85rem',
-              boxShadow: '0 8px 24px rgba(46, 40, 36, 0.14)',
-              pointerEvents: 'none',
-              zIndex: 10,
-              minWidth: '160px',
-              fontSize: '0.8rem',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                <Clock size={12} strokeWidth={1.75} />
-                {new Date(pontoAtivo.timeMs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: '999px',
-                  backgroundColor: pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'var(--cor-cta-suave)' : '#FDF2F0',
-                  color: pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'var(--cor-cta)' : '#A23B2A',
-                }}
-              >
-                {pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'No alvo' : pontoAtivo.valor < metaMin ? 'Hipo' : 'Alta'}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '0.35rem' }}>
-              <span
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: 'var(--cor-texto)',
-                  fontFamily: 'var(--fonte-corpo)',
-                }}
-              >
-                {pontoAtivo.valor}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--cor-texto-suave)' }}>mg/dL</span>
-            </div>
-
-            {/* Insumos associados (Carboidratos e Insulina) */}
-            {(pontoAtivo.carbos > 0 || pontoAtivo.insulina > 0) && (
-              <div style={{ display: 'flex', gap: '0.6rem', borderTop: '1px solid var(--cor-borda-suave)', paddingTop: '0.35rem', marginTop: '0.2rem', fontSize: '0.74rem' }}>
-                {pontoAtivo.carbos > 0 && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--cor-primaria)', fontWeight: 600 }}>
-                    <Utensils size={11} strokeWidth={1.75} />
-                    {pontoAtivo.carbos}g
-                  </span>
-                )}
-                {pontoAtivo.insulina > 0 && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--cor-cta)', fontWeight: 600 }}>
-                    <Zap size={11} strokeWidth={1.75} />
-                    {pontoAtivo.insulina} UI
-                  </span>
-                )}
+          {/* TOOLTIP ESTILO SHADCN (SURFACE ELEVADA, BORDA SUTIL, SHADOW COMPACTA) */}
+          {pontoAtivo && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${Math.min(84, Math.max(16, (pontoAtivo.x / svgWidth) * 100))}%`,
+                top: `${Math.max(12, (pontoAtivo.y / svgHeight) * 100 - 45)}%`,
+                transform: 'translate(-50%, -100%)',
+                backgroundColor: 'var(--cor-superficie-elevada, #FFFFFF)',
+                color: 'var(--cor-texto, #2E2824)',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.15))',
+                borderRadius: '10px',
+                padding: '0.65rem 0.85rem',
+                boxShadow: '0 4px 16px rgba(46, 40, 36, 0.12)',
+                pointerEvents: 'none',
+                zIndex: 20,
+                minWidth: '165px',
+                fontSize: '0.82rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  <Clock size={12} strokeWidth={1.75} />
+                  {new Date(pontoAtivo.timeMs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <Badge
+                  variant={pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'success' : pontoAtivo.valor < metaMin ? 'destructive' : 'warning'}
+                  style={{ fontSize: '10px', padding: '1px 6px' }}
+                >
+                  {pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'No alvo' : pontoAtivo.valor < metaMin ? 'Hipo' : 'Alta'}
+                </Badge>
               </div>
-            )}
 
-            {pontoAtivo.obs && (
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: 'var(--cor-texto-suave)', fontStyle: 'italic' }}>
-                {pontoAtivo.obs}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                <span
+                  style={{
+                    fontSize: '1.45rem',
+                    fontWeight: 800,
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontVariantNumeric: 'tabular-nums',
+                    color: pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'var(--cor-cta, #3B7E48)' : pontoAtivo.valor < metaMin ? '#C94A38' : '#C88D2A',
+                    lineHeight: 1,
+                  }}
+                >
+                  {pontoAtivo.valor}
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', marginLeft: 'auto' }}>
+                  {pontoAtivo.momento}
+                </span>
+              </div>
 
-      {/* ====================================================================
-          BARRA DE RESUMO DAS MÉTRICAS DO PERÍODO
-          ==================================================================== */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '0.75rem',
-          marginTop: '1.25rem',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--cor-borda-suave)',
-        }}
-      >
-        <div>
-          <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave)' }}>Média do período</span>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cor-texto)', fontVariantNumeric: 'tabular-nums' }}>
-            {metricas.media} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--cor-texto-suave)' }}>mg/dL</span>
-          </div>
+              {(pontoAtivo.carbos > 0 || pontoAtivo.insulina > 0 || pontoAtivo.obs) && (
+                <div
+                  style={{
+                    borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))',
+                    paddingTop: '0.35rem',
+                    marginTop: '0.35rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    fontSize: '0.74rem',
+                    color: 'var(--cor-texto-suave, #5C534C)',
+                  }}
+                >
+                  {pontoAtivo.carbos > 0 && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Utensils size={11} strokeWidth={1.75} /> {pontoAtivo.carbos}g carboidratos
+                    </span>
+                  )}
+                  {pontoAtivo.insulina > 0 && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--cor-primaria, #7C533F)', fontWeight: 600 }}>
+                      <Zap size={11} strokeWidth={1.75} /> {pontoAtivo.insulina} UI insulina
+                    </span>
+                  )}
+                  {pontoAtivo.obs && <span>📝 {pontoAtivo.obs}</span>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-
-        <div>
-          <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave)' }}>Variação (Mín • Máx)</span>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cor-texto)', fontVariantNumeric: 'tabular-nums' }}>
-            {metricas.min}–{metricas.max} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--cor-texto-suave)' }}>mg/dL</span>
-          </div>
-        </div>
-
-        <div>
-          <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave)' }}>Tempo no Alvo (TIR)</span>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cor-cta)', fontVariantNumeric: 'tabular-nums' }}>
-            {metricas.tir}% <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--cor-texto-suave)' }}>no alvo</span>
-          </div>
-        </div>
-
-        <div>
-          <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave)' }}>Distribuição</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '0.74rem', color: '#A23B2A', fontWeight: 600 }}>{metricas.percHipo}% hipo</span>
-            <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave)' }}>•</span>
-            <span style={{ fontSize: '0.74rem', color: '#C2410C', fontWeight: 600 }}>{metricas.percHiper}% alta</span>
-          </div>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
-
 /* FIM DO COMPONENTE GRAFICOCURVAGLICEMIA */
