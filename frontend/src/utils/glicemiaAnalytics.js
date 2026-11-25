@@ -2,7 +2,8 @@
    ARQUIVO: glicemiaAnalytics.js (Localização: /frontend/src/utils/glicemiaAnalytics.js)
    OBJETIVO:
      Motor de cálculo clínico-educativo e preditivo da plataforma GlicoCare:
-     1. Insulina Ativa Estimada (IOB — Insulin On Board) com decaimento fisiológico;
+     1. Insulina Ativa Estimada (IOB — Insulin On Board) com decaimento fisiológico
+        individual por dose/bolus (multi-bolus) e tempo máximo de expiração;
      2. Projeção pelo Fator de Sensibilidade Insulínica (FSI) e detecção de sobreposição;
      3. Velocidade de Variação e Seta de Tendência entre pontas de dedo (destros <= 45 min).
    AVISO ÉTICO:
@@ -10,15 +11,17 @@
      A GlicoCare não altera nem prescreve doses de insulina.
    ========================================================================== */
 
+/* INÍCIO DO MÓDULO DE CÁLCULO DE IOB MULTI-DOSE INDIVIDUAL */
+
 /**
  * Retorna o fator de decaimento (0.0 a 1.0) para um tempo decorrido em minutos,
- * proporcional à duração de ação informada (padrão 3h = 180 min).
- * Curva fisiológica aproximada para insulina rápida/ultrarrápida:
+ * proporcional à duração de ação informada (padrão 3h = 180 min ou 4h = 240 min).
+ * Curva fisiológica refinada para insulina rápida/ultrarrápida (Novorapid, Humalog, Fiasp, Apidra):
  *  - 0% do tempo: 100% ativa (1.0)
- *  - 16.7% do tempo (~30 min em 3h): 80% ativa (0.8)
- *  - 33.3% do tempo (~60 min em 3h): 60% ativa (0.6)
- *  - 50.0% do tempo (~90 min em 3h): 40% ativa (0.4)
- *  - 66.7% do tempo (~120 min em 3h): 25% ativa (0.25)
+ *  - 16.7% do tempo (~30 min em 3h): 82% ativa (0.82)
+ *  - 33.3% do tempo (~60 min em 3h): 62% ativa (0.62)
+ *  - 50.0% do tempo (~90 min em 3h): 42% ativa (0.42)
+ *  - 66.7% do tempo (~120 min em 3h): 24% ativa (0.24)
  *  - 83.3% do tempo (~150 min em 3h): 10% ativa (0.10)
  *  - >= 100% do tempo (180 min em 3h): 0% ativa (0.0)
  */
@@ -32,11 +35,11 @@ export function obterFatorDecaimentoInsulina(minutosDecorridos, duracaoHoras = 3
   // Pontos de controle da curva fisiológica (fração de tempo -> fração de insulina restante)
   const pontos = [
     { t: 0.0, i: 1.0 },
-    { t: 30 / 180, i: 0.8 },
-    { t: 60 / 180, i: 0.6 },
-    { t: 90 / 180, i: 0.4 },
-    { t: 120 / 180, i: 0.25 },
-    { t: 150 / 180, i: 0.1 },
+    { t: 30 / 180, i: 0.82 },
+    { t: 60 / 180, i: 0.62 },
+    { t: 90 / 180, i: 0.42 },
+    { t: 120 / 180, i: 0.24 },
+    { t: 150 / 180, i: 0.10 },
     { t: 1.0, i: 0.0 },
   ];
 
@@ -45,7 +48,7 @@ export function obterFatorDecaimentoInsulina(minutosDecorridos, duracaoHoras = 3
     const p2 = pontos[idx + 1];
     if (f >= p1.t && f <= p2.t) {
       const progressoSegmento = (f - p1.t) / (p2.t - p1.t);
-      return p1.i - progressoSegmento * (p1.i - p2.i);
+      return Math.max(0, p1.i - progressoSegmento * (p1.i - p2.i));
     }
   }
 
@@ -53,86 +56,199 @@ export function obterFatorDecaimentoInsulina(minutosDecorridos, duracaoHoras = 3
 }
 
 /**
- * Calcula a Insulina Ativa Estimada (IOB) presente no organismo no momento informado.
+ * Normaliza qualquer campo de data/hora de registro (ISO string, Date, timestamp ou horário "HH:MM")
+ * para timestamp em milissegundos.
+ */
+function extrairTimestampRegistro(reg, refDate = new Date()) {
+  const campoData = reg.registrado_em || reg.data_hora_medicao || reg.criado_em || reg.data_hora;
+  if (campoData) {
+    if (campoData instanceof Date) return campoData.getTime();
+    if (typeof campoData === 'number') return campoData;
+
+    const parsed = new Date(campoData).getTime();
+    if (!isNaN(parsed)) return parsed;
+
+    // Suporte robusto a formato brasileiro DD/MM/YYYY HH:MM:SS ou DD/MM/YYYY, HH:MM
+    if (typeof campoData === 'string' && campoData.includes('/')) {
+      const regexPtBr = /(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
+      const match = campoData.match(regexPtBr);
+      if (match) {
+        const dia = parseInt(match[1], 10);
+        const mes = parseInt(match[2], 10) - 1;
+        const ano = parseInt(match[3], 10);
+        const hora = parseInt(match[4], 10);
+        const min = parseInt(match[5], 10);
+        const seg = match[6] ? parseInt(match[6], 10) : 0;
+        return new Date(ano, mes, dia, hora, min, seg).getTime();
+      }
+    }
+  }
+
+  // Fallback para quando o registro possui apenas horário string (ex: "12:30" ou "12:30:00")
+  if (reg.horario && typeof reg.horario === 'string') {
+    const partes = reg.horario.split(':');
+    if (partes.length >= 2) {
+      const d = new Date(refDate);
+      d.setHours(parseInt(partes[0], 10), parseInt(partes[1], 10), partes[2] ? parseInt(partes[2], 10) : 0, 0);
+      return d.getTime();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Formata minutos restantes em texto amigável de expiração (ex: "expira em ~2h35" ou "expira em ~45min")
+ */
+export function formatarTextoExpiracao(minutosRestantes) {
+  if (!minutosRestantes || minutosRestantes <= 0) {
+    return 'Nenhuma insulina ativa no momento';
+  }
+  const hRest = Math.floor(minutosRestantes / 60);
+  const mRest = Math.round(minutosRestantes % 60);
+  if (hRest > 0) {
+    const mFormatado = mRest > 0 ? String(mRest).padStart(2, '0') : '00';
+    return `expira em ~${hRest}h${mFormatado}`;
+  }
+  return `expira em ~${mRest}min`;
+}
+
+/**
+ * Calcula a Insulina Ativa Estimada (IOB — Insulin On Board) consolidada a partir
+ * do decaimento fisiológico individual de cada dose rápida/ultrarrápida ativa (Multi-Bolus).
  *
- * @param {Array} registrosRecentes Lista de registros de glicemia com dose_insulina / dose_aplicada
+ * @param {Array} registrosRecentes Lista de registros de glicemia com dose rápida
+ * @param {number} duracaoHoras Duração de ação configurada da insulina rápida (3, 4 ou 5h, default 3)
  * @param {Date|string|number} dataHoraReferencia Data/hora de referência para o cálculo (default agora)
- * @param {number} duracaoHoras Duração de ação da insulina rápida (3, 4 ou 5h, default 3)
- * @returns {Object} { iobTotal, textoExpiracao, totalDosesAtivas, detalhesDoses }
+ * @returns {Object} {
+ *   iobTotal: number (ex: 7.9),
+ *   textoExpiracao: string (ex: "expira em ~3h00"),
+ *   maxMinutosRestantes: number,
+ *   totalDosesAtivas: number,
+ *   detalhesDoses: Array<{
+ *     id,
+ *     doseOriginal,
+ *     iobRestante,
+ *     minutosDecorridos,
+ *     minutosRestantes,
+ *     horarioFormatado,
+ *     rotuloTexto,
+ *     contexto
+ *   }>
+ * }
  */
 export function calcularInsulinaAtiva(
   registrosRecentes = [],
-  dataHoraReferencia = new Date(),
-  duracaoHoras = 3
+  duracaoHoras = 3,
+  dataHoraReferencia = new Date()
 ) {
-  const refMs = new Date(dataHoraReferencia).getTime();
-  const duracaoMinutos = (duracaoHoras || 3) * 60;
+  // Trata inversão acidental de parâmetros (se duracaoHoras for uma Date)
+  let refDate = dataHoraReferencia instanceof Date ? dataHoraReferencia : new Date(dataHoraReferencia || Date.now());
+  let duracaoH = typeof duracaoHoras === 'number' ? duracaoHoras : 3;
+  if (duracaoHoras instanceof Date) {
+    refDate = duracaoHoras;
+    duracaoH = typeof dataHoraReferencia === 'number' ? dataHoraReferencia : 3;
+  }
+
+  const refMs = refDate.getTime();
+  const duracaoMinutos = Math.max(60, (duracaoH || 3) * 60);
   const duracaoMs = duracaoMinutos * 60 * 1000;
 
-  let iobTotal = 0;
+  let somaIob = 0;
   let maxMinutosRestantes = 0;
   const detalhesDoses = [];
 
   if (!Array.isArray(registrosRecentes) || registrosRecentes.length === 0) {
     return {
-      iobTotal: 0,
+      iobTotal: 0.0,
       textoExpiracao: 'Nenhuma insulina ativa no momento',
+      maxMinutosRestantes: 0,
       totalDosesAtivas: 0,
       detalhesDoses: [],
     };
   }
 
-  registrosRecentes.forEach((reg) => {
-    const dose = parseFloat(reg.dose_aplicada || reg.dose_insulina || 0);
+  registrosRecentes.forEach((reg, index) => {
+    // Extrai a dose rápida numérica
+    const dose = parseFloat(reg.dose_insulina || reg.dose_aplicada || reg.insulina_ui || 0);
     if (isNaN(dose) || dose <= 0) return;
 
-    const dataHoraDose = new Date(reg.data_hora_medicao || reg.criado_em).getTime();
-    const diffMs = refMs - dataHoraDose;
+    // Ignora insulinas basais lentas se informadas
+    const nomeOuTipo = (reg.tipo_insulina || reg.nome_medicamento || reg.tipo || reg.medicamento_nome || '').toLowerCase();
+    const ehBasalLenta =
+      nomeOuTipo.includes('basal') ||
+      nomeOuTipo.includes('tresiba') ||
+      nomeOuTipo.includes('lantus') ||
+      nomeOuTipo.includes('levemir') ||
+      nomeOuTipo.includes('toujeo') ||
+      nomeOuTipo.includes('degludeca') ||
+      nomeOuTipo.includes('glargina') ||
+      nomeOuTipo.includes('detemir') ||
+      nomeOuTipo.includes('nph');
 
-    // Apenas doses passadas aplicadas dentro do raio da duração da insulina
+    if (ehBasalLenta) return;
+
+    const dataHoraDoseMs = extrairTimestampRegistro(reg, refDate);
+    if (!dataHoraDoseMs) return;
+
+    const diffMs = refMs - dataHoraDoseMs;
+
+    // Apenas doses passadas aplicadas dentro da janela da duração da insulina
     if (diffMs >= 0 && diffMs < duracaoMs) {
       const minutosDecorridos = diffMs / (60 * 1000);
-      const fator = obterFatorDecaimentoInsulina(minutosDecorridos, duracaoHoras);
+      const fator = obterFatorDecaimentoInsulina(minutosDecorridos, duracaoH);
       const iobDestaDose = dose * fator;
 
-      if (iobDestaDose > 0.05) {
-        iobTotal += iobDestaDose;
+      if (iobDestaDose > 0.01) {
+        somaIob += iobDestaDose;
         const minutosRestantes = Math.max(0, duracaoMinutos - minutosDecorridos);
         if (minutosRestantes > maxMinutosRestantes) {
           maxMinutosRestantes = minutosRestantes;
         }
 
+        // Formata o horário da aplicação para exibição limpa
+        const dateObjDose = new Date(dataHoraDoseMs);
+        const horarioFormatado = !isNaN(dateObjDose.getTime())
+          ? dateObjDose.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          : (reg.horario || 'Recente');
+
+        const tempoExpDose = formatarTextoExpiracao(minutosRestantes);
+        const iobFormatado = Number(iobDestaDose.toFixed(1));
+
         detalhesDoses.push({
-          id: reg.id,
-          doseOriginal: dose,
+          id: reg.id || `dose-${index}`,
+          doseOriginal: Number(dose.toFixed(1)),
+          iobRestante: iobFormatado,
           minutosDecorridos: Math.round(minutosDecorridos),
           minutosRestantes: Math.round(minutosRestantes),
-          iobRestante: parseFloat(iobDestaDose.toFixed(2)),
-          dataHora: reg.data_hora_medicao,
+          horarioFormatado,
+          rotuloTexto: `${horarioFormatado} • ${dose.toFixed(1)} UI → restam ${iobFormatado.toFixed(1)} UI (${tempoExpDose})`,
+          contexto: reg.fator_contexto || reg.momento_medicao || 'Bolus de Refeição/Correção',
+          dataHora: reg.data_hora_medicao || reg.registrado_em,
         });
       }
     }
   });
 
-  // Formata o tempo restante de expiração
-  let textoExpiracao = 'Nenhuma insulina ativa no momento';
-  if (iobTotal > 0.05 && maxMinutosRestantes > 0) {
-    const hRest = Math.floor(maxMinutosRestantes / 60);
-    const mRest = Math.round(maxMinutosRestantes % 60);
-    if (hRest > 0) {
-      textoExpiracao = `expira em ~${hRest}h${mRest > 0 ? String(mRest).padStart(2, '0') : ''}`;
-    } else {
-      textoExpiracao = `expira em ~${mRest} min`;
-    }
-  }
+  // Ordena detalhes das doses: da mais recente para a mais antiga
+  detalhesDoses.sort((a, b) => a.minutosDecorridos - b.minutosDecorridos);
+
+  const iobTotal = Number(somaIob.toFixed(1));
+  const textoExpiracao = formatarTextoExpiracao(maxMinutosRestantes);
 
   return {
-    iobTotal: parseFloat(iobTotal.toFixed(2)),
+    iobTotal,
     textoExpiracao,
+    maxMinutosRestantes: Math.round(maxMinutosRestantes),
     totalDosesAtivas: detalhesDoses.length,
     detalhesDoses,
   };
 }
+
+// Alias conveniente para calcularInsulinaAtiva
+export const calcularIOB = calcularInsulinaAtiva;
+
+/* FIM DO MÓDULO DE CÁLCULO DE IOB MULTI-DOSE INDIVIDUAL */
 
 /**
  * Calcula a Projeção pelo Fator de Sensibilidade Insulínica (FSI) e avalia risco de hipo/empilhamento.

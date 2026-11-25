@@ -17,6 +17,7 @@ import GlicoLoader from '../components/GlicoLoader';
 import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
 import GraficoCurvaGlicemia from '../components/GraficoCurvaGlicemia';
 import ComparativoExames from '../components/ComparativoExames';
+import { calcularInsulinaAtiva } from '../utils/glicemiaAnalytics';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { Badge } from '../components/ui/Badge';
@@ -162,12 +163,12 @@ const DEPENDENTE_PADRAO_THEO = {
       valor_mg_dl: 114,
       momento_medicao: 'Antes da Refeicao',
       tipo_leitura: 'Sensor/CGM',
-      acao_realizada: 'Nenhuma Acao',
-      dose_insulina: null,
-      carboidratos_g: null,
-      fator_contexto: 'Brincando no recreio escolar',
+      acao_realizada: 'Bolus para Refeicao',
+      dose_insulina: 2.0,
+      carboidratos_g: 30,
+      fator_contexto: 'Lanche escolar',
       registrado_por_rotulo: 'Mariana Silva (Mãe)',
-      data_hora_medicao: '2026-11-17 14:15:00',
+      data_hora_medicao: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
     },
     {
       id: 102,
@@ -179,7 +180,7 @@ const DEPENDENTE_PADRAO_THEO = {
       carboidratos_g: 32,
       fator_contexto: 'Almoço: arroz, feijão e maçã',
       registrado_por_rotulo: 'Mariana Silva (Mãe)',
-      data_hora_medicao: '2026-11-17 12:30:00',
+      data_hora_medicao: new Date(Date.now() - 95 * 60 * 1000).toISOString(),
     },
     {
       id: 103,
@@ -191,7 +192,7 @@ const DEPENDENTE_PADRAO_THEO = {
       carboidratos_g: null,
       fator_contexto: 'Acordou disposto sem alarmes',
       registrado_por_rotulo: 'Carlos Eduardo (Pai)',
-      data_hora_medicao: '2026-11-17 07:15:00',
+      data_hora_medicao: new Date(Date.now() - 280 * 60 * 1000).toISOString(),
     },
     {
       id: 104,
@@ -203,7 +204,7 @@ const DEPENDENTE_PADRAO_THEO = {
       carboidratos_g: null,
       fator_contexto: 'Sono tranquilo',
       registrado_por_rotulo: 'Mariana Silva (Mãe)',
-      data_hora_medicao: '2026-11-16 22:40:00',
+      data_hora_medicao: new Date(Date.now() - 600 * 60 * 1000).toISOString(),
     },
   ],
   iob_ativa: 0.8,
@@ -351,6 +352,24 @@ export default function PainelCuidador() {
 
   const filhoAtivo = dependentes[indiceFilhoAtivo] || dependentes[0] || DEPENDENTE_PADRAO_THEO;
 
+  // Atualização em tempo real (a cada 60 segundos) para recálculo dinâmico do IOB da criança
+  const [agoraTickCuidador, setAgoraTickCuidador] = useState(Date.now());
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setAgoraTickCuidador(Date.now());
+    }, 60000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Cálculo de IOB consolidado multi-dose com maior tempo de expiração para o filho ativo
+  const infoIOBCuidador = useMemo(() => {
+    return calcularInsulinaAtiva(
+      filhoAtivo?.leituras_recentes || [],
+      filhoAtivo?.duracao_insulina_horas || 3,
+      new Date(agoraTickCuidador)
+    );
+  }, [filhoAtivo?.leituras_recentes, filhoAtivo?.duracao_insulina_horas, agoraTickCuidador]);
+
   // Carrega lista de dependentes da API
   const carregarDependentes = async () => {
     setCarregando(true);
@@ -456,7 +475,7 @@ export default function PainelCuidador() {
         carboidratos_g: formGlicemia.carboidratos_g ? parseInt(formGlicemia.carboidratos_g, 10) : null,
         fator_contexto: formGlicemia.fator_contexto,
         registrado_por_rotulo: `${usuario?.nome_completo || 'Mariana Silva'} (Mãe)`,
-        data_hora_medicao: new Date().toLocaleString('pt-BR'),
+        data_hora_medicao: new Date().toISOString(),
       };
 
       const listaAtualizada = [novoRegistro, ...filhoAtivo.leituras_recentes];
@@ -464,9 +483,6 @@ export default function PainelCuidador() {
       depsAtualizados[indiceFilhoAtivo] = {
         ...filhoAtivo,
         leituras_recentes: listaAtualizada,
-        iob_ativa: formGlicemia.dose_insulina
-          ? (filhoAtivo.iob_ativa || 0) + parseFloat(formGlicemia.dose_insulina)
-          : filhoAtivo.iob_ativa,
       };
       setDependentes(depsAtualizados);
 
@@ -919,9 +935,9 @@ export default function PainelCuidador() {
               <TabsTrigger value="diario">
                 <Activity size={15} strokeWidth={1.75} />
                 <span>Diário & IOB</span>
-                {filhoAtivo.iob_ativa > 0 && (
+                {infoIOBCuidador.iobTotal > 0 && (
                   <Badge variant="warning" style={{ fontSize: '10px', padding: '0 5px' }}>
-                    {filhoAtivo.iob_ativa} UI
+                    {infoIOBCuidador.iobTotal.toFixed(1)} UI
                   </Badge>
                 )}
               </TabsTrigger>
@@ -956,15 +972,19 @@ export default function PainelCuidador() {
             ================================================================== */}
         {abaAtiva === 'diario' && (
           <div>
-            {/* ALERTA VISUAL DE EMPILHAMENTO DE INSULINA (IOB) */}
-            {filhoAtivo.alerta_empilhamento && (
+            {/* ALERTA VISUAL DE EMPILHAMENTO DE INSULINA (IOB MULTI-BOLUS) */}
+            {infoIOBCuidador.iobTotal > 0 && (
               <div style={{ marginBottom: '1.75rem' }}>
                 <Alert variant="warning">
                   <AlertTitle>
-                    Alerta de Segurança: Insulina Ativa ({filhoAtivo.alerta_empilhamento.iob_ativa} UI) — Prevenção de Empilhamento
+                    Alerta de Segurança: Insulina Ativa ({infoIOBCuidador.iobTotal.toFixed(1)} UI) — Prevenção de Empilhamento
                   </AlertTitle>
                   <AlertDescription>
-                    {filhoAtivo.alerta_empilhamento.mensagem}
+                    Atenção: há <strong>{infoIOBCuidador.iobTotal.toFixed(1)} UI</strong> de insulina ativa no organismo de{' '}
+                    <strong>{filhoAtivo.nome_crianca || 'Theo'}</strong> ({infoIOBCuidador.textoExpiracao}).
+                    {infoIOBCuidador.totalDosesAtivas > 1
+                      ? ` Identificamos ${infoIOBCuidador.totalDosesAtivas} aplicações ativas em andamento somadas. Evite nova correção rápida neste momento para prevenir hipoglicemia.`
+                      : ' Evite nova correção rápida neste momento para prevenir hipoglicemia.'}
                   </AlertDescription>
                 </Alert>
               </div>
@@ -986,7 +1006,7 @@ export default function PainelCuidador() {
               const abaixoPct = Math.round((abaixoCount / totalL) * 100);
               const acimaPct = Math.max(0, 100 - tirPct - abaixoPct);
 
-              const iobVal = filhoAtivo.alerta_empilhamento?.iob_ativa || 2.1;
+              const iobVal = infoIOBCuidador.iobTotal;
 
               return (
                 <div
@@ -1031,15 +1051,21 @@ export default function PainelCuidador() {
                     </CardContent>
                   </Card>
 
-                  {/* KPI 2: Insulina Ativa (IOB) */}
+                  {/* KPI 2: Insulina Ativa (IOB) + Decaimento Individual Multi-Bolus */}
                   <Card>
                     <CardContent style={{ padding: '1.25rem 1.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                         <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                           Insulina Ativa (IOB)
                         </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                          expira em 2h15
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            color: iobVal > 0 ? 'var(--cor-cta, #3B7E48)' : 'var(--cor-texto-suave, #5C534C)',
+                            fontWeight: iobVal > 0 ? 700 : 500,
+                          }}
+                        >
+                          {infoIOBCuidador.textoExpiracao}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
@@ -1053,12 +1079,27 @@ export default function PainelCuidador() {
                             lineHeight: 1,
                           }}
                         >
-                          {iobVal}
+                          {iobVal.toFixed(1)}
                         </span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>UI</span>
+                        {infoIOBCuidador.totalDosesAtivas > 1 && (
+                          <span
+                            style={{
+                              marginLeft: 'auto',
+                              fontSize: '0.7rem',
+                              backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                              color: '#285832',
+                              padding: '2px 7px',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {infoIOBCuidador.totalDosesAtivas} doses somadas
+                          </span>
+                        )}
                       </div>
                       <Separator style={{ margin: '0.65rem 0' }} />
-                      {/* Barra de progresso fina de 4px */}
+                      {/* Barra de progresso fisiológica de decaimento */}
                       <div>
                         <div
                           style={{
@@ -1070,18 +1111,75 @@ export default function PainelCuidador() {
                         >
                           <div
                             style={{
-                              width: `${Math.min(100, Math.round((iobVal / 4) * 100))}%`,
+                              width: `${Math.min(100, Math.round((iobVal / 5) * 100))}%`,
                               height: '100%',
-                              backgroundColor: 'var(--cor-cta, #3B7E48)',
+                              backgroundColor: iobVal > 0 ? 'var(--cor-cta, #3B7E48)' : 'var(--cor-borda)',
                               borderRadius: '999px',
+                              transition: 'width 0.4s ease',
                             }}
                           />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                          <span>Ação rápida</span>
+                          <span>Curva rápida ({filhoAtivo.duracao_insulina_horas || 3}h)</span>
                           <span>Prevenção empilhamento</span>
                         </div>
                       </div>
+
+                      {/* DETALHAMENTO DISCRETO DAS DOSES ATIVAS DA CRIANÇA */}
+                      {infoIOBCuidador.detalhesDoses.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: '0.75rem',
+                            paddingTop: '0.6rem',
+                            borderTop: '1px dashed rgba(124, 83, 63, 0.2)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Doses de {filhoAtivo.nome_crianca?.split(' ')[0] || 'Theo'}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: '#6A5E57' }}>
+                              Duração: {filhoAtivo.duracao_insulina_horas || 3}h
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            {infoIOBCuidador.detalhesDoses.map((dose) => (
+                              <div
+                                key={dose.id}
+                                style={{
+                                  fontSize: '0.74rem',
+                                  backgroundColor: 'rgba(124, 83, 63, 0.05)',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '4px',
+                                }}
+                              >
+                                <div>
+                                  <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
+                                  <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
+                                  {dose.contexto && (
+                                    <span style={{ fontSize: '0.66rem', color: '#7C533F', marginLeft: '6px', fontStyle: 'italic' }}>
+                                      ({dose.contexto.split(':')[0]})
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ fontWeight: 700, color: '#285832' }}>
+                                  restam {dose.iobRestante.toFixed(1)} UI{' '}
+                                  <span style={{ fontWeight: 500, fontSize: '0.7rem', color: '#5A5049' }}>
+                                    (expira em ~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 

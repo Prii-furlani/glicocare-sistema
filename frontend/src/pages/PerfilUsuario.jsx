@@ -95,37 +95,37 @@ const REGISTROS_DEMO_INICIAIS = [
     momento_medicao: '1h/2h Apos Refeicao',
     tipo_leitura: 'Manual',
     acao_realizada: 'Bolus para Refeicao',
-    dose_insulina: 3.5,
-    dose_aplicada: 3.5,
-    insulina_ativa_estimada: 1.2,
-    insulina_total_organismo: 4.7,
+    dose_insulina: 5.0,
+    dose_aplicada: 5.0,
+    insulina_ativa_estimada: 4.8,
+    insulina_total_organismo: 6.9,
     variacao_por_minuto: -0.80,
     tendencia_destro: '↘ Queda moderada',
-    fator_contexto: 'Almoço leve',
-    carboidratos_g: 45,
+    fator_contexto: 'Almoço: arroz, feijão e frango grelhado',
+    carboidratos_g: 50,
     observacoes: 'Sensação tranquila, monitorando com calma.',
   },
   {
     id: 102,
     valor_mg_dl: 162,
-    data_hora_medicao: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
+    data_hora_medicao: new Date(Date.now() - 110 * 60 * 1000).toISOString(),
     momento_medicao: 'Antes da Refeicao',
     tipo_leitura: 'Manual',
-    acao_realizada: 'Nenhuma Acao',
-    dose_insulina: 0,
-    dose_aplicada: 0,
-    insulina_ativa_estimada: 1.5,
-    insulina_total_organismo: 1.5,
+    acao_realizada: 'Bolus para Refeicao',
+    dose_insulina: 4.0,
+    dose_aplicada: 4.0,
+    insulina_ativa_estimada: 2.1,
+    insulina_total_organismo: 2.1,
     variacao_por_minuto: null,
     tendencia_destro: '• Estável',
-    fator_contexto: null,
-    carboidratos_g: 0,
-    observacoes: null,
+    fator_contexto: 'Café da manhã: pão integral com ovos',
+    carboidratos_g: 35,
+    observacoes: 'Dose matinal de cobertura.',
   },
   {
     id: 103,
     valor_mg_dl: 110,
-    data_hora_medicao: new Date(Date.now() - 140 * 60 * 1000).toISOString(),
+    data_hora_medicao: new Date(Date.now() - 240 * 60 * 1000).toISOString(),
     momento_medicao: 'Jejum',
     tipo_leitura: 'Manual',
     acao_realizada: 'Nenhuma Acao',
@@ -311,10 +311,19 @@ export default function PerfilUsuario() {
     }
   };
 
-  // Cálculo da IOB total
+  // Atualização em tempo real (a cada 60 segundos) para recálculo dinâmico do IOB
+  const [agoraTick, setAgoraTick] = useState(Date.now());
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setAgoraTick(Date.now());
+    }, 60000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Cálculo da IOB total individual por dose com soma consolidada e maior tempo de expiração
   const infoIOB = useMemo(() => {
-    return calcularInsulinaAtiva(registros, duracaoInsulinaHoras);
-  }, [registros, duracaoInsulinaHoras]);
+    return calcularInsulinaAtiva(registros, duracaoInsulinaHoras, new Date(agoraTick));
+  }, [registros, duracaoInsulinaHoras, agoraTick]);
 
   // Registro mais recente
   const ultimoRegistro = registros[0];
@@ -762,15 +771,21 @@ export default function PerfilUsuario() {
               </CardContent>
             </Card>
 
-            {/* KPI 2: Insulina Ativa (IOB) + Barra de Progresso Fina (4px) */}
+            {/* KPI 2: Insulina Ativa (IOB) + Decaimento Individual Multi-Bolus */}
             <Card>
               <CardContent style={{ padding: '1.25rem 1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Insulina Ativa (IOB)
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                    expira em ~2h35
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      color: infoIOB.iobTotal > 0 ? 'var(--cor-cta, #3B7E48)' : 'var(--cor-texto-suave, #5C534C)',
+                      fontWeight: infoIOB.iobTotal > 0 ? 700 : 500,
+                    }}
+                  >
+                    {infoIOB.textoExpiracao}
                   </span>
                 </div>
 
@@ -785,14 +800,31 @@ export default function PerfilUsuario() {
                       lineHeight: 1,
                     }}
                   >
-                    {infoIOB.iobTotal > 0 ? infoIOB.iobTotal.toFixed(1) : '2.9'}
+                    {infoIOB.iobTotal.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>UI ativas</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>
+                    UI ativas
+                  </span>
+                  {infoIOB.totalDosesAtivas > 1 && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: '0.7rem',
+                        backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                        color: '#285832',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {infoIOB.totalDosesAtivas} doses somadas
+                    </span>
+                  )}
                 </div>
 
                 <Separator style={{ margin: '0.65rem 0' }} />
 
-                {/* Barra de progresso fina de 4px */}
+                {/* Barra de progresso fisiológica de decaimento */}
                 <div>
                   <div
                     style={{
@@ -806,18 +838,74 @@ export default function PerfilUsuario() {
                     <div
                       style={{
                         height: '100%',
-                        width: `${Math.min(100, Math.max(15, (infoIOB.iobTotal || 2.9) * 25))}%`,
-                        backgroundColor: 'var(--cor-primaria, #7C533F)',
+                        width: `${Math.min(100, Math.round((infoIOB.iobTotal / 6) * 100))}%`,
+                        backgroundColor: infoIOB.iobTotal > 0 ? 'var(--cor-primaria, #7C533F)' : 'var(--cor-borda)',
                         borderRadius: '999px',
                         transition: 'width 0.4s ease',
                       }}
                     />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                    <span>Ação rápida</span>
+                    <span>Curva rápida ({duracaoInsulinaHoras}h)</span>
                     <span>Prevenção de empilhamento</span>
                   </div>
                 </div>
+
+                {/* DETALHAMENTO DISCRETO DAS DOSES ATIVAS */}
+                {infoIOB.detalhesDoses.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: '0.75rem',
+                      paddingTop: '0.6rem',
+                      borderTop: '1px dashed rgba(124, 83, 63, 0.2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Detalhamento por Aplicação
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: '#6A5E57' }}>
+                        Duração: {duracaoInsulinaHoras}h
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {infoIOB.detalhesDoses.map((dose) => (
+                        <div
+                          key={dose.id}
+                          style={{
+                            fontSize: '0.74rem',
+                            backgroundColor: 'rgba(124, 83, 63, 0.05)',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '4px',
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
+                            <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
+                            {dose.contexto && (
+                              <span style={{ fontSize: '0.66rem', color: '#7C533F', marginLeft: '6px', fontStyle: 'italic' }}>
+                                ({dose.contexto.split(':')[0]})
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ fontWeight: 700, color: '#285832' }}>
+                            restam {dose.iobRestante.toFixed(1)} UI{' '}
+                            <span style={{ fontWeight: 500, fontSize: '0.7rem', color: '#5A5049' }}>
+                              (expira em ~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

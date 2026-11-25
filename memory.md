@@ -1194,6 +1194,46 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
 - **Validação de Bloqueio:** O usuário é impedido de pular para as etapas seguintes sem preencher ao menos 1 contato com telefone válido com DDD (mínimo 10 dígitos).
 - **Persistência Integrada:** Salva contatos na API e em fallback no `localStorage ('glicocare_contatos_emergencia')`.
 
+---
+
+## 30. MOTOR DE CÁLCULO DE IOB MULTI-BOLUS POR DOSE INDIVIDUAL + TEMPO MÁXIMO DE EXPIRAÇÃO
+
+### A. Princípio Fisiológico e Curva de Decaimento Multi-Bolus
+A plataforma GlicoCare implementa um motor de cálculo de **Insulina Ativa (IOB — Insulin On Board)** fundamentado na farmacocinética de análogos rápidos e ultrarrápidos de insulina (`Novorapid`, `Humalog`, `Fiasp`, `Apidra`):
+- **Decaimento Individual por Aplicação:** Cada dose registrada no diário glicêmico possui seu próprio ciclo de decaimento com base no timestamp da aplicação (`registrado_em`, `data_hora_medicao` ou `criado_em`), na duração configurada da insulina rápida (`duracao_insulina_horas`, padrão `3` ou `4` horas) e no tempo decorrido em minutos (`minutosDecorridos = (agora - timestampDose) / 60000`).
+- **Filtro Estrito de Insulinas Basais Lentas:** Doses associadas a insulinas de ação prolongada ou basal (`Tresiba`, `Lantus`, `Levemir`, `Toujeo`, `NPH`, `Degludeca`, `Glargina`) são automaticamente desconsideradas do cálculo de IOB para não distorcer a estimativa de insulina rápida ativa.
+- **Curva Fisiológica Refinada (`obterFatorDecaimentoInsulina`):**
+  * $0\%$ do tempo decorrido: $100\%$ da dose ativa ($1.00$).
+  * $16.7\%$ do tempo ($\approx 30$ min em 3h): $82\%$ ativa ($0.82$).
+  * $33.3\%$ do tempo ($\approx 60$ min em 3h): $62\%$ ativa ($0.62$).
+  * $50.0\%$ do tempo ($\approx 90$ min em 3h): $42\%$ ativa ($0.42$).
+  * $66.7\%$ do tempo ($\approx 120$ min em 3h): $24\%$ ativa ($0.24$).
+  * $83.3\%$ do tempo ($\approx 150$ min em 3h): $10\%$ ativa ($0.10$).
+  * $\ge 100\%$ do tempo ($\ge 180$ min em 3h): $0\%$ ativa ($0.00$).
+- **Cálculo da Dose Individual:** $\text{iobDose} = \text{doseUi} \times \text{fatorDecaimento}$ e $\text{minutosRestantes} = \max(0, \text{duracaoMinutos} - \text{minutosDecorridos})$.
+
+### B. Consolidação Total e Tempo Máximo de Expiração (`calcularInsulinaAtiva`)
+1. **Soma Consolidada (`iobTotal`):**
+   * O total de IOB corresponde à soma aritmética do IOB remanescente de todas as doses ativas na janela de ação:
+     $$\text{iobTotal} = \sum_{k=1}^{n} \text{iobDose}_k$$
+   * **Exemplo Prático (Almoço sobreposto):** Quando uma dose de $5.0\text{ UI}$ é aplicada no almoço enquanto ainda restavam $2.9\text{ UI}$ de uma dose matinal, o `iobTotal` passa instantaneamente a refletir $2.9 + 5.0 = 7.9\text{ UI}$, prevenindo o empilhamento (*insulin stacking*) e protegendo contra hipoglicemia tardia.
+2. **Tempo Máximo de Expiração (`maxMinutosRestantes` / `textoExpiracao`):**
+   * Corresponde ao **maior tempo restante entre todas as doses ativas**:
+     $$\text{maxMinutosRestantes} = \max_{k} (\text{minutosRestantes}_k)$$
+   * O organismo só zera a insulina ativa quando a última dose aplicada concluir integralmente sua curva de ação.
+   * Formatação automática e amigável: `expira em ~3h00` ou `expira em ~45min` (ou *"Nenhuma insulina ativa no momento"* quando zerado).
+
+### C. Atualização Automática em Tempo Real (`setInterval`)
+- Em [`PerfilUsuario.jsx`](file:///c:/Users/Priscila.Furlani/OneDrive%20-%20JHE%20CONSULTORES%20ASSOCIADOS/glicocare/frontend/src/pages/PerfilUsuario.jsx) e [`PainelCuidador.jsx`](file:///c:/Users/Priscila.Furlani/OneDrive%20-%20JHE%20CONSULTORES%20ASSOCIADOS/glicocare/frontend/src/pages/PainelCuidador.jsx), um `setInterval` a cada `60000` ms (1 minuto) atualiza o estado de referência temporal (`agoraTick` / `agoraTickCuidador`), forçando o recálculo reativo da curva de decaimento sem necessidade de recarregar a página.
+
+### D. Detalhamento Discreto das Doses Ativas no Card KPI
+Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de Insulina Ativa exibe:
+- **Cabeçalho:** Rótulo em maiúsculas acompanhado do tempo dinâmico de expiração consolidado (`expira em ~2h35`).
+- **Valor Numérico:** Valor tabular em destaque (`2.25rem`, `font-variant-numeric: tabular-nums`) com unidade `UI ativas` e badge contador de sobreposição quando houver mais de 1 dose ativa (`2 doses somadas`).
+- **Barra de Progresso:** Micro-barra de 4px com transição suave refletindo o IOB atual em relação à escala de segurança.
+- **Painel de Detalhamento por Aplicação:** Lista compacta contendo cada dose ativa com horário, dose original aplicada, IOB restante e tempo de expiração individual (ex: `09:00 • 4.0 UI → restam 2.1 UI (expira em ~1h10)` e `11:35 • 5.0 UI → restam 4.8 UI (expira em ~2h35)`).
+
+
 
 
 
