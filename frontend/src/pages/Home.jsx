@@ -18,6 +18,8 @@ import SugerirConteudoCTA from '../components/SugerirConteudoCTA';
 import CapaEditorialDefault from '../components/CapaEditorialDefault';
 import GlicoLoader from '../components/GlicoLoader';
 import { FEATURES } from '../config/features';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/Toggle';
+import { Skeleton } from '../components/ui/Skeleton';
 
 /* INÍCIO DOS DADOS ESTRUTURADOS FIÉIS ÀS IMAGENS DO PROTÓTIPO */
 
@@ -1000,37 +1002,80 @@ export default function Home() {
             <span>📱 Feed Vertical otimizado para leitura rápida</span>
           </div>
 
-          {/* Barra de Filtros por Categoria (Grade no Desktop / Deslize de Polegar no Mobile) */}
-          <div className="conteudos-filtros-bar">
-            {[
-              { id: 'Todos', label: 'Todos', icone: null },
-              { id: 'Com o Lufy', label: 'Com o Lufy', icone: '🐾' },
-              { id: 'Rotina Escolar', label: 'Rotina Escolar', icone: '🏫' },
-              {
-                id: 'Tecnologia & Autonomia',
-                label: 'Tecnologia & Autonomia',
-                icone: '💡',
-              },
-            ].map((aba) => (
-              <button
-                key={aba.id}
-                type="button"
-                onClick={() => setFiltroBiblioteca(aba.id)}
-                className={`filtro-pilula ${
-                  filtroBiblioteca === aba.id ? 'filtro-pilula--ativo' : ''
-                }`}
-              >
-                {aba.icone && <span aria-hidden="true">{aba.icone}</span>}
-                <span>{aba.label}</span>
-              </button>
-            ))}
+          {/* INÍCIO BLOCO DE FILTROS POR CATEGORIA COM TOGGLEGROUP SHADCN */}
+          <div className="conteudos-filtros-bar" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+            <ToggleGroup
+              type="single"
+              value={filtroBiblioteca}
+              onValueChange={(val) => {
+                if (val) setFiltroBiblioteca(val);
+              }}
+              variant="outline"
+              size="md"
+            >
+              {[
+                { id: 'Todos', label: 'Todos', icone: null },
+                { id: 'Com o Lufy', label: 'Com o Lufy', icone: '🐾' },
+                { id: 'Rotina Escolar', label: 'Rotina Escolar', icone: '🏫' },
+                {
+                  id: 'Tecnologia & Autonomia',
+                  label: 'Tecnologia & Autonomia',
+                  icone: '💡',
+                },
+              ].map((aba) => (
+                <ToggleGroupItem
+                  key={aba.id}
+                  value={aba.id}
+                  style={{
+                    backgroundColor: filtroBiblioteca === aba.id ? 'var(--cor-superficie-elevada)' : 'transparent',
+                    color: filtroBiblioteca === aba.id ? 'var(--cor-primaria)' : 'var(--cor-texto-suave)',
+                    fontWeight: filtroBiblioteca === aba.id ? 700 : 500,
+                  }}
+                >
+                  {aba.icone && <span aria-hidden="true" style={{ marginRight: '4px' }}>{aba.icone}</span>}
+                  <span>{aba.label}</span>
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
+          {/* FIM BLOCO DE FILTROS POR CATEGORIA COM TOGGLEGROUP SHADCN */}
 
           {/* Container Híbrido: Grid no Desktop -> Feed Vertical Contínuo no Mobile */}
           <div className="conteudos-hibrido-container">
-            {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (GLICOLOADER SKELETON) */}
+            {/* INÍCIO BLOCO FEEDBACK CARREGAMENTO (SKELETON SHADCN PORTO SEGURO) */}
             {carregandoArtigos ? (
-              <GlicoLoader variant="skeleton" tipo="grid" quantidade={6} />
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                  gap: '24px',
+                  width: '100%',
+                }}
+              >
+                {[1, 2, 3, 4, 5, 6].map((idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: 'var(--cor-superficie-elevada)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--cor-borda)',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    <Skeleton style={{ width: '100%', height: '170px', borderRadius: '10px' }} />
+                    <Skeleton style={{ width: '38%', height: '14px', borderRadius: '4px' }} />
+                    <Skeleton style={{ width: '90%', height: '22px', borderRadius: '4px' }} />
+                    <Skeleton style={{ width: '100%', height: '36px', borderRadius: '4px' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                      <Skeleton style={{ width: '28%', height: '12px' }} />
+                      <Skeleton style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               artigosExibidos.map((artigo) => (
                 <CardConteudo

@@ -53,6 +53,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import { Separator } from '../components/ui/Separator';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/Toggle';
+import { TraceList, TraceItem } from '../components/ui/Trace';
+import { Switch } from '../components/ui/Switch';
 import {
   Sheet,
   SheetContent,
@@ -162,6 +166,9 @@ export default function PerfilUsuario() {
 
   // Controle de Gaveta Lateral (Sheet) para Novo Registro de Glicemia
   const [sheetNovoRegistroAberta, setSheetNovoRegistroAberta] = useState(false);
+  const [modoVisualizacaoRegistros, setModoVisualizacaoRegistros] = useState('trilha'); // 'trilha' | 'tabela'
+  const [alertaUrgenteCuidador, setAlertaUrgenteCuidador] = useState(true);
+  const [notificacaoSonora, setNotificacaoSonora] = useState(false);
 
   // Controle de Dialogs
   const [dialogAlergiasAberta, setDialogAlergiasAberta] = useState(false);
@@ -437,7 +444,7 @@ export default function PerfilUsuario() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '0.65rem',
                 flexWrap: 'wrap',
                 marginTop: '0.25rem',
                 fontSize: '0.82rem',
@@ -445,9 +452,9 @@ export default function PerfilUsuario() {
               }}
             >
               <span>{perfilSaude?.tipo_diabetes || 'Tipo 1A'}</span>
-              <span>•</span>
+              <Separator orientation="vertical" style={{ height: '12px' }} />
               <span>{perfilSaude?.terapia_insulina || 'Caneta'}</span>
-              <span>•</span>
+              <Separator orientation="vertical" style={{ height: '12px' }} />
               <span>{tempoJornada?.textoJornada || '9 anos e 11 meses de jornada'}</span>
 
               {/* Selo Discreto de Alergias Clicável */}
@@ -644,7 +651,9 @@ export default function PerfilUsuario() {
                   <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>mg/dL</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                <Separator style={{ margin: '0.65rem 0' }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
                   <Activity size={13} color="var(--cor-cta, #3B7E48)" />
                   <span>
                     {tendenciaAtual ? `${tendenciaAtual.icone} ${tendenciaAtual.rotulo}` : '↘ Queda moderada'}
@@ -681,8 +690,10 @@ export default function PerfilUsuario() {
                   <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>UI ativas</span>
                 </div>
 
+                <Separator style={{ margin: '0.65rem 0' }} />
+
                 {/* Barra de progresso fina de 4px */}
-                <div style={{ marginTop: '0.65rem' }}>
+                <div>
                   <div
                     style={{
                       height: '4px',
@@ -738,8 +749,10 @@ export default function PerfilUsuario() {
                   <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>70–180 mg/dL</span>
                 </div>
 
+                <Separator style={{ margin: '0.65rem 0' }} />
+
                 {/* Micro-barra segmentada fina de 4px */}
-                <div style={{ marginTop: '0.65rem' }}>
+                <div>
                   <div
                     style={{
                       height: '4px',
@@ -775,31 +788,44 @@ export default function PerfilUsuario() {
           />
 
           {/* ================================================================
-              HISTÓRICO AUDITÁVEL DE REGISTROS (<Table /> SHADCN STYLE)
+              HISTÓRICO AUDITÁVEL DE REGISTROS (<Table /> E <Trace /> SHADCN STYLE)
               ================================================================ */}
           <Card>
             <CardHeader>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
                   <CardTitle>Linha do Tempo das Medições ({registros.length})</CardTitle>
                   <CardDescription>
                     Rastreabilidade contínua de doses, glicemias e carboidratos.
                   </CardDescription>
                 </div>
-                <Button
-                  variante="sucesso"
-                  onClick={() => setSheetNovoRegistroAberta(true)}
-                  style={{
-                    fontSize: '0.78rem',
-                    padding: '0.4rem 0.85rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
-                >
-                  <Plus size={14} strokeWidth={2} />
-                  <span>Nova Medição</span>
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <ToggleGroup
+                    type="single"
+                    value={modoVisualizacaoRegistros}
+                    onValueChange={(val) => val && setModoVisualizacaoRegistros(val)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="trilha">Trilha (Trace)</ToggleGroupItem>
+                    <ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
+                  </ToggleGroup>
+
+                  <Button
+                    variante="sucesso"
+                    onClick={() => setSheetNovoRegistroAberta(true)}
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '0.4rem 0.85rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <Plus size={14} strokeWidth={2} />
+                    <span>Nova Medição</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
 
@@ -808,6 +834,58 @@ export default function PerfilUsuario() {
                 <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--cor-texto-suave, #5C534C)', fontSize: '0.86rem' }}>
                   Nenhum registro encontrado. Clique em "+ Registrar Glicemia / Dose" para começar.
                 </p>
+              ) : modoVisualizacaoRegistros === 'trilha' ? (
+                <div style={{ padding: '1.25rem 1.5rem' }}>
+                  <TraceList>
+                    {registros.slice(0, 10).map((item, idx) => {
+                      const noAlvo = item.valor_mg_dl >= 70 && item.valor_mg_dl <= 180;
+                      const isHipo = item.valor_mg_dl < 70;
+                      const statusTrace = noAlvo ? 'success' : isHipo ? 'destructive' : 'warning';
+                      const dataStr = new Date(item.data_hora_medicao).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+
+                      return (
+                        <TraceItem
+                          key={item.id}
+                          status={statusTrace}
+                          timestamp={dataStr}
+                          isLast={idx === Math.min(registros.length, 10) - 1}
+                          title={
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                                  fontWeight: 800,
+                                  fontVariantNumeric: 'tabular-nums',
+                                  fontSize: '1.1rem',
+                                  color: noAlvo ? 'var(--cor-cta, #3B7E48)' : isHipo ? '#C94A38' : '#C88D2A',
+                                }}
+                              >
+                                {item.valor_mg_dl} mg/dL
+                              </span>
+                              <Badge variant={statusTrace}>
+                                {noAlvo ? 'No Alvo' : isHipo ? 'Hipoglicemia' : 'Atenção'}
+                              </Badge>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                                ({item.momento_medicao || 'Rotina'})
+                              </span>
+                            </div>
+                          }
+                          description={
+                            <span>
+                              Insulina: <strong>{item.dose_aplicada || item.dose_insulina ? `${item.dose_aplicada || item.dose_insulina} UI` : '0 UI'}</strong> • Carbos: <strong>{item.carboidratos_g ? `${item.carboidratos_g}g` : '0g'}</strong>
+                              {item.observacoes && <span> — "{item.observacoes}"</span>}
+                            </span>
+                          }
+                        />
+                      );
+                    })}
+                  </TraceList>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -1025,6 +1103,26 @@ export default function PerfilUsuario() {
                   color: 'var(--cor-texto, #2E2824)',
                   fontSize: '0.88rem',
                 }}
+              />
+            </div>
+
+            <Separator style={{ margin: '0.25rem 0' }} />
+
+            {/* Configurações Booleanas de Notificação via Switch */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <Switch
+                id="switch-alerta-cuidador"
+                checked={alertaUrgenteCuidador}
+                onCheckedChange={setAlertaUrgenteCuidador}
+                label="Alerta Imediato ao Cuidador"
+                description="Notifica a rede de apoio em caso de hipo/hiperglicemia severa"
+              />
+              <Switch
+                id="switch-notificacao-sonora"
+                checked={notificacaoSonora}
+                onCheckedChange={setNotificacaoSonora}
+                label="Notificação Sonora de Urgência"
+                description="Emite aviso sonoro suave se a medição estiver fora da meta clínica"
               />
             </div>
 

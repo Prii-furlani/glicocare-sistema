@@ -1030,3 +1030,45 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
 
 
 
+
+
+---
+
+## 25. SUÍTE COMPLETA DE PRIMITIVOS SHADCN/UI PORTO SEGURO & INTEGRAÇÃO SISTÊMICA
+
+### A. Novos Primitivos Base em `frontend/src/components/ui/`
+1. **`Separator.jsx` (`Separator`):**
+   - Divisor ultrafino (`1px solid var(--cor-borda)`), suporte a `orientation="horizontal" | "vertical"`, semântica `role={decorative ? 'none' : 'separator'}` e `aria-orientation`.
+   - Substitui linhas divisórias inline e pontuações textuais nos metadados de cabeçalho (`PerfilUsuario.jsx`, `PainelCuidador.jsx`, `PainelAdmin.jsx`).
+2. **`Skeleton.jsx` (`Skeleton`):**
+   - Placeholder com animação suave de pulso (`@keyframes glico-skeleton-pulse`) respeitando as variáveis semânticas de borda e superfície.
+   - Utilizado para o carregamento gracioso de cards de artigos na Biblioteca da `Home.jsx` com proporções idênticas às capas editoriais.
+3. **`Switch.jsx` (`Switch`):**
+   - Interruptor acessível (`role="switch"`, `aria-checked`), pista inativa em `var(--cor-borda)` e ativa em Verde Alívio (`var(--cor-cta, #3B7E48)`), com thumb circular branco e transição suave.
+   - Integrado para status de publicação (*Publicado / Rascunho*) no CMS do `PainelAdmin.jsx` e parâmetros clínicos/alertas em `PerfilUsuario.jsx` e `PainelCuidador.jsx`.
+4. **`Toggle.jsx` (`Toggle`, `ToggleGroup`, `ToggleGroupItem`):**
+   - Botões de alternância acessíveis (`aria-pressed`, variantes `default`, `outline`, `terracota`, `alivio`, tamanhos `sm`, `md`, `lg`) e agrupador contextual `ToggleGroup` (`type="single" | "multiple"`).
+   - Utilizado nos filtros de categoria de artigos da `Home.jsx` e `PainelAdmin.jsx`, na seleção de marcadores laboratoriais no `ComparativoExames.jsx` e na alternância entre modos de exibição (Trilha vs Tabela).
+5. **`Resizable.jsx` (`ResizablePanelGroup`, `ResizablePanel`, `ResizableHandle`):**
+   - Contêiner de layout dividido com alça arrastável interativa (`col-resize` / `row-resize`), suporte a pointer e touch events, clamping entre 20% e 80% e indicador visual sutil de 3 pontinhos.
+   - Integrado no Modal de Edição de Artigos do `PainelAdmin.jsx` (divisão entre Editor de Blocos à esquerda e Prévia ao Vivo à direita) e anotado/estruturado para o palco de vídeo e prontuário lateral na `SalaTeleconsulta.jsx` (Fase 2).
+6. **`Trace.jsx` (`TraceList`, `TraceItem`):**
+   - Trilha cronológica vertical com conector contínuo (`1.5px solid var(--cor-borda)`), nós circulares semânticos (`default`, `success`, `warning`, `destructive`, `info`), carimbo de data/hora tabular e descrição contextual.
+   - Integrado na Trilha de Auditoria Imutável do `PainelAdmin.jsx`, na Linha do Tempo de medições familiares do `PerfilUsuario.jsx` e `PainelCuidador.jsx` e no Histórico de Coletas Laboratoriais do `ComparativoExames.jsx`.
+
+### B. Mapeamento das Integrações nas Telas
+- **`Home.jsx`:**
+  * Filtros de categoria da biblioteca migrados para `<ToggleGroup variant="outline" size="md">`.
+  * Estado de carregamento dos artigos atualizado com grid de `<Skeleton>` reproduzindo as proporções editoriais.
+- **`PainelAdmin.jsx`:**
+  * Trilha de Auditoria (`logs_auditoria`): Alternância entre visualização em Tabela e Linha do Tempo através de `<ToggleGroup>` e renderização com `<TraceList>` e `<TraceItem>`.
+  * Gestor Editorial: Filtro de categorias em `<ToggleGroup>` e Modal de Criação/Edição com divisão side-by-side interativa através de `<ResizablePanelGroup>`, `<ResizablePanel>` e `<ResizableHandle withHandle />`, além de `<Switch>` para publicação instantânea.
+- **`PerfilUsuario.jsx` & `PainelCuidador.jsx`:**
+  * Cabeçalho e KPIs: Divisores verticais e horizontais com `<Separator />`, eliminando bordas redundantes.
+  * Histórico de Medições: Seletor de visualização com `<ToggleGroup>` e visualização em linha do tempo com nós de status semântico através de `<TraceList>` e `<TraceItem>`.
+  * Gavetas Laterais (`Sheet`): Interruptores `<Switch>` para alertas imediatos à rede de apoio e equipe escolar.
+- **`ComparativoExames.jsx`:**
+  * Seletor de marcadores com `<ToggleGroup>` com suporte aos marcadores clínicos (`HbA1c`, `Glicemia de Jejum`, `Vitamina D`, `Colesterol Total`, `Microalbuminúria`, `Creatinina`, `TSH`).
+  * Histórico de Coletas Laboratoriais renderizado com `<TraceList>` e `<TraceItem>`.
+- **`SalaTeleconsulta.jsx`:**
+  * Arquitetura de tela dividida anotada e estruturada com `ResizablePanelGroup` preparada para a Fase 2.

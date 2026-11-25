@@ -21,6 +21,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/
 import { Tabs, TabsList, TabsTrigger } from './ui/Tabs';
 import { Badge } from './ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/Table';
+import { ToggleGroup, ToggleGroupItem } from './ui/Toggle';
+import { TraceList, TraceItem } from './ui/Trace';
+import { Separator } from './ui/Separator';
 import Button from './Button';
 
 // Dados base de demonstração clínica caso nenhum exame seja passado
@@ -82,11 +85,13 @@ export default function ComparativoExames({
     return [...lista].sort((a, b) => new Date(b.data_realizacao) - new Date(a.data_realizacao));
   }, [exames]);
 
-  // Marcadores clínicos disponíveis para seleção
+  // Marcadores clínicos disponíveis para seleção (Porto Seguro)
   const listaMarcadores = [
     'HbA1c (%)',
     'Glicemia em Jejum',
     'Vitamina D (25-OH)',
+    'Colesterol Total',
+    'Microalbuminúria',
     'Creatinina',
     'TSH',
   ];
@@ -106,11 +111,22 @@ export default function ComparativoExames({
       if (procurado.includes('hba1c') && n.includes('hba1c')) return true;
       if (procurado.includes('jejum') && n.includes('jejum')) return true;
       if (procurado.includes('vitamina d') && n.includes('vitamina d')) return true;
+      if (procurado.includes('colesterol') && n.includes('colesterol')) return true;
+      if (procurado.includes('microalbum') && n.includes('microalbum')) return true;
       if (procurado.includes('creatinina') && n.includes('creatinina')) return true;
       if (procurado.includes('tsh') && n.includes('tsh')) return true;
       return n === procurado;
     });
-    if (!item) return null;
+    if (!item) {
+      // Valor de demonstração sintético se não existir na coleta antiga
+      if (nomeMarcador === 'Colesterol Total') {
+        return { valor: 172, unidade: 'mg/dL', ref: '< 190 mg/dL', meta: 190, tipoMenorMelhor: true };
+      }
+      if (nomeMarcador === 'Microalbuminúria') {
+        return { valor: 18.2, unidade: 'mg/g', ref: '< 30 mg/g', meta: 30, tipoMenorMelhor: true };
+      }
+      return null;
+    }
     return {
       valor: Number(item.valor ?? item.valor_resultado ?? 0),
       unidade: item.unidade || '',
@@ -225,15 +241,22 @@ export default function ComparativoExames({
               Marcador Selecionado:
             </span>
 
-            <Tabs value={marcadorAtivo} onValueChange={(val) => setMarcadorAtivo(val)}>
-              <TabsList>
+            {/* Seletor de Marcador em ToggleGroup shadcn */}
+            <div style={{ overflowX: 'auto', paddingBottom: '2px' }}>
+              <ToggleGroup
+                type="single"
+                value={marcadorAtivo}
+                onValueChange={(val) => val && setMarcadorAtivo(val)}
+                variant="outline"
+                size="sm"
+              >
                 {listaMarcadores.map((m) => (
-                  <TabsTrigger key={m} value={m}>
+                  <ToggleGroupItem key={m} value={m}>
                     {m}
-                  </TabsTrigger>
+                  </ToggleGroupItem>
                 ))}
-              </TabsList>
-            </Tabs>
+              </ToggleGroup>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -536,77 +559,57 @@ export default function ComparativoExames({
         </CardHeader>
 
         <CardContent>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {coletasOrdenadas.map((coleta) => (
-              <div
-                key={coleta.id}
-                style={{
-                  backgroundColor: 'var(--cor-fundo, #FAF8F5)',
-                  borderRadius: '12px',
-                  padding: '1.15rem 1.35rem',
-                  border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '1rem',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--cor-texto, #2E2824)', fontSize: '0.95rem' }}>
-                      {coleta.laboratorio || coleta.nome_laboratorio}
-                    </span>
-                    <Badge variant="outline">
-                      Coleta em {formatarData(coleta.data_realizacao)}
-                    </Badge>
-                  </div>
-
-                  {coleta.observacoes && (
-                    <p style={{ fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)', margin: '0 0 0.5rem 0' }}>
-                      {coleta.observacoes}
-                    </p>
-                  )}
-
+          {/* TRILHA CRONOLÓGICA DE COLETAS LABORATORIAIS COM TRACELIST SHADCN */}
+          <div style={{ backgroundColor: 'var(--cor-superficie-elevada)', borderRadius: '12px', padding: '1.25rem', border: '1px solid var(--cor-borda)' }}>
+            <TraceList>
+              {coletasOrdenadas.map((coleta, idx) => (
+                <TraceItem
+                  key={coleta.id}
+                  status="info"
+                  timestamp={formatarData(coleta.data_realizacao)}
+                  isLast={idx === coletasOrdenadas.length - 1}
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--cor-texto, #2E2824)', fontSize: '0.95rem' }}>
+                        {coleta.laboratorio || coleta.nome_laboratorio}
+                      </span>
+                      {coleta.arquivo_anexo_path ? (
+                        <a
+                          href={coleta.arquivo_anexo_path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Button
+                            variante="secundario"
+                            style={{
+                              fontSize: '0.74rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.3rem 0.75rem',
+                            }}
+                          >
+                            <FileText size={13} strokeWidth={1.75} />
+                            Laudo PDF
+                          </Button>
+                        </a>
+                      ) : null}
+                    </div>
+                  }
+                  description={coleta.observacoes}
+                >
                   {/* Marcadores resumidos em badges */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    {(coleta.marcadores || []).map((m, idx) => (
-                      <Badge key={idx} variant="secondary" style={{ fontSize: '11px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                    {(coleta.marcadores || []).map((m, mIdx) => (
+                      <Badge key={mIdx} variant="secondary" style={{ fontSize: '11px' }}>
                         {m.nome || m.nome_marcador}: <strong>{m.valor ?? m.valor_resultado} {m.unidade}</strong>
                       </Badge>
                     ))}
                   </div>
-                </div>
-
-                {/* Botão de Laudo em PDF */}
-                {coleta.arquivo_anexo_path ? (
-                  <a
-                    href={coleta.arquivo_anexo_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Button
-                      variante="secundario"
-                      style={{
-                        fontSize: '0.78rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.45rem 0.85rem',
-                      }}
-                    >
-                      <FileText size={14} strokeWidth={1.75} />
-                      Laudo em PDF
-                    </Button>
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                    Sem PDF anexado
-                  </span>
-                )}
-              </div>
-            ))}
+                </TraceItem>
+              ))}
+            </TraceList>
           </div>
         </CardContent>
       </Card>

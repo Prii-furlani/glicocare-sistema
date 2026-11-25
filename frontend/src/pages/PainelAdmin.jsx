@@ -23,6 +23,11 @@ import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
+import { Separator } from '../components/ui/Separator';
+import { Switch } from '../components/ui/Switch';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/Toggle';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable';
+import { TraceList, TraceItem } from '../components/ui/Trace';
 import { useNotify } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
 import lufyMascoteFoto from '../assets/lufy-mascote.jpg';
@@ -78,6 +83,7 @@ export default function PainelAdmin() {
   const [buscaLogs, setBuscaLogs] = useState('');
   const [filtroAcaoLog, setFiltroAcaoLog] = useState('TODOS');
   const [modalLogDetalhe, setModalLogDetalhe] = useState(null);
+  const [modoVisualizacaoLogs, setModoVisualizacaoLogs] = useState('trilha'); // 'trilha' | 'tabela'
 
   // ---------------------------------------------------------------------------
   // 2. DADOS DO CMS DINÂMICO DA HOME
@@ -119,6 +125,7 @@ export default function PainelAdmin() {
   const [previewCapaArtigo, setPreviewCapaArtigo] = useState('');
   const [salvandoArtigo, setSalvandoArtigo] = useState(false);
   const [visualizarPreviewArtigo, setVisualizarPreviewArtigo] = useState(false);
+  const [modoEditorArtigo, setModoEditorArtigo] = useState('split'); // 'split' | 'editor' | 'preview'
 
   // ---------------------------------------------------------------------------
   // 4. DADOS DA CURADORIA DE ESPECIALISTAS
@@ -1031,6 +1038,17 @@ export default function PainelAdmin() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <ToggleGroup
+                    type="single"
+                    value={modoVisualizacaoLogs}
+                    onValueChange={(v) => v && setModoVisualizacaoLogs(v)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ToggleGroupItem value="trilha">Trilha Cronológica (Trace)</ToggleGroupItem>
+                    <ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
+                  </ToggleGroup>
+
                   <input
                     type="text"
                     value={buscaLogs}
@@ -1058,6 +1076,39 @@ export default function PainelAdmin() {
                 <p style={{ color: '#5A5049', fontSize: '0.9rem', textAlign: 'center', padding: '2rem 0' }}>
                   Nenhum registro de auditoria encontrado para o filtro selecionado.
                 </p>
+              ) : modoVisualizacaoLogs === 'trilha' ? (
+                /* INÍCIO TRILHA CRONOLÓGICA TRACE SHADCN */
+                <div style={{ backgroundColor: 'var(--cor-superficie-elevada)', borderRadius: '14px', padding: '1.5rem', border: '1px solid var(--cor-borda)' }}>
+                  <TraceList>
+                    {logsFiltrados.map((log, idx) => {
+                      let statusTrace = 'default';
+                      if (log.acao === 'CRIACAO') statusTrace = 'success';
+                      if (log.acao === 'EDICAO') statusTrace = 'info';
+                      if (log.acao === 'EXCLUSAO') statusTrace = 'destructive';
+
+                      return (
+                        <TraceItem
+                          key={log.id}
+                          status={statusTrace}
+                          timestamp={log.data_hora_local}
+                          isLast={idx === logsFiltrados.length - 1}
+                          title={
+                            <span>
+                              <span style={{ color: 'var(--cor-texto)' }}>{log.usuario_nome || 'Sistema'}</span> executou{' '}
+                              <strong style={{ color: 'var(--cor-primaria)' }}>{log.acao}</strong>
+                            </span>
+                          }
+                          description={
+                            <span>
+                              Tabela afetada: <code>{log.tabela_afetada}</code> • Registro: <strong>#{log.registro_id}</strong> • Rota: <code>{log.pagina_impacto}</code> • IP: {log.ip_origem || '127.0.0.1'}
+                            </span>
+                          }
+                        />
+                      );
+                    })}
+                  </TraceList>
+                </div>
+                /* FIM TRILHA CRONOLÓGICA TRACE SHADCN */
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -1541,19 +1592,6 @@ export default function PainelAdmin() {
                   style={{ width: '220px', padding: '8px 12px', fontSize: '0.88rem' }}
                 />
 
-                <CustomSelect
-                  value={filtroCategoriaArtigo}
-                  onChange={(v) => setFiltroCategoriaArtigo(v)}
-                  options={[
-                    { value: 'TODAS', label: 'Todas Categorias' },
-                    { value: 'Acolhimento Inicial', label: 'Acolhimento Inicial' },
-                    { value: 'Rotina Escolar', label: 'Rotina Escolar' },
-                    { value: 'Tecnologia & Autonomia', label: 'Tecnologia & Autonomia' },
-                    { value: 'Com o Lufy', label: 'Com o Lufy' },
-                  ]}
-                  style={{ width: '190px' }}
-                />
-
                 <Button
                   variante="primario"
                   onClick={iniciarCriacaoArtigo}
@@ -1562,6 +1600,29 @@ export default function PainelAdmin() {
                   + Criar Novo Conteúdo
                 </Button>
               </div>
+            </div>
+
+            {/* BARRA DE FILTROS DE CATEGORIA EM TOGGLEGROUP SHADCN */}
+            <div style={{ marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '4px' }}>
+              <ToggleGroup
+                type="single"
+                value={filtroCategoriaArtigo}
+                onValueChange={(val) => val && setFiltroCategoriaArtigo(val)}
+                variant="outline"
+                size="sm"
+              >
+                {[
+                  { value: 'TODAS', label: 'Todas as Categorias' },
+                  { value: 'Acolhimento Inicial', label: 'Acolhimento' },
+                  { value: 'Rotina Escolar', label: 'Rotina Escolar' },
+                  { value: 'Tecnologia & Autonomia', label: 'Tecnologia' },
+                  { value: 'Com o Lufy', label: 'Com o Lufy' },
+                ].map((cat) => (
+                  <ToggleGroupItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
 
             {/* TABELA DE ARTIGOS */}
@@ -1711,118 +1772,154 @@ export default function PainelAdmin() {
           >
             <div
               style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--cor-superficie-elevada)',
                 borderRadius: '20px',
                 width: '100%',
-                maxWidth: '920px',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                padding: '2.25rem',
-                border: '1px solid rgba(124, 83, 63, 0.2)',
+                maxWidth: modoEditorArtigo === 'split' ? '1240px' : '920px',
+                maxHeight: '92vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                padding: '2rem',
+                border: '1px solid var(--cor-borda)',
                 boxShadow: '0 20px 50px rgba(0, 0, 0, 0.25)',
+                transition: 'max-width 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.45rem', color: '#2E2824', margin: 0 }}>
-                  {artigoEmEdicao.id ? `Editar Artigo #${artigoEmEdicao.id}` : 'Criar Novo Conteúdo Editorial'}
-                </h2>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => setVisualizarPreviewArtigo(!visualizarPreviewArtigo)}
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      borderRadius: '8px',
-                      border: '1px solid #7C533F',
-                      backgroundColor: visualizarPreviewArtigo ? '#7C533F' : '#FFF',
-                      color: visualizarPreviewArtigo ? '#FFF' : '#7C533F',
-                      cursor: 'pointer',
-                      fontSize: '0.84rem',
-                      fontWeight: 600,
-                    }}
+              {/* CABEÇALHO DO MODAL COM SWITCH E TOGGLEGROUP */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                  paddingBottom: '1.25rem',
+                  borderBottom: '1px solid var(--cor-borda)',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <div>
+                  <h2 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.45rem', color: 'var(--cor-texto)', margin: 0 }}>
+                    {artigoEmEdicao.id ? `Editar Artigo #${artigoEmEdicao.id}` : 'Criar Novo Conteúdo Editorial'}
+                  </h2>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave)' }}>
+                    Editor em blocos com visualização em tempo real e paleta Porto Seguro
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  {/* Switch para status Publicado / Rascunho */}
+                  <Switch
+                    id="switch-status-artigo"
+                    checked={artigoEmEdicao.status_publicacao === 'publicado'}
+                    onCheckedChange={(checked) =>
+                      setArtigoEmEdicao({
+                        ...artigoEmEdicao,
+                        status_publicacao: checked ? 'publicado' : 'rascunho',
+                      })
+                    }
+                    label={artigoEmEdicao.status_publicacao === 'publicado' ? '🟢 Publicado' : '🟡 Rascunho'}
+                  />
+
+                  <Separator orientation="vertical" style={{ height: '24px' }} />
+
+                  {/* ToggleGroup de Modo de Exibição */}
+                  <ToggleGroup
+                    type="single"
+                    value={modoEditorArtigo}
+                    onValueChange={(v) => v && setModoEditorArtigo(v)}
+                    variant="outline"
+                    size="sm"
                   >
-                    {visualizarPreviewArtigo ? 'Voltar ao Editor' : '👁️ Prévia do Artigo'}
-                  </button>
+                    <ToggleGroupItem value="split">Lado a Lado (Resizable)</ToggleGroupItem>
+                    <ToggleGroupItem value="editor">Editor</ToggleGroupItem>
+                    <ToggleGroupItem value="preview">Prévia</ToggleGroupItem>
+                  </ToggleGroup>
+
                   <button
                     type="button"
                     onClick={() => setModalArtigoAberto(false)}
-                    style={{ border: 'none', background: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#777' }}
+                    style={{ border: 'none', background: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--cor-texto-suave)' }}
                   >
                     ✕
                   </button>
                 </div>
               </div>
 
-              {visualizarPreviewArtigo ? (
-                /* PRÉ-VISUALIZAÇÃO ACOLHEDORA DO ARTIGO */
-                <div style={{ backgroundColor: 'var(--cor-fundo)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(124, 83, 63, 0.15)' }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                    {artigoEmEdicao.categoria} • {artigoEmEdicao.tempo_leitura}
-                  </div>
-                  <h1 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.85rem', color: '#2E2824', marginBottom: '0.5rem' }}>
-                    {artigoEmEdicao.titulo}{' '}
-                    {artigoEmEdicao.titulo_destaque_italico && (
-                      <span className="texto-italico-terracota">({artigoEmEdicao.titulo_destaque_italico})</span>
-                    )}
-                  </h1>
-                  {artigoEmEdicao.subtitulo && (
-                    <p style={{ fontSize: '1.05rem', color: '#5A5049', fontStyle: 'italic', marginBottom: '1.5rem' }}>
-                      {artigoEmEdicao.subtitulo}
-                    </p>
-                  )}
+              {/* CORPO DO EDITOR COM RESIZABLEPANELGROUP SHADCN */}
+              <div style={{ flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
+                {(() => {
+                  const previewConteudo = (
+                    <div style={{ backgroundColor: 'var(--cor-fundo)', padding: '1.75rem', borderRadius: '16px', border: '1px solid var(--cor-borda)', height: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--cor-primaria)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                        {artigoEmEdicao.categoria} • {artigoEmEdicao.tempo_leitura || '5 min de leitura'}
+                      </div>
+                      <h1 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.75rem', color: 'var(--cor-texto)', marginBottom: '0.5rem' }}>
+                        {artigoEmEdicao.titulo}{' '}
+                        {artigoEmEdicao.titulo_destaque_italico && (
+                          <span className="texto-italico-terracota">({artigoEmEdicao.titulo_destaque_italico})</span>
+                        )}
+                      </h1>
+                      {artigoEmEdicao.subtitulo && (
+                        <p style={{ fontSize: '1rem', color: 'var(--cor-texto-suave)', fontStyle: 'italic', marginBottom: '1.25rem' }}>
+                          {artigoEmEdicao.subtitulo}
+                        </p>
+                      )}
 
-                  {previewCapaArtigo ? (
-                    <img
-                      src={previewCapaArtigo}
-                      alt={artigoEmEdicao.legenda_capa || 'Capa do artigo'}
-                      style={{ width: '100%', maxHeight: '340px', objectFit: 'cover', borderRadius: '14px', marginBottom: '1.5rem' }}
-                    />
-                  ) : (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <CapaEditorialDefault
-                        selo={artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL'}
-                        numero={artigoEmEdicao.id || '01'}
-                        cor={artigoEmEdicao.cor_capa_default || 'terracota'}
-                        categoria={artigoEmEdicao.categoria}
-                        variante="banner"
-                      />
+                      {previewCapaArtigo ? (
+                        <img
+                          src={previewCapaArtigo}
+                          alt={artigoEmEdicao.legenda_capa || 'Capa do artigo'}
+                          style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1.25rem' }}
+                        />
+                      ) : (
+                        <div style={{ marginBottom: '1.25rem' }}>
+                          <CapaEditorialDefault
+                            selo={artigoEmEdicao.selo_editorial || 'GUIA ESSENCIAL'}
+                            numero={artigoEmEdicao.id || '01'}
+                            cor={artigoEmEdicao.cor_capa_default || 'terracota'}
+                            categoria={artigoEmEdicao.categoria}
+                            variante="banner"
+                          />
+                        </div>
+                      )}
+
+                      <div style={{ display: 'grid', gap: '1rem', marginTop: '1.25rem' }}>
+                        {(artigoEmEdicao.conteudo_blocos || []).map((b, idx) => {
+                          if (b.tipo === 'paragrafo') {
+                            return <p key={idx} style={{ lineHeight: 1.6, color: 'var(--cor-texto)' }}>{b.texto}</p>;
+                          }
+                          if (b.tipo === 'subtitulo') {
+                            return <h2 key={idx} style={{ fontFamily: 'var(--fonte-titulo)', color: 'var(--cor-primaria)', fontSize: '1.25rem', margin: '0.75rem 0 0.35rem' }}>{b.texto}</h2>;
+                          }
+                          if (b.tipo === 'citacao') {
+                            return (
+                              <div key={idx} style={{ backgroundColor: 'var(--cor-superficie-elevada)', borderLeft: '4px solid var(--cor-cta)', padding: '1rem 1.25rem', borderRadius: '8px', margin: '0.75rem 0' }}>
+                                <p style={{ fontStyle: 'italic', color: 'var(--cor-texto)', margin: 0, fontSize: '0.98rem' }}>{b.texto}</p>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--cor-primaria)', fontWeight: 700, display: 'block', marginTop: '0.35rem' }}>— {b.autor || 'Lufy'}</span>
+                              </div>
+                            );
+                          }
+                          if (b.tipo === 'passo') {
+                            return (
+                              <div key={idx} style={{ display: 'flex', gap: '0.85rem', backgroundColor: 'var(--cor-superficie-elevada)', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid var(--cor-borda)' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--cor-primaria)', minWidth: '28px' }}>{b.numero}</span>
+                                <div>
+                                  <strong style={{ display: 'block', color: 'var(--cor-texto)', marginBottom: '0.15rem' }}>{b.titulo}</strong>
+                                  <span style={{ color: 'var(--cor-texto-suave)', fontSize: '0.88rem' }}>{b.texto}</span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
                     </div>
-                  )}
+                  );
 
-                  <div style={{ display: 'grid', gap: '1.25rem', marginTop: '1.5rem' }}>
-                    {(artigoEmEdicao.conteudo_blocos || []).map((b, idx) => {
-                      if (b.tipo === 'paragrafo') {
-                        return <p key={idx} style={{ lineHeight: 1.7, color: '#2E2824' }}>{b.texto}</p>;
-                      }
-                      if (b.tipo === 'subtitulo') {
-                        return <h2 key={idx} style={{ fontFamily: 'var(--fonte-titulo)', color: '#7C533F', fontSize: '1.35rem', margin: '1rem 0 0.5rem' }}>{b.texto}</h2>;
-                      }
-                      if (b.tipo === 'citacao') {
-                        return (
-                          <div key={idx} style={{ backgroundColor: '#F6F3EE', borderLeft: '4px solid #3B7E48', padding: '1.2rem 1.5rem', borderRadius: '8px', margin: '1rem 0' }}>
-                            <p style={{ fontStyle: 'italic', color: '#2E2824', margin: 0, fontSize: '1.02rem' }}>{b.texto}</p>
-                            <span style={{ fontSize: '0.8rem', color: '#7C533F', fontWeight: 700, display: 'block', marginTop: '0.4rem' }}>— {b.autor || 'Lufy'}</span>
-                          </div>
-                        );
-                      }
-                      if (b.tipo === 'passo') {
-                        return (
-                          <div key={idx} style={{ display: 'flex', gap: '1rem', backgroundColor: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(124, 83, 63, 0.12)' }}>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7C533F', minWidth: '32px' }}>{b.numero}</span>
-                            <div>
-                              <strong style={{ display: 'block', color: '#2E2824', marginBottom: '0.2rem' }}>{b.titulo}</strong>
-                              <span style={{ color: '#5A5049', fontSize: '0.9rem' }}>{b.texto}</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                </div>
-              ) : (
-                /* FORMULÁRIO DO EDITOR */
-                <div style={{ display: 'grid', gap: '1.25rem' }}>
+                  const editorFormulario = (
+                    <div style={{ display: 'grid', gap: '1.25rem', paddingRight: '4px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
@@ -2201,24 +2298,54 @@ export default function PainelAdmin() {
                     </div>
                   </div>
                 </div>
-              )}
+              );
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.75rem' }}>
-                <Button variante="secundario" onClick={() => setModalArtigoAberto(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  variante="primario"
-                  onClick={handleSalvarArtigo}
-                  loading={salvandoArtigo}
-                  disabled={salvandoArtigo}
-                >
-                  {salvandoArtigo ? 'Salvando...' : '✓ Salvar Artigo no Acervo'}
-                </Button>
-              </div>
-            </div>
+              if (modoEditorArtigo === 'split') {
+                return (
+                  <ResizablePanelGroup direction="horizontal" style={{ height: '62vh' }}>
+                    <ResizablePanel order={0} defaultSize={52} style={{ paddingRight: '12px', overflowY: 'auto' }}>
+                      {editorFormulario}
+                    </ResizablePanel>
+                    <ResizableHandle withHandle />
+                    <ResizablePanel order={1} defaultSize={48} style={{ paddingLeft: '12px', overflowY: 'auto' }}>
+                      {previewConteudo}
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                );
+              }
+
+              if (modoEditorArtigo === 'preview') {
+                return (
+                  <div style={{ height: '62vh', overflowY: 'auto', paddingRight: '8px' }}>
+                    {previewConteudo}
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ height: '62vh', overflowY: 'auto', paddingRight: '8px' }}>
+                  {editorFormulario}
+                </div>
+              );
+            })()}
           </div>
-        )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--cor-borda)' }}>
+            <Button variante="secundario" onClick={() => setModalArtigoAberto(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variante="primario"
+              onClick={handleSalvarArtigo}
+              loading={salvandoArtigo}
+              disabled={salvandoArtigo}
+            >
+              {salvandoArtigo ? 'Salvando...' : '✓ Salvar Artigo no Acervo'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
 
         {/* ===================================================================
             ABA 4: ESPECIALISTAS & CURADORIA (RN-ESP-01 / RN-FIN-03)

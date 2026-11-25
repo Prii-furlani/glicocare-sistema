@@ -21,6 +21,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import { Separator } from '../components/ui/Separator';
+import { ToggleGroup, ToggleGroupItem } from '../components/ui/Toggle';
+import { TraceList, TraceItem } from '../components/ui/Trace';
+import { Switch } from '../components/ui/Switch';
 import {
   Sheet,
   SheetContent,
@@ -269,6 +273,9 @@ export default function PainelCuidador() {
   const [modalPreAtendimento, setModalPreAtendimento] = useState(false);
   const [modalAssinarTCLE, setModalAssinarTCLE] = useState(false);
   const [sheetNovaMedicaoAberta, setSheetNovaMedicaoAberta] = useState(false);
+  const [modoVisualizacaoCuidador, setModoVisualizacaoCuidador] = useState('trilha'); // 'trilha' | 'tabela'
+  const [alertaDemaisCuidadores, setAlertaDemaisCuidadores] = useState(true);
+  const [compartilharEquipeEscolar, setCompartilharEquipeEscolar] = useState(false);
 
   // Estados dos Formulários
   /* INÍCIO ESTADOS DE CARREGAMENTO (GLICOLOADER BOTAO) */
@@ -939,7 +946,8 @@ export default function PainelCuidador() {
                         </span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                      <Separator style={{ margin: '0.65rem 0' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
                         <Activity size={13} color="var(--cor-cta, #3B7E48)" />
                         <span>{ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao} • ↘ Tendência estável</span>
                       </div>
@@ -972,8 +980,9 @@ export default function PainelCuidador() {
                         </span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>UI</span>
                       </div>
+                      <Separator style={{ margin: '0.65rem 0' }} />
                       {/* Barra de progresso fina de 4px */}
-                      <div style={{ marginTop: '0.65rem' }}>
+                      <div>
                         <div
                           style={{
                             height: '4px',
@@ -1025,8 +1034,9 @@ export default function PainelCuidador() {
                         </span>
                         <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--cor-texto-suave, #5C534C)' }}>70–180 mg/dL</span>
                       </div>
+                      <Separator style={{ margin: '0.65rem 0' }} />
                       {/* Micro-barra segmentada fina de 4px */}
-                      <div style={{ marginTop: '0.65rem' }}>
+                      <div>
                         <div
                           style={{
                             height: '4px',
@@ -1059,30 +1069,43 @@ export default function PainelCuidador() {
             </div>
             {/* /* FIM DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA */}
 
-            {/* /* INÍCIO DO HISTÓRICO DE LEITURAS RECENTES (<Table /> SHADCN STYLE) */}
+            {/* /* INÍCIO DO HISTÓRICO DE LEITURAS RECENTES (<Table /> E <Trace /> SHADCN STYLE) */}
             <Card style={{ marginBottom: '1.75rem' }}>
               <CardHeader>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div>
                     <CardTitle>Linha do Tempo Familiar & Auditoria</CardTitle>
                     <CardDescription>
                       {filhoAtivo.leituras_recentes?.length || 0} registros sincronizados entre mãe, pai e cuidadores autorizados.
                     </CardDescription>
                   </div>
-                  <Button
-                    variante="sucesso"
-                    onClick={() => setSheetNovaMedicaoAberta(true)}
-                    style={{
-                      fontSize: '0.78rem',
-                      padding: '0.4rem 0.85rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Plus size={14} strokeWidth={2} />
-                    <span>Nova Medição</span>
-                  </Button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <ToggleGroup
+                      type="single"
+                      value={modoVisualizacaoCuidador}
+                      onValueChange={(val) => val && setModoVisualizacaoCuidador(val)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <ToggleGroupItem value="trilha">Trilha (Trace)</ToggleGroupItem>
+                      <ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
+                    </ToggleGroup>
+
+                    <Button
+                      variante="sucesso"
+                      onClick={() => setSheetNovaMedicaoAberta(true)}
+                      style={{
+                        fontSize: '0.78rem',
+                        padding: '0.4rem 0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                      }}
+                    >
+                      <Plus size={14} strokeWidth={2} />
+                      <span>Nova Medição</span>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
 
@@ -1091,6 +1114,55 @@ export default function PainelCuidador() {
                   <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--cor-texto-suave, #5C534C)', fontSize: '0.86rem' }}>
                     Nenhuma medição registrada até o momento.
                   </p>
+                ) : modoVisualizacaoCuidador === 'trilha' ? (
+                  <div style={{ padding: '1.25rem 1.5rem' }}>
+                    <TraceList>
+                      {filhoAtivo.leituras_recentes?.map((leitura, idx) => {
+                        const v = Number(leitura.valor_mg_dl);
+                        const statusTrace = v < 70 ? 'destructive' : v > 180 ? 'warning' : 'success';
+
+                        return (
+                          <TraceItem
+                            key={leitura.id}
+                            status={statusTrace}
+                            timestamp={leitura.data_hora_medicao?.split(' ')[1] || leitura.data_hora_medicao}
+                            isLast={idx === (filhoAtivo.leituras_recentes?.length || 1) - 1}
+                            title={
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span
+                                  style={{
+                                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                                    fontWeight: 800,
+                                    fontVariantNumeric: 'tabular-nums',
+                                    fontSize: '1.1rem',
+                                    color: obterCorGlicemia(leitura.valor_mg_dl),
+                                  }}
+                                >
+                                  {leitura.valor_mg_dl} mg/dL
+                                </span>
+                                <Badge variant={statusTrace}>
+                                  {v < 70 ? 'Hipo' : v > 180 ? 'Atenção' : 'No Alvo'}
+                                </Badge>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                                  ({leitura.momento_medicao})
+                                </span>
+                                <Badge variant={leitura.registrado_por_rotulo?.includes('Pai') ? 'outline' : 'success'} style={{ fontSize: '10px' }}>
+                                  Por: {leitura.registrado_por_rotulo || 'Responsável'}
+                                </Badge>
+                              </div>
+                            }
+                            description={
+                              <span>
+                                {leitura.dose_insulina ? `Insulina: ${leitura.dose_insulina} UI • ` : ''}
+                                {leitura.carboidratos_g ? `Carboidratos: ${leitura.carboidratos_g}g • ` : ''}
+                                Contexto: {leitura.fator_contexto || 'Rotina familiar'}
+                              </span>
+                            }
+                          />
+                        );
+                      })}
+                    </TraceList>
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -1275,6 +1347,26 @@ export default function PainelCuidador() {
                         backgroundColor: 'var(--cor-fundo, #FAF8F5)',
                         color: 'var(--cor-texto, #2E2824)',
                       }}
+                    />
+                  </div>
+
+                  <Separator style={{ margin: '0.25rem 0' }} />
+
+                  {/* Configurações Booleanas via Switch */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <Switch
+                      id="switch-alerta-demais-cuidadores"
+                      checked={alertaDemaisCuidadores}
+                      onCheckedChange={setAlertaDemaisCuidadores}
+                      label="Alerta Imediato aos Demais Cuidadores"
+                      description="Sincroniza notificação push em tempo real com a rede familiar"
+                    />
+                    <Switch
+                      id="switch-compartilhar-escola"
+                      checked={compartilharEquipeEscolar}
+                      onCheckedChange={setCompartilharEquipeEscolar}
+                      label="Compartilhar com Equipe Escolar"
+                      description="Disponibiliza o registro no Cartão Escolar seguro da criança"
                     />
                   </div>
 

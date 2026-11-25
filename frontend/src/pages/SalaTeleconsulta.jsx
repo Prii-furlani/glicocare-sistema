@@ -23,6 +23,7 @@ import ModalTCLE from '../components/ModalTCLE';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import { FEATURES } from '../config/features';
 import EmPreparacaoLufy from '../components/EmPreparacaoLufy';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/Resizable';
 
 export default function SalaTeleconsulta() {
   /* INÍCIO BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS (COMENTADO PARA LANÇAMENTO FASE 1) */
@@ -1022,7 +1023,25 @@ export default function SalaTeleconsulta() {
 
       {/* ====================================================================
           CORPO PRINCIPAL: TELA DIVIDIDA (70% VÍDEO / 30% PAINEL CLÍNICO)
+          PREPARAÇÃO FASE 2: Suporta ResizablePanelGroup (palco de vídeo à esquerda
+          e prontuário / roteiro à direita com alça arrastável ResizableHandle).
           ==================================================================== */}
+      {/* INÍCIO BLOCO FASE 2: RESIZABLEPANELGROUP PARA VÍDEO + PRONTUÁRIO LATERAL */}
+      {/*
+        Na ativação da Fase 2, este container adota ResizablePanelGroup:
+        <ResizablePanelGroup direction="horizontal" style={{ flex: 1, width: '100%', height: '100%' }}>
+          <ResizablePanel order={0} defaultSize={70} minSize={40}>
+            ... Palco de Vídeo / Espera ...
+          </ResizablePanel>
+          {drawerAberto && <ResizableHandle withHandle />}
+          {drawerAberto && (
+            <ResizablePanel order={1} defaultSize={30} minSize={20}>
+              ... Prontuário / Roteiro Lateral ...
+            </ResizablePanel>
+          )}
+        </ResizablePanelGroup>
+      */}
+      {/* FIM BLOCO FASE 2: RESIZABLEPANELGROUP */}
       <div
         style={{
           flex: 1,
