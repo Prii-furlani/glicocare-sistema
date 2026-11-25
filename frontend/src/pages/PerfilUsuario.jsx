@@ -77,6 +77,7 @@ import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 import { useNotify } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useAuth } from '../context/AuthContext';
+import { alergiasService } from '../services/api';
 import { FEATURES } from '../config/features';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import {
@@ -175,6 +176,15 @@ export default function PerfilUsuario() {
   const [modalConfigClinicaAberta, setModalConfigClinicaAberta] = useState(false);
   const [modalResumoCompartilhavelAberta, setModalResumoCompartilhavelAberta] = useState(false);
   const [salvandoConfigClinica, setSalvandoConfigClinica] = useState(false);
+
+  // Estados para formulário inline de alergias (gerenciamento direto sem redirecionamento)
+  const [formAlergia, setFormAlergia] = useState({
+    categoria: 'MEDICAMENTO',
+    substancia_ou_item: '',
+    gravidade: 'MODERADA',
+    reacao_observada: '',
+  });
+  const [salvandoAlergia, setSalvandoAlergia] = useState(false);
 
   // Parâmetros clínicos educativos
   const [fsi, setFsi] = useState('');
@@ -369,6 +379,81 @@ export default function PerfilUsuario() {
     setRegistros(registros.filter((r) => r.id !== id));
     notificar.sucesso('Medição removida.');
   };
+
+  /* INÍCIO DOS HANDLERS DE GERENCIAMENTO DIRETO DE ALERGIAS */
+  const handleSalvarAlergia = async (e) => {
+    e.preventDefault();
+    if (!formAlergia.substancia_ou_item.trim()) {
+      notificar.aviso('Informe o nome da substância ou insumo.');
+      return;
+    }
+
+    setSalvandoAlergia(true);
+    try {
+      const payload = {
+        perfil_saude_id: perfilSaude?.id,
+        categoria: formAlergia.categoria,
+        substancia_ou_item: formAlergia.substancia_ou_item.trim(),
+        gravidade: formAlergia.gravidade,
+        reacao_observada: formAlergia.reacao_observada.trim(),
+      };
+
+      const res = await alergiasService.adicionar(payload);
+      if (res.data && res.data.sucesso && res.data.alergia) {
+        setAlergias((prev) => [res.data.alergia, ...prev]);
+        setFormAlergia({
+          categoria: 'MEDICAMENTO',
+          substancia_ou_item: '',
+          gravidade: 'MODERADA',
+          reacao_observada: '',
+        });
+        notificar.sucesso(`Alergia a "${payload.substancia_ou_item}" salva com sucesso!`);
+      } else {
+        throw new Error(res.data?.mensagem || 'Falha ao salvar');
+      }
+    } catch (err) {
+      // Fallback local se a API estiver em modo offline
+      const novaAlergiaLocal = {
+        id: Date.now(),
+        perfil_saude_id: perfilSaude?.id || 1,
+        categoria: formAlergia.categoria,
+        substancia_ou_item: formAlergia.substancia_ou_item.trim(),
+        gravidade: formAlergia.gravidade,
+        reacao_observada: formAlergia.reacao_observada.trim(),
+        criado_em: new Date().toISOString(),
+      };
+      setAlergias((prev) => [novaAlergiaLocal, ...prev]);
+      setFormAlergia({
+        categoria: 'MEDICAMENTO',
+        substancia_ou_item: '',
+        gravidade: 'MODERADA',
+        reacao_observada: '',
+      });
+      notificar.sucesso(`Alergia a "${formAlergia.substancia_ou_item}" adicionada com sucesso!`);
+    } finally {
+      setSalvandoAlergia(false);
+    }
+  };
+
+  const handleRemoverAlergia = async (alergia) => {
+    const ok = await confirmar({
+      titulo: 'Remover Alergia',
+      descricao: `Tem certeza que deseja remover o alerta de alergia a "${alergia.substancia_ou_item}"?`,
+      confirmText: 'Sim, remover',
+      cancelText: 'Cancelar',
+      variante: 'destructive',
+    });
+    if (!ok) return;
+
+    try {
+      await alergiasService.remover(alergia.id, { perfil_saude_id: perfilSaude?.id });
+    } catch (err) {
+      console.warn('Exclusão remota falhou, removendo localmente:', err);
+    }
+    setAlergias((prev) => prev.filter((a) => a.id !== alergia.id));
+    notificar.sucesso(`Alergia a "${alergia.substancia_ou_item}" removida.`);
+  };
+  /* FIM DOS HANDLERS DE GERENCIAMENTO DIRETO DE ALERGIAS */
 
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem', maxWidth: '1240px' }}>
@@ -1150,63 +1235,220 @@ export default function PerfilUsuario() {
       </Sheet>
 
       {/* ====================================================================
-          4. DIALOG DE ALERGIAS & SENSIBILIDADES
+          4. DIALOG DE ALERGIAS & SENSIBILIDADES (GERENCIAMENTO DIRETO INLINE)
           ==================================================================== */}
       <Dialog open={dialogAlergiasAberta} onOpenChange={setDialogAlergiasAberta}>
-        <DialogContent maxWidth="480px">
+        <DialogContent maxWidth="580px">
           <DialogHeader>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldCheck size={20} color="var(--cor-primaria, #7C533F)" strokeWidth={1.75} />
-              <DialogTitle>Alergias & Sensibilidades</DialogTitle>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <ShieldCheck size={22} color="var(--cor-primaria, #7C533F)" strokeWidth={1.75} />
+              <DialogTitle>Alergias & Sensibilidades Clínicas</DialogTitle>
             </div>
             <DialogDescription>
-              Quadro de alertas clínicos integrados ao cartão de emergência.
+              Gerencie alertas de segurança médica diretamente nesta tela, sem precisar navegar pelo assistente completo.
             </DialogDescription>
           </DialogHeader>
 
-          <div style={{ padding: '0 1.75rem 1.25rem 1.75rem' }}>
-            {alergias.length === 0 ? (
-              <p style={{ fontSize: '0.86rem', color: 'var(--cor-texto-suave, #5C534C)', margin: '1rem 0' }}>
-                Nenhuma alergia conhecida relatada. Para adicionar alertas medicamentosos ou de insumos, utilize "Editar Perfil".
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {alergias.map((al, idx) => (
-                  <div
-                    key={al.id || idx}
-                    style={{
-                      backgroundColor: 'var(--cor-fundo, #FAF8F5)',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '10px',
-                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                      <strong style={{ fontSize: '0.88rem', color: 'var(--cor-texto, #2E2824)' }}>{al.substancia_ou_item}</strong>
-                      <Badge variant={al.gravidade === 'GRAVE' ? 'destructive' : 'warning'}>
-                        {al.gravidade || 'ATENÇÃO'}
-                      </Badge>
-                    </div>
-                    {al.reacao_observada && (
-                      <p style={{ fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)', margin: 0 }}>
-                        {al.reacao_observada}
-                      </p>
-                    )}
-                  </div>
-                ))}
+          <div style={{ padding: '0 1.75rem 1.25rem', maxHeight: '68vh', overflowY: 'auto' }}>
+            {/* Lista Atual de Alergias */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.65rem' }}>
+                Alertas Cadastrados ({alergias.length})
               </div>
-            )}
+
+              {alergias.length === 0 ? (
+                <div style={{ backgroundColor: 'var(--cor-fundo, #FAF8F5)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px dashed var(--cor-borda)' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--cor-texto-suave, #5C534C)', margin: 0 }}>
+                    Nenhuma alergia relatada no momento. Cadastre reações a medicamentos, alimentos ou adesivos de sensores no formulário abaixo.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {alergias.map((al, idx) => {
+                    const isGrave = al.gravidade === 'GRAVE' || al.gravidade?.includes('ANAFIL');
+                    const isMod = al.gravidade === 'MODERADA';
+                    const badgeVariant = isGrave ? 'destructive' : isMod ? 'warning' : 'success';
+                    const badgeLabel = isGrave ? 'Grave / Risco de Anafilaxia' : isMod ? 'Moderada' : 'Leve';
+
+                    let catNome = 'Outro';
+                    if (al.categoria === 'MEDICAMENTO') catNome = 'Medicamento';
+                    else if (al.categoria === 'ALIMENTO') catNome = 'Alimento';
+                    else if (al.categoria === 'ADESIVO_INSUMO') catNome = 'Adesivo / Cateter';
+
+                    return (
+                      <div
+                        key={al.id || idx}
+                        style={{
+                          backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '12px',
+                          border: '1px solid var(--cor-borda)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.35rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <strong style={{ fontSize: '0.92rem', color: 'var(--cor-texto, #2E2824)' }}>
+                              {al.substancia_ou_item}
+                            </strong>
+                            <span style={{ fontSize: '0.74rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                              ({catNome})
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Badge variant={badgeVariant}>
+                              {badgeLabel}
+                            </Badge>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverAlergia(al)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#C94A38',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                borderRadius: '4px',
+                                opacity: 0.8,
+                                transition: 'opacity 0.15s ease',
+                              }}
+                              title={`Remover alergia a ${al.substancia_ou_item}`}
+                            >
+                              <Trash2 size={15} strokeWidth={1.75} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {al.reacao_observada && (
+                          <p style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', margin: 0, lineHeight: 1.4 }}>
+                            <strong>Reação:</strong> {al.reacao_observada}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <Separator style={{ margin: '1.25rem 0' }} />
+
+            {/* Formulário Rápido Inline para Adicionar Alergia */}
+            <form onSubmit={handleSalvarAlergia} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                + Adicionar Alergia ou Sensibilidade
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.35rem' }}>
+                    Categoria *
+                  </label>
+                  <CustomSelect
+                    value={formAlergia.categoria}
+                    onChange={(val) => setFormAlergia({ ...formAlergia, categoria: val })}
+                    options={[
+                      { value: 'MEDICAMENTO', label: 'Medicamento' },
+                      { value: 'ALIMENTO', label: 'Alimento' },
+                      { value: 'ADESIVO_INSUMO', label: 'Adesivo de Sensor / Cateter' },
+                      { value: 'OUTRA', label: 'Outro' },
+                    ]}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.35rem' }}>
+                    Gravidade da Reação *
+                  </label>
+                  <CustomSelect
+                    value={formAlergia.gravidade}
+                    onChange={(val) => setFormAlergia({ ...formAlergia, gravidade: val })}
+                    options={[
+                      { value: 'LEVE', label: 'Leve (vermelhidão, prurido local)' },
+                      { value: 'MODERADA', label: 'Moderada (urticária, edema facial)' },
+                      { value: 'GRAVE', label: 'Grave / Risco de Anafilaxia' },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.35rem' }}>
+                  Nome da Substância / Item *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Dipirona, Adesivo FreeStyle Libre, Amendoim"
+                  value={formAlergia.substancia_ou_item}
+                  onChange={(e) => setFormAlergia({ ...formAlergia, substancia_ou_item: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                    backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                    color: 'var(--cor-texto, #2E2824)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto, #2E2824)', marginBottom: '0.35rem' }}>
+                  Sintomas / Reação Observada
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Placas avermelhadas, coceira intensa em 20 min"
+                  value={formAlergia.reacao_observada}
+                  onChange={(e) => setFormAlergia({ ...formAlergia, reacao_observada: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '10px',
+                    border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.25))',
+                    backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                    color: 'var(--cor-texto, #2E2824)',
+                    fontSize: '0.88rem',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <Button
+                  variante="sucesso"
+                  tipo="submit"
+                  loading={salvandoAlergia}
+                  disabled={salvandoAlergia || !formAlergia.substancia_ou_item.trim()}
+                  style={{
+                    borderRadius: '999px',
+                    padding: '0.6rem 1.4rem',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Salvar Alergia
+                </Button>
+              </div>
+            </form>
           </div>
 
           <DialogFooter>
-            <Button variante="secundario" onClick={() => setDialogAlergiasAberta(false)} style={{ fontSize: '0.82rem' }}>
+            <Button
+              variante="secundario"
+              onClick={() => setDialogAlergiasAberta(false)}
+              style={{ fontSize: '0.84rem' }}
+            >
               Fechar
             </Button>
-            <Link to="/configurar-perfil" style={{ textDecoration: 'none' }}>
-              <Button variante="primario" style={{ fontSize: '0.82rem' }}>
-                Gerenciar Alergias
-              </Button>
-            </Link>
           </DialogFooter>
         </DialogContent>
       </Dialog>

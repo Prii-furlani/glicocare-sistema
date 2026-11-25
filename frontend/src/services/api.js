@@ -81,4 +81,10 @@ export const cuidadorService = {
   registrarGlicemiaCuidador: (dados) => api.post('/cuidadores/registrar_glicemia_cuidador.php', dados),
 };
 
+export const alergiasService = {
+  listar: (params) => api.get('/perfil/gerenciar_alergias.php', { params }),
+  adicionar: (dados) => api.post('/perfil/gerenciar_alergias.php', dados),
+  remover: (id, params) => api.delete(`/perfil/gerenciar_alergias.php?id=${id}`, { params }),
+};
+
 export default api;

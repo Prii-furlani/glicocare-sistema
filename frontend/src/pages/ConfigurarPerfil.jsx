@@ -290,36 +290,78 @@ export default function ConfigurarPerfil() {
           border: '1px solid rgba(124, 83, 63, 0.15)',
         }}
       >
-        {/* Topo do Stepper com Indicador Visual */}
+        {/* Topo do Stepper Interativo com Navegação Direta entre Passos */}
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span
-              style={{
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#7C533F',
-                backgroundColor: '#EAE4D9',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '12px',
-              }}
-            >
-              Passo {etapa} de 4
-            </span>
-            <span style={{ fontSize: '0.85rem', color: '#6A5E57', fontWeight: 600 }}>
-              {etapa === 1 && '1. Dados Base & Diabetes'}
-              {etapa === 2 && '2. Fatores de Sensibilidade'}
-              {etapa === 3 && `3. Saúde ${sexo === 'feminino' ? 'Feminina' : (sexo === 'masculino' ? 'Masculina' : 'Geral')}`}
-              {etapa === 4 && '4. Medicamentos & Insulinas'}
-            </span>
+          {/* Navegação Rápida entre Passos */}
+          <div
+            role="tablist"
+            aria-label="Etapas de Configuração do Perfil"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: '8px',
+              marginBottom: '1rem',
+            }}
+          >
+            {[
+              { num: 1, label: '1. Dados Base' },
+              { num: 2, label: '2. Fatores' },
+              { num: 3, label: `3. Saúde ${sexo === 'feminino' ? 'Feminina' : (sexo === 'masculino' ? 'Masculina' : 'Geral')}` },
+              { num: 4, label: '4. Medicamentos' },
+            ].map((p) => {
+              const ativo = etapa === p.num;
+              const concluido = etapa > p.num;
+              return (
+                <button
+                  key={p.num}
+                  type="button"
+                  role="tab"
+                  aria-selected={ativo}
+                  onClick={() => {
+                    if (p.num > 1 && !nomeCompleto.trim()) {
+                      setMensagemStatus({ tipo: 'erro', texto: 'Por favor, preencha o nome antes de prosseguir.' });
+                      return;
+                    }
+                    setMensagemStatus(null);
+                    setEtapa(p.num);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    borderColor: ativo ? 'var(--cor-cta, #3B7E48)' : 'var(--cor-borda, rgba(124, 83, 63, 0.15))',
+                    backgroundColor: ativo
+                      ? 'var(--cor-cta, #3B7E48)'
+                      : concluido
+                      ? 'rgba(59, 126, 72, 0.08)'
+                      : 'var(--cor-superficie-elevada, #FAF8F5)',
+                    color: ativo ? '#FFFFFF' : concluido ? 'var(--cor-cta, #3B7E48)' : 'var(--cor-texto, #2E2824)',
+                    fontSize: '0.8rem',
+                    fontWeight: ativo ? 700 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: ativo ? '0 2px 6px rgba(59, 126, 72, 0.25)' : 'none',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  title={`Ir diretamente para o Passo ${p.num}: ${p.label}`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Barra de Progresso Suave */}
           <div
             style={{
-              height: '8px',
-              backgroundColor: '#EAE4D9',
+              height: '6px',
+              backgroundColor: 'rgba(124, 83, 63, 0.12)',
               borderRadius: '999px',
               overflow: 'hidden',
             }}
@@ -328,7 +370,7 @@ export default function ConfigurarPerfil() {
               style={{
                 height: '100%',
                 width: `${(etapa / 4) * 100}%`,
-                backgroundColor: 'var(--cor-cta)',
+                backgroundColor: 'var(--cor-cta, #3B7E48)',
                 transition: 'width 0.3s ease',
               }}
             />

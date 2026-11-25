@@ -1072,3 +1072,30 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
   * Histórico de Coletas Laboratoriais renderizado com `<TraceList>` e `<TraceItem>`.
 - **`SalaTeleconsulta.jsx`:**
   * Arquitetura de tela dividida anotada e estruturada com `ResizablePanelGroup` preparada para a Fase 2.
+
+---
+
+## 26. FLUXO DIRETO DE ALERGIAS & SENSIBILIDADES EM MODAL E STEPPER CLICÁVEL
+
+### A. Endpoint Dedicado e Auditado (`/backend/api/perfil/gerenciar_alergias.php`)
+- **Segurança & Permissões:**
+  * Protegido por `AuthMiddleware::autenticar()`.
+  * Validação de posse do `perfil_saude_id`: se o perfil pertencer ao próprio paciente ou a um dependente legal com vínculo verificado na tabela `cuidadores_dependentes`.
+- **Operações:**
+  * `GET`: Lista todas as alergias cadastradas na tabela `alergias_usuario`, ordenadas por gravidade e nome.
+  * `POST`: Insere nova alergia vinculada a `perfil_saude_id`, sincroniza a flag `possui_alergias = 1` na tabela `perfis_saude` e grava evento `CADASTRO_ALERGIA_DIRETO` no `AuditLogger::registrar()` no fuso `America/Sao_Paulo`.
+  * `DELETE`: Remove alergia por `id`, recalcula o total de alergias do perfil para atualizar `possui_alergias = 0` se zerado e grava evento `REMOCAO_ALERGIA_DIRETO` no `AuditLogger`.
+
+### B. Integração Frontend e Eliminação do Redirecionamento ao Wizard
+- **`frontend/src/services/api.js`:** Adicionado `alergiasService` com métodos `listar()`, `adicionar()` e `remover()`.
+- **`PerfilUsuario.jsx` & `PainelCuidador.jsx`:**
+  * **Abertura Direta:** Ao clicar no selo/badge de alergias no cabeçalho ou no botão `+ Adicionar Alergia`, abre-se imediatamente um `Dialog` (`shadcn/ui`) dedicado.
+  * **Fim do Redirecionamento Indesejado:** Eliminado qualquer redirecionamento ao Passo 1 do wizard de configuração (`/configurar-perfil`). O cadastro e exclusão ocorrem 100% dentro do modal.
+  * **Lista Atual com Badges Semânticos:** Exibe as alergias cadastradas com badges de severidade (`Leve` em Verde Alívio, `Moderada` em Âmbar e `Grave / Risco de Anafilaxia` em Terracota Crítico), categoria e sintomas.
+  * **Ação de Exclusão:** Botão discreto com ícone `Trash2` acionando confirmação modal via `useConfirm()` antes da exclusão.
+  * **Formulário Rápido Inline:** Contém `<CustomSelect />` para Categoria e Gravidade, inputs para substância e sintomas, e botão Verde Alívio (`#3B7E48`) com spinner `<GlicoLoader variant="botao" />` durante salvamento.
+
+### C. Navegação Rápida no Wizard (`ConfigurarPerfil.jsx`)
+- **Stepper Clicável:** Os 4 passos do formulário completo (`1. Dados Base`, `2. Fatores`, `3. Saúde`, `4. Medicamentos`) agora atuam como um controle segmentado interativo estilo *pill tabs*.
+- **Acesso Direto:** Permite ao usuário navegar diretamente entre as etapas sem precisar avançar passo a passo, mantendo validações básicas de preenchimento (ex: nome preenchido antes de pular).
+
