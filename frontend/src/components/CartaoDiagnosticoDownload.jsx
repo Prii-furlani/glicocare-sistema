@@ -26,6 +26,7 @@ export default function CartaoDiagnosticoDownload({
   isCuidador = false,
   tituloSecao = 'Cartão de Diagnóstico & Identificação Médica',
   descricaoSecao = 'Mantenha este documento salvo no seu celular ou impresso na carteira para emergências e identificação clínica rápida.',
+  exibirCabecalhoSecao = true,
 }) {
   const cardRef = useRef(null);
   const notificar = useNotify();
@@ -125,8 +126,8 @@ export default function CartaoDiagnosticoDownload({
   };
 
   return (
-    <div style={{ marginTop: '2rem', marginBottom: '2.5rem' }}>
-      {/* ESTILOS DE IMPRESSÃO DEDICADOS (@media print) */}
+    <div style={{ marginTop: exibirCabecalhoSecao ? '1.5rem' : '0', marginBottom: '1rem' }}>
+      {/* ESTILOS DE IMPRESSÃO DEDICADOS (@media print) E RESPONSIVIDADE */}
       <style>{`
         @media print {
           body * {
@@ -137,7 +138,7 @@ export default function CartaoDiagnosticoDownload({
             visibility: visible !important;
           }
           .cartao-diagnostico-print-area {
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
@@ -147,46 +148,57 @@ export default function CartaoDiagnosticoDownload({
             background-color: #FFFFFF !important;
             margin: 0 !important;
             padding: 1.5rem !important;
+            z-index: 999999 !important;
           }
           .cartao-no-print {
             display: none !important;
           }
         }
+        @media (max-width: 640px) {
+          .cartao-grade-parametros {
+            grid-template-columns: 1fr !important;
+          }
+          .cartao-grade-emergencia {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
       {/* CABEÇALHO DA SEÇÃO DE APRESENTAÇÃO */}
-      <div className="cartao-no-print" style={{ marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: '1.25rem' }}>🪪</span>
-          <h3
-            style={{
-              fontFamily: 'var(--fonte-titulo, Fraunces)',
-              fontSize: '1.35rem',
-              color: '#2E2824',
-              margin: 0,
-            }}
-          >
-            {tituloSecao}
-          </h3>
-          <span
-            style={{
-              backgroundColor: 'rgba(59, 126, 72, 0.1)',
-              color: '#3B7E48',
-              padding: '2px 8px',
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            Fase 1 Oficial
-          </span>
+      {exibirCabecalhoSecao && (
+        <div className="cartao-no-print" style={{ marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🪪</span>
+            <h3
+              style={{
+                fontFamily: 'var(--fonte-titulo, Fraunces)',
+                fontSize: '1.35rem',
+                color: '#2E2824',
+                margin: 0,
+              }}
+            >
+              {tituloSecao}
+            </h3>
+            <span
+              style={{
+                backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                color: '#3B7E48',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Fase 1 Oficial
+            </span>
+          </div>
+          <p style={{ fontSize: '0.88rem', color: '#5A5049', margin: 0, maxWidth: '780px', lineHeight: 1.5 }}>
+            {descricaoSecao}
+          </p>
         </div>
-        <p style={{ fontSize: '0.88rem', color: '#5A5049', margin: 0, maxWidth: '780px', lineHeight: 1.5 }}>
-          {descricaoSecao}
-        </p>
-      </div>
+      )}
 
       {/* PREVIEW DO CARD OFICIAL (ALVO DE CAPTURA DO HTML2CANVAS E IMPRESSÃO) */}
       <div
@@ -197,12 +209,13 @@ export default function CartaoDiagnosticoDownload({
           borderRadius: '18px',
           border: '1.5px solid rgba(124, 83, 63, 0.25)',
           padding: '1.75rem',
-          maxWidth: '680px',
+          maxWidth: '100%',
           boxShadow: '0 8px 24px rgba(46, 40, 36, 0.08)',
           color: '#2E2824',
           fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
           position: 'relative',
           overflow: 'hidden',
+          boxSizing: 'border-box',
         }}
       >
         {/* TOPO: IDENTIDADE GLICOCARE E SELO OFICIAL */}
@@ -341,11 +354,12 @@ export default function CartaoDiagnosticoDownload({
           </div>
         )}
 
-        {/* GRADE CLÍNICA: TIPO DE DIABETES, TERAPIA E MONITORAMENTO */}
+        {/* GRADE CLÍNICA: TIPO DE DIABETES, TERAPIA E MONITORAMENTO (3 COLUNAS UNIFORMES) */}
         <div
+          className="cartao-grade-parametros"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '0.75rem',
             marginBottom: '1.25rem',
           }}
@@ -362,7 +376,7 @@ export default function CartaoDiagnosticoDownload({
             <div style={{ fontSize: '0.7rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
               Classificação & Diagnóstico
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#2E2824', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#2E2824', marginTop: '0.15rem' }}>
               {tipoDiabetes}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#3B7E48', fontWeight: 600, marginTop: '0.2rem' }}>
@@ -511,22 +525,100 @@ export default function CartaoDiagnosticoDownload({
           )}
         </div>
 
-        {/* ORIENTAÇÃO EMERGENCIAL DE SEGURANÇA: REGRA DOS 15G */}
+        {/* PROTOCOLO COMPLETO DE EMERGÊNCIA: HIPOGLICEMIA & HIPERGLICEMIA (2 COLUNAS LADO A LADO) */}
         <div
+          className="cartao-grade-emergencia"
           style={{
-            backgroundColor: '#FFF4E5',
-            border: '1.5px solid #C88D2A',
-            borderRadius: '10px',
-            padding: '0.75rem 1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '0.75rem',
             marginBottom: '1rem',
-            fontSize: '0.82rem',
-            lineHeight: 1.45,
-            color: '#8A5D10',
           }}
         >
-          <strong>🚨 EM CASO DE HIPOGLICEMIA (&lt; 70 mg/dL, tremores, sudorese fria ou sonolência):</strong>
-          <div style={{ marginTop: '0.2rem', color: '#2E2824' }}>
-            Aplicar a <strong>Regra dos 15g</strong> imediatamente: ingerir 15g de carboidrato simples (1 sachê de mel, 150ml de suco integral ou 1 colher de sopa de açúcar diluído em água). Aguardar 15 minutos em repouso e medir novamente. <strong>NUNCA aplique insulina durante um episódio de hipoglicemia.</strong>
+          {/* Card 1: Hipoglicemia (< 70 mg/dL) */}
+          <div
+            style={{
+              backgroundColor: '#FFF9F0',
+              border: '1.5px solid #C88D2A',
+              borderRadius: '10px',
+              padding: '0.75rem 0.9rem',
+              fontSize: '0.8rem',
+              lineHeight: 1.45,
+              color: '#2E2824',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.95rem' }}>🚨</span>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#8A5D10', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Hipoglicemia (&lt; 70 mg/dL)
+                </span>
+              </div>
+              <div style={{ marginBottom: '0.35rem', fontSize: '0.78rem' }}>
+                <strong>Sinais:</strong> Tremores, sudorese fria, palidez, tontura ou sonolência.
+              </div>
+              <div style={{ fontSize: '0.78rem' }}>
+                <strong>Conduta:</strong> Aplicar a <strong>Regra dos 15g</strong> (1 sachê de mel, 150 ml de suco integral ou 1 colher de sopa de açúcar diluído em água). Aguardar 15 minutos em repouso e medir novamente.
+              </div>
+            </div>
+            <div
+              style={{
+                marginTop: '0.45rem',
+                paddingTop: '0.35rem',
+                borderTop: '1px dashed rgba(200, 141, 42, 0.4)',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#A23B2A',
+              }}
+            >
+              ⚠️ NUNCA aplique insulina durante uma hipoglicemia.
+            </div>
+          </div>
+
+          {/* Card 2: Hiperglicemia (> 250 mg/dL) */}
+          <div
+            style={{
+              backgroundColor: '#FFF4F2',
+              border: '1.5px solid #C94A38',
+              borderRadius: '10px',
+              padding: '0.75rem 0.9rem',
+              fontSize: '0.8rem',
+              lineHeight: 1.45,
+              color: '#2E2824',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.95rem' }}>⚠️</span>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#A23B2A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Hiperglicemia (&gt; 250 mg/dL)
+                </span>
+              </div>
+              <div style={{ marginBottom: '0.35rem', fontSize: '0.78rem' }}>
+                <strong>Sinais:</strong> Sede intensa, boca seca, vontade frequente de urinar, cansaço ou visão turva.
+              </div>
+              <div style={{ fontSize: '0.78rem' }}>
+                <strong>Conduta:</strong> Oferecer água pura para hidratação, verificar cetonas (se disponível) e checar cateter/aplicação. Realizar correção apenas conforme o <strong>FSI prescrito</strong> (respeitando a insulina ativa).
+              </div>
+            </div>
+            <div
+              style={{
+                marginTop: '0.45rem',
+                paddingTop: '0.35rem',
+                borderTop: '1px dashed rgba(201, 74, 56, 0.4)',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                color: '#842029',
+              }}
+            >
+              🚨 Buscar pronto-atendimento se houver náuseas, vômitos, dor abdominal ou sonolência excessiva.
+            </div>
           </div>
         </div>
 
@@ -558,14 +650,14 @@ export default function CartaoDiagnosticoDownload({
         className="cartao-no-print"
         style={{
           display: 'flex',
-          gap: '0.85rem',
+          gap: '0.75rem',
           marginTop: '1.25rem',
           flexWrap: 'wrap',
           alignItems: 'center',
         }}
       >
         <Button
-          variante="primario"
+          variante="cta"
           onClick={handleBaixarPNG}
           loading={gerandoImagem}
           disabled={gerandoImagem}
@@ -573,8 +665,9 @@ export default function CartaoDiagnosticoDownload({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.75rem 1.4rem',
+            padding: '0.65rem 1.3rem',
             fontWeight: 700,
+            fontSize: '0.88rem',
           }}
         >
           <span>🖼️</span>
@@ -588,8 +681,9 @@ export default function CartaoDiagnosticoDownload({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.75rem 1.4rem',
+            padding: '0.65rem 1.3rem',
             fontWeight: 700,
+            fontSize: '0.88rem',
           }}
         >
           <span>🖨️</span>

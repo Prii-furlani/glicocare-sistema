@@ -1099,3 +1099,23 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
 - **Stepper Clicável:** Os 4 passos do formulário completo (`1. Dados Base`, `2. Fatores`, `3. Saúde`, `4. Medicamentos`) agora atuam como um controle segmentado interativo estilo *pill tabs*.
 - **Acesso Direto:** Permite ao usuário navegar diretamente entre as etapas sem precisar avançar passo a passo, mantendo validações básicas de preenchimento (ex: nome preenchido antes de pular).
 
+---
+
+## 27. CARTÃO DE DIAGNÓSTICO EM MODAL (DIALOG) & PROTOCOLOS DE EMERGÊNCIA
+
+### A. Abertura sob Demanda e Limpeza Estrutural do Rodapé
+- **Remoção da Seção Estática:** Eliminada a seção fixa de download do rodapé de `PerfilUsuario.jsx` e `PainelCuidador.jsx`, mantendo o término da visualização principal limpo logo após a *Linha do Tempo das Medições*.
+- **Abertura em `Dialog` Centralizado:** Conectado o botão **`Card Diagnóstico (PNG/PDF)`** existente no cabeçalho das páginas para acionar um `Dialog` (`shadcn/ui`) com rolagem interna suave, exibindo o preview fiel do documento e as ações de exportação logo abaixo.
+
+### B. Aprimoramento Clínico e Visual (`CartaoDiagnosticoDownload.jsx`)
+- **Grade de Parâmetros Uniforme (3 Colunas):** Os blocos *Classificação & Diagnóstico*, *Terapia & Monitoramento* e *FSI & Glicemia Alvo* agora são dispostos em 3 colunas perfeitamente alinhadas no desktop (`repeat(3, 1fr)`), com colapso responsivo suave para 1 coluna no mobile (`<= 640px`).
+- **Protocolo Completo de Emergência Lado a Lado (2 Colunas):**
+  1. **Hipoglicemia (`< 70 mg/dL` — Alerta Âmbar/Terracota `#FFF9F0`):**
+     * *Sinais:* Tremores, sudorese fria, palidez, tontura ou sonolência.
+     * *Conduta:* **Regra dos 15g** (1 sachê de mel, 150 ml de suco integral ou 1 colher de sopa de açúcar na água). Aguardar 15 minutos em repouso e retestar. Alerta enfático: **NUNCA aplicar insulina durante a hipoglicemia.**
+  2. **Hiperglicemia (`> 250 mg/dL` — Alerta Terracota Suave `#FFF4F2`):**
+     * *Sinais:* Sede intensa, boca seca, poliúria, fadiga e visão turva.
+     * *Conduta:* Hidratação abundante com água pura, verificação de cetonas e correção baseada estritamente no **FSI prescrito** e insulina ativa. Alerta de pronto-atendimento imediato em caso de náuseas, vômitos, dor abdominal ou sonolência intensa.
+- **Paleta Forçada de Alto Contraste:** Cores claras e nítidas fixadas no documento para garantir legibilidade perfeita tanto em tela quanto em ambientes escuros, exportação PNG (`html2canvas` 2x) e impressão física/PDF (`@media print` com `position: fixed` e corte zero de bordas).
+
+

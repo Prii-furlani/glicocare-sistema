@@ -175,6 +175,7 @@ export default function PerfilUsuario() {
   const [dialogAlergiasAberta, setDialogAlergiasAberta] = useState(false);
   const [modalConfigClinicaAberta, setModalConfigClinicaAberta] = useState(false);
   const [modalResumoCompartilhavelAberta, setModalResumoCompartilhavelAberta] = useState(false);
+  const [modalCartaoDiagnosticoAberto, setModalCartaoDiagnosticoAberto] = useState(false);
   const [salvandoConfigClinica, setSalvandoConfigClinica] = useState(false);
 
   // Estados para formulário inline de alergias (gerenciamento direto sem redirecionamento)
@@ -594,12 +595,7 @@ export default function PerfilUsuario() {
           {/* Botão Outline: Card Diagnóstico */}
           <button
             type="button"
-            onClick={() => {
-              setAbaAtiva('diario');
-              setTimeout(() => {
-                document.getElementById('cartao-diagnostico-secao')?.scrollIntoView({ behavior: 'smooth' });
-              }, 100);
-            }}
+            onClick={() => setModalCartaoDiagnosticoAberto(true)}
             style={{
               fontSize: '0.8rem',
               fontWeight: 600,
@@ -1048,20 +1044,6 @@ export default function PerfilUsuario() {
               )}
             </CardContent>
           </Card>
-
-          {/* ================================================================
-              SEÇÃO DO CARD DE DIAGNÓSTICO (PARA DOWNLOAD PNG/PDF)
-              ================================================================ */}
-          <div id="cartao-diagnostico-secao">
-            <CartaoDiagnosticoDownload
-              paciente={perfilSaude}
-              alergias={alergias}
-              medicamentos={medicamentos}
-              isCuidador={false}
-              tituloSecao="Meu Cartão de Diagnóstico & Cuidado para Download"
-              descricaoSecao="Documento clínico oficial com seus parâmetros terapêuticos e alergias para portar na carteira ou salvar no celular."
-            />
-          </div>
         </div>
       )}
 
@@ -1450,6 +1432,50 @@ export default function PerfilUsuario() {
               Fechar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==================================================================
+          MODAL DO CARTÃO DE DIAGNÓSTICO & CUIDADO (PREVIEW + PNG/PDF)
+          ================================================================== */}
+      <Dialog open={modalCartaoDiagnosticoAberto} onOpenChange={setModalCartaoDiagnosticoAberto}>
+        <DialogContent style={{ maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--cor-destaque)',
+                }}
+              >
+                <FileText size={18} strokeWidth={2} />
+              </div>
+              <div>
+                <DialogTitle style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.25rem' }}>
+                  Cartão de Diagnóstico & Cuidado
+                </DialogTitle>
+                <DialogDescription style={{ fontSize: '0.85rem' }}>
+                  Documento oficial com parâmetros terapêuticos e condutas de emergência para portar na carteira ou salvar no celular.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div style={{ marginTop: '0.5rem' }}>
+            <CartaoDiagnosticoDownload
+              paciente={perfilSaude}
+              alergias={alergias}
+              medicamentos={medicamentos}
+              isCuidador={false}
+              exibirCabecalhoSecao={false}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 

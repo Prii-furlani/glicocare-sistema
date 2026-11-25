@@ -272,6 +272,7 @@ export default function PainelCuidador() {
   const [modalNovaAlergia, setModalNovaAlergia] = useState(false);
   const [modalPreAtendimento, setModalPreAtendimento] = useState(false);
   const [modalAssinarTCLE, setModalAssinarTCLE] = useState(false);
+  const [modalCartaoDiagnosticoAberto, setModalCartaoDiagnosticoAberto] = useState(false);
   const [sheetNovaMedicaoAberta, setSheetNovaMedicaoAberta] = useState(false);
   const [modoVisualizacaoCuidador, setModoVisualizacaoCuidador] = useState('trilha'); // 'trilha' | 'tabela'
   const [alertaDemaisCuidadores, setAlertaDemaisCuidadores] = useState(true);
@@ -803,6 +804,29 @@ export default function PainelCuidador() {
               <Plus size={15} strokeWidth={2.5} />
               <span>Registrar Medição</span>
             </Button>
+
+            {/* Botão Outline: Card Diagnóstico */}
+            <button
+              type="button"
+              onClick={() => setModalCartaoDiagnosticoAberto(true)}
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                backgroundColor: 'transparent',
+                color: 'var(--cor-texto, #2E2824)',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
+                borderRadius: '999px',
+                padding: '0.45rem 0.9rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <FileText size={14} strokeWidth={1.75} />
+              <span>Card Diagnóstico (PNG/PDF)</span>
+            </button>
 
             <button
               type="button"
@@ -1423,22 +1447,6 @@ export default function PainelCuidador() {
               </SheetContent>
             </Sheet>
             {/* /* FIM DA GAVETA LATERAL (SHEET) */}
-
-            {/* INÍCIO BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD (FASE 1) */}
-            <CartaoDiagnosticoDownload
-              paciente={filhoAtivo}
-              cuidador={{
-                nome_responsavel: usuario?.nome_completo || 'Mariana Silva',
-                parentesco: filhoAtivo.parentesco || 'Mãe',
-                telefone_emergencia: filhoAtivo.contato_emergencia_telefone || usuario?.telefone || '(11) 97777-2001',
-              }}
-              alergias={filhoAtivo.alergias || []}
-              medicamentos={filhoAtivo.medicamentos || []}
-              isCuidador={true}
-              tituloSecao={`Cartão de Diagnóstico de ${filhoAtivo.nome_crianca} para Download`}
-              descricaoSecao="Documento oficial da criança com parâmetros de segurança, contato do responsável legal e orientações imediatas para portar na mochila escolar ou salvar no celular."
-            />
-            {/* FIM BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD */}
           </div>
         )}
 
@@ -2793,6 +2801,54 @@ export default function PainelCuidador() {
             </div>
           </div>
         )}
+        {/* ==================================================================
+            MODAL DO CARTÃO DE DIAGNÓSTICO DO DEPENDENTE (PREVIEW + PNG/PDF)
+            ================================================================== */}
+        <Dialog open={modalCartaoDiagnosticoAberto} onOpenChange={setModalCartaoDiagnosticoAberto}>
+          <DialogContent style={{ maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <DialogHeader>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--cor-destaque)',
+                  }}
+                >
+                  <FileText size={18} strokeWidth={2} />
+                </div>
+                <div>
+                  <DialogTitle style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.25rem' }}>
+                    Cartão de Diagnóstico de {filhoAtivo?.nome_crianca}
+                  </DialogTitle>
+                  <DialogDescription style={{ fontSize: '0.85rem' }}>
+                    Documento oficial com parâmetros de segurança, contato do responsável legal e condutas de emergência para portar na mochila escolar ou salvar no celular.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div style={{ marginTop: '0.5rem' }}>
+              <CartaoDiagnosticoDownload
+                paciente={filhoAtivo}
+                cuidador={{
+                  nome_responsavel: usuario?.nome_completo || 'Mariana Silva',
+                  parentesco: filhoAtivo.parentesco || 'Mãe',
+                  telefone_emergencia: filhoAtivo.contato_emergencia_telefone || usuario?.telefone || '(11) 97777-2001',
+                }}
+                alergias={filhoAtivo.alergias || []}
+                medicamentos={filhoAtivo.medicamentos || []}
+                isCuidador={true}
+                exibirCabecalhoSecao={false}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
