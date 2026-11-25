@@ -1296,6 +1296,27 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
   * O primeiro ponto tem recuo seguro de 22px em relação ao eixo Y de valores (`45px + 22px = 67px`).
   * O último ponto tem respiro de 22px antes do término da linha de grade pontilhada e mais de 60px antes da margem direita do SVG (`x = 778px` em canvas de `840px`), eliminando a sensação de sufocamento contra as bordas laterais.
 
+---
+
+## 33. REFINAMENTO DE PROPORÇÃO E ESPAÇAMENTO DOS CARDS DE KPI (`Última Glicemia`, `IOB` e `TIR 7D`)
+
+### A. Alinhamento e Eliminação do Espaço Vazio Inferior
+- **Grid com `alignItems: 'start'`:** Em `PerfilUsuario.jsx` e `PainelCuidador.jsx`, o Bento Grid superior foi configurado com `alignItems: 'start'`. Isso impede que os cards de **Última Glicemia** e **Tempo no Alvo (TIR)** sejam forçados a esticar artificialmente até a altura total do card de **Insulina Ativa (IOB)** quando este contém múltiplas doses ativas somadas, eliminando o excesso de espaço vazio no rodapé desses cards.
+- **Estrutura Visual shadcn/ui "Porto Seguro":**
+  * Cada card possui borda única de `1px solid var(--cor-borda)` e `border-radius: 12px`.
+  * `CardContent` padronizado com `padding: 20px 22px`, `display: flex`, `flexDirection: column` e espaçamento uniforme de `gap: 10px` entre topo, centro e rodapé.
+
+### B. Escala Tipográfica Contida e Harmônica (`tabular-nums`)
+- **Dígitos Principais (`30px`):** Ajustados de `2.25rem` (36px) para `30px` com `font-weight: 700`, `font-variant-numeric: tabular-nums` e `line-height: 1`, conferindo elegância sóbria sem parecer inflado.
+- **Rótulos Superiores:** `fontSize: 0.72rem` (~11.5px), `font-weight: 600`, `letter-spacing: 0.06em` e `text-transform: uppercase`.
+- **Badges de Status:** Compactos com `fontSize: 11px` e `padding: 1px 8px`.
+- **Linhas Inferiores e Rodapés:** `fontSize: 0.78rem` com ícones discretos e micro-barra segmentada fina de 4px com bordas circulares (`999px`).
+
+### C. Detalhamento Compacto de Doses no Card de IOB
+- **Linhas Enxutas de Aplicação:** Cada dose ativa sobreposta é renderizada em linha compacta com `padding: 8px 10px`, `gap: 6px`, `border-radius: 6px` e fundo translúcido acolhedor (`rgba(124, 83, 63, 0.05)`).
+- **Leitura Clara e Concisa:** Exibe horário da aplicação, dose original em UI, contexto clínico (`Almoço`, `Café`) e IOB restante com tempo dinâmico de expiração (ex: `11:44 • 5.0 UI (Almoço) → restam 4.8 UI (~2h35)`), sem expandir o card desproporcionalmente.
+
+
 
 
 

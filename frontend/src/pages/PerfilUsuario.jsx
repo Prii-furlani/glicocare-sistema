@@ -723,33 +723,49 @@ export default function PerfilUsuario() {
       {abaAtiva === 'diario' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {/* ================================================================
-              BENTO GRID COM 3 KPI CARDS ESTILO SHADCN
+              BENTO GRID COM 3 KPI CARDS ESTILO SHADCN COM PROPORÇÃO EQUILIBRADA
               ================================================================ */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
               gap: '1rem',
+              alignItems: 'start',
             }}
           >
-            {/* KPI 1: Última Glicemia */}
-            <Card>
-              <CardContent style={{ padding: '1.25rem 1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {/* INÍCIO DO KPI 1: ÚLTIMA GLICEMIA */}
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+              <CardContent
+                style={{
+                  padding: '20px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      color: 'var(--cor-primaria, #7C533F)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
                     Última Glicemia
                   </span>
-                  <Badge variant={statusUltimaGlicemia.variante}>
+                  <Badge variant={statusUltimaGlicemia.variante} style={{ fontSize: '11px', padding: '1px 8px' }}>
                     {statusUltimaGlicemia.rotulo}
                   </Badge>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                   <span
                     style={{
-                      fontSize: '2.25rem',
-                      fontWeight: 800,
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '30px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                       fontVariantNumeric: 'tabular-nums',
                       color: statusUltimaGlicemia.cor,
                       lineHeight: 1,
@@ -757,25 +773,46 @@ export default function PerfilUsuario() {
                   >
                     {ultimoRegistro ? ultimoRegistro.valor_mg_dl : 142}
                   </span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>mg/dL</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>mg/dL</span>
                 </div>
 
-                <Separator style={{ margin: '0.65rem 0' }} />
+                <Separator style={{ margin: '2px 0' }} />
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                  <Activity size={13} color="var(--cor-cta, #3B7E48)" />
-                  <span>
-                    {tendenciaAtual ? `${tendenciaAtual.icone} ${tendenciaAtual.rotulo}` : '↘ Queda moderada'}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Activity size={13} color="var(--cor-cta, #3B7E48)" />
+                    <span>
+                      {tendenciaAtual ? `${tendenciaAtual.icone} ${tendenciaAtual.rotulo}` : '↘ Queda moderada'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', opacity: 0.85 }}>
+                    {ultimoRegistro?.data_hora_medicao ? new Date(ultimoRegistro.data_hora_medicao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '11:44'}
                   </span>
                 </div>
               </CardContent>
             </Card>
+            {/* FIM DO KPI 1: ÚLTIMA GLICEMIA */}
 
-            {/* KPI 2: Insulina Ativa (IOB) + Decaimento Individual Multi-Bolus */}
-            <Card>
-              <CardContent style={{ padding: '1.25rem 1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {/* INÍCIO DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS */}
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+              <CardContent
+                style={{
+                  padding: '20px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      color: 'var(--cor-primaria, #7C533F)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
                     Insulina Ativa (IOB)
                   </span>
                   <span
@@ -789,12 +826,12 @@ export default function PerfilUsuario() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      fontSize: '2.25rem',
-                      fontWeight: 800,
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '30px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                       fontVariantNumeric: 'tabular-nums',
                       color: 'var(--cor-texto, #2E2824)',
                       lineHeight: 1,
@@ -802,17 +839,17 @@ export default function PerfilUsuario() {
                   >
                     {infoIOB.iobTotal.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>
                     UI ativas
                   </span>
                   {infoIOB.totalDosesAtivas > 1 && (
                     <span
                       style={{
                         marginLeft: 'auto',
-                        fontSize: '0.7rem',
+                        fontSize: '0.68rem',
                         backgroundColor: 'rgba(59, 126, 72, 0.1)',
                         color: '#285832',
-                        padding: '2px 7px',
+                        padding: '1px 7px',
                         borderRadius: '6px',
                         fontWeight: 700,
                       }}
@@ -822,7 +859,7 @@ export default function PerfilUsuario() {
                   )}
                 </div>
 
-                <Separator style={{ margin: '0.65rem 0' }} />
+                <Separator style={{ margin: '2px 0' }} />
 
                 {/* Barra de progresso fisiológica de decaimento */}
                 <div>
@@ -845,75 +882,81 @@ export default function PerfilUsuario() {
                       }}
                     />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
                     <span>Curva rápida ({duracaoInsulinaHoras}h)</span>
                     <span>Prevenção de empilhamento</span>
                   </div>
                 </div>
 
-                {/* DETALHAMENTO DISCRETO DAS DOSES ATIVAS */}
+                {/* DETALHAMENTO COMPACTO DAS DOSES ATIVAS */}
                 {infoIOB.detalhesDoses.length > 0 && (
                   <div
                     style={{
-                      marginTop: '0.75rem',
-                      paddingTop: '0.6rem',
-                      borderTop: '1px dashed rgba(124, 83, 63, 0.2)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      marginTop: '2px',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                        Detalhamento por Aplicação
-                      </span>
-                      <span style={{ fontSize: '0.68rem', color: '#6A5E57' }}>
-                        Duração: {duracaoInsulinaHoras}h
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      {infoIOB.detalhesDoses.map((dose) => (
-                        <div
-                          key={dose.id}
-                          style={{
-                            fontSize: '0.74rem',
-                            backgroundColor: 'rgba(124, 83, 63, 0.05)',
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '4px',
-                          }}
-                        >
-                          <div>
-                            <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
-                            <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
-                            {dose.contexto && (
-                              <span style={{ fontSize: '0.66rem', color: '#7C533F', marginLeft: '6px', fontStyle: 'italic' }}>
-                                ({dose.contexto.split(':')[0]})
-                              </span>
-                            )}
-                          </div>
-
-                          <div style={{ fontWeight: 700, color: '#285832' }}>
-                            restam {dose.iobRestante.toFixed(1)} UI{' '}
-                            <span style={{ fontWeight: 500, fontSize: '0.7rem', color: '#5A5049' }}>
-                              (expira em ~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                    {infoIOB.detalhesDoses.map((dose) => (
+                      <div
+                        key={dose.id}
+                        style={{
+                          fontSize: '0.72rem',
+                          backgroundColor: 'rgba(124, 83, 63, 0.05)',
+                          border: '1px solid rgba(124, 83, 63, 0.08)',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '6px',
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
+                          <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
+                          {dose.contexto && (
+                            <span style={{ fontSize: '0.65rem', color: '#7C533F', marginLeft: '4px', fontStyle: 'italic' }}>
+                              ({dose.contexto.split(':')[0]})
                             </span>
-                          </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+
+                        <div style={{ fontWeight: 700, color: '#285832', whiteSpace: 'nowrap' }}>
+                          restam {dose.iobRestante.toFixed(1)} UI{' '}
+                          <span style={{ fontWeight: 500, fontSize: '0.68rem', color: '#5A5049' }}>
+                            (~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
+            {/* FIM DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS */}
 
-            {/* KPI 3: Tempo no Alvo (TIR — 7 dias) + Micro-barra Segmentada */}
-            <Card>
-              <CardContent style={{ padding: '1.25rem 1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {/* INÍCIO DO KPI 3: TEMPO NO ALVO (TIR 7D) */}
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+              <CardContent
+                style={{
+                  padding: '20px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      color: 'var(--cor-primaria, #7C533F)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
                     Tempo no Alvo (TIR 7d)
                   </span>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--cor-cta, #3B7E48)' }}>
@@ -921,12 +964,12 @@ export default function PerfilUsuario() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', margin: '0.2rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                   <span
                     style={{
-                      fontSize: '2.25rem',
-                      fontWeight: 800,
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '30px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                       fontVariantNumeric: 'tabular-nums',
                       color: dadosTIR7d.tir >= 70 ? 'var(--cor-cta, #3B7E48)' : '#C88D2A',
                       lineHeight: 1,
@@ -934,10 +977,10 @@ export default function PerfilUsuario() {
                   >
                     {dadosTIR7d.tir}%
                   </span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>70–180 mg/dL</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>70–180 mg/dL</span>
                 </div>
 
-                <Separator style={{ margin: '0.65rem 0' }} />
+                <Separator style={{ margin: '2px 0' }} />
 
                 {/* Micro-barra segmentada fina de 4px */}
                 <div>
@@ -955,7 +998,7 @@ export default function PerfilUsuario() {
                     <div style={{ width: `${dadosTIR7d.tir}%`, backgroundColor: 'var(--cor-cta, #3B7E48)' }} title={`${dadosTIR7d.tir}% no alvo`} />
                     <div style={{ width: `${dadosTIR7d.hiper}%`, backgroundColor: '#C88D2A' }} title={`${dadosTIR7d.hiper}% acima`} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--cor-texto-suave, #5C534C)', marginTop: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)', marginTop: '0.25rem' }}>
                     <span style={{ color: '#C94A38' }}>{dadosTIR7d.hipo}% &lt;70</span>
                     <span style={{ fontWeight: 700, color: 'var(--cor-cta, #3B7E48)' }}>{dadosTIR7d.tir}% no alvo</span>
                     <span style={{ color: '#C88D2A' }}>{dadosTIR7d.hiper}% &gt;180</span>
@@ -963,6 +1006,7 @@ export default function PerfilUsuario() {
                 </div>
               </CardContent>
             </Card>
+            {/* FIM DO KPI 3: TEMPO NO ALVO (TIR 7D) */}
           </div>
 
           {/* ================================================================
