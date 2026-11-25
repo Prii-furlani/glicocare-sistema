@@ -125,8 +125,8 @@ export default function GraficoCurvaGlicemia({
   /* INÍCIO DO CÁLCULO DE DIMENSÕES E RESPIRO HORIZONTAL */
   // Dimensões do SVG
   const svgWidth = 840;
-  const svgHeight = 250;
-  const padding = { top: 24, right: 40, bottom: 32, left: 45 };
+  const svgHeight = 260;
+  const padding = { top: 22, right: 36, bottom: 36, left: 45 };
   const graphWidth = svgWidth - padding.left - padding.right;
   const graphHeight = svgHeight - padding.top - padding.bottom;
 
@@ -167,6 +167,47 @@ export default function GraficoCurvaGlicemia({
       y: getY(d.valor),
     }));
   }, [dadosGrafico, maxTime, minTime, graphWidth, graphHeight, padding.left, padding.top, usableWidth, xMargin]);
+
+  /* INÍCIO DO CÁLCULO INTELIGENTE DE RÓTULOS DO EIXO X (SEM ENCAVALAMENTO) */
+  const formatarRotuloX = (timeMs) => {
+    const d = new Date(timeMs);
+    if (periodo === 'hoje') {
+      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  const rotulosEixoX = useMemo(() => {
+    if (!pontosProcessados || pontosProcessados.length === 0) return [];
+
+    const resultado = [];
+    let ultimoX = -999;
+    const minEspaco = 65; // pixels mínimos no SVG para prevenir colisões visuais
+
+    pontosProcessados.forEach((p, idx) => {
+      const isUltimo = idx === pontosProcessados.length - 1;
+      const isPrimeiro = idx === 0;
+
+      if (isUltimo && resultado.length > 0) {
+        const penultimo = resultado[resultado.length - 1];
+        if (p.x - penultimo.x < minEspaco) {
+          if (resultado.length > 1) {
+            resultado.pop(); // Remove o que encavalaria com o ponto final
+          }
+        }
+        resultado.push(p);
+        return;
+      }
+
+      if (isPrimeiro || p.x - ultimoX >= minEspaco) {
+        resultado.push(p);
+        ultimoX = p.x;
+      }
+    });
+
+    return resultado;
+  }, [pontosProcessados]);
+  /* FIM DO CÁLCULO INTELIGENTE DE RÓTULOS DO EIXO X (SEM ENCAVALAMENTO) */
 
   // Geração do caminho Bezier suave e da área sombreada
   const { pathD, areaD } = useMemo(() => {
@@ -409,6 +450,41 @@ export default function GraficoCurvaGlicemia({
                 </g>
               );
             })}
+            {/* Linha do Eixo X na base do gráfico */}
+            <line
+              x1={padding.left}
+              y1={padding.top + graphHeight}
+              x2={padding.left + graphWidth}
+              y2={padding.top + graphHeight}
+              stroke="var(--cor-borda-suave, rgba(124, 83, 63, 0.18))"
+              strokeWidth="1"
+            />
+
+            {/* Rótulos de Horário no Eixo X com espaçamento inteligente anti-colisão */}
+            {rotulosEixoX.map((p) => (
+              <g key={`eixo-x-${p.id}`}>
+                <line
+                  x1={p.x}
+                  y1={padding.top + graphHeight}
+                  x2={p.x}
+                  y2={padding.top + graphHeight + 4}
+                  stroke="var(--cor-borda-suave, rgba(124, 83, 63, 0.25))"
+                  strokeWidth="1"
+                />
+                <text
+                  x={p.x}
+                  y={padding.top + graphHeight + 17}
+                  textAnchor="middle"
+                  fontSize="10.5"
+                  fill="var(--cor-texto-suave, #6A5E57)"
+                  fontFamily="Plus Jakarta Sans, sans-serif"
+                  fontVariantNumeric="tabular-nums"
+                  fontWeight="500"
+                >
+                  {formatarRotuloX(p.timeMs)}
+                </text>
+              </g>
+            ))}
           </svg>
 
           {/* INÍCIO DO POSICIONAMENTO INTELIGENTE E ANTI-CORTE DO TOOLTIP */}
@@ -416,22 +492,27 @@ export default function GraficoCurvaGlicemia({
             const xPct = (pontoAtivo.x / svgWidth) * 100;
             const yPct = (pontoAtivo.y / svgHeight) * 100;
 
-            // Quando o ponto estiver na metade superior (y < 125) ou perto do topo, renderiza ABAIXO do ponto (+14px)
-            // Quando estiver na metade inferior, renderiza ACIMA do ponto (-14px)
-            const renderAbaixo = pontoAtivo.y < 125;
-            const topPos = renderAbaixo ? `calc(${yPct}% + 14px)` : `calc(${yPct}% - 14px)`;
+            // Quando o ponto estiver na metade superior da curva (y <= metade da área útil), renderiza o tooltip ABAIXO do ponto (+12px)
+            // eliminando qualquer corte no topo ou sobreposição com a navbar/cabeçalho.
+            // Quando na metade inferior, renderiza ACIMA do ponto (-12px).
+            const metadeVertical = padding.top + (graphHeight * 0.52);
+            const renderAbaixo = pontoAtivo.y <= metadeVertical;
+            const topPos = renderAbaixo ? `calc(${yPct}% + 12px)` : `calc(${yPct}% - 12px)`;
             const translateY = renderAbaixo ? '0%' : '-100%';
 
-            // Ajuste horizontal dinâmico para não vazar nem ser cortado pelas margens do card
+            // Alinhamento horizontal inteligente para nunca vazar nas bordas:
+            // Nos últimos 30% da direita (xPct > 70%), alinha à esquerda do ponto (transform: translate(-100%, ...))
+            // Nos primeiros 20% da esquerda (xPct < 20%), alinha à direita do ponto (transform: translate(0%, ...))
+            // No centro, centraliza (transform: translate(-50%, ...))
             let leftPos = `${xPct}%`;
             let translateX = '-50%';
 
-            if (xPct < 18) {
-              leftPos = `calc(${xPct}% - 4px)`;
-              translateX = '0%';
-            } else if (xPct > 82) {
+            if (xPct > 70) {
               leftPos = `calc(${xPct}% + 4px)`;
               translateX = '-100%';
+            } else if (xPct < 20) {
+              leftPos = `calc(${xPct}% - 4px)`;
+              translateX = '0%';
             }
 
             return (

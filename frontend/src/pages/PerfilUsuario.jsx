@@ -193,6 +193,7 @@ export default function PerfilUsuario() {
   const [modalResumoCompartilhavelAberta, setModalResumoCompartilhavelAberta] = useState(false);
   const [modalCartaoDiagnosticoAberto, setModalCartaoDiagnosticoAberto] = useState(false);
   const [salvandoConfigClinica, setSalvandoConfigClinica] = useState(false);
+  const [popoverDosesAberto, setPopoverDosesAberto] = useState(false);
 
   // Estados para formulário inline de alergias (gerenciamento direto sem redirecionamento)
   const [formAlergia, setFormAlergia] = useState({
@@ -487,26 +488,27 @@ export default function PerfilUsuario() {
   return (
     <div className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem', maxWidth: '1240px' }}>
       {/* ====================================================================
-          1. CABEÇALHO UNIFICADO MINIMALISTA (PADRÃO SHADCN / LINHA ÚNICA)
+          1. CABEÇALHO SLIM UNIFICADO EM UMA LINHA (HEADER SLIM UX SHADCN)
           ==================================================================== */}
+      {/* INÍCIO DO CABEÇALHO SLIM DO PERFIL */}
       <header
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '1.25rem',
-          paddingBottom: '1.5rem',
-          marginBottom: '1.5rem',
+          gap: '16px',
+          paddingBottom: '1.25rem',
+          marginBottom: '1.25rem',
           borderBottom: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
         }}
       >
-        {/* Esquerda: Avatar + Identidade + Metadados + Selo de Alergias */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* Esquerda: Avatar + Nome + Metadados em linha única + Badge de Alergias */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
           <div
             style={{
-              width: '52px',
-              height: '52px',
+              width: '46px',
+              height: '46px',
               borderRadius: '50%',
               backgroundColor: 'var(--cor-cta, #3B7E48)',
               color: '#FFFFFF',
@@ -514,24 +516,25 @@ export default function PerfilUsuario() {
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: 'var(--fonte-titulo, Fraunces)',
-              fontSize: '1.35rem',
+              fontSize: '1.3rem',
               fontWeight: 600,
               flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(59, 126, 72, 0.2)',
+              boxShadow: '0 2px 6px rgba(59, 126, 72, 0.2)',
             }}
           >
             {nomeExibicao.charAt(0)}
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h1
                 style={{
                   fontFamily: 'var(--fonte-titulo, Fraunces)',
-                  fontSize: '1.45rem',
+                  fontSize: '1.35rem',
                   color: 'var(--cor-texto, #2E2824)',
                   margin: 0,
                   lineHeight: 1.2,
+                  fontWeight: 700,
                 }}
               >
                 {nomeExibicao}
@@ -540,11 +543,11 @@ export default function PerfilUsuario() {
               {perfilSaude?.data_nascimento && (
                 <span
                   style={{
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     color: 'var(--cor-primaria, #7C533F)',
                     backgroundColor: 'rgba(124, 83, 63, 0.08)',
-                    padding: '2px 8px',
-                    borderRadius: '8px',
+                    padding: '1px 7px',
+                    borderRadius: '6px',
                     fontWeight: 600,
                   }}
                 >
@@ -553,23 +556,23 @@ export default function PerfilUsuario() {
               )}
             </div>
 
-            {/* Metadados em Linha Única Limpa + Selo Discreto de Alergias */}
+            {/* Metadados em Linha Única Limpa (Tipo • Terapia • Tempo + Alergias) */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.65rem',
+                gap: '0.45rem',
                 flexWrap: 'wrap',
-                marginTop: '0.25rem',
-                fontSize: '0.82rem',
+                marginTop: '2px',
+                fontSize: '0.8rem',
                 color: 'var(--cor-texto-suave, #5C534C)',
               }}
             >
               <span>{perfilSaude?.tipo_diabetes || 'Tipo 1A'}</span>
-              <Separator orientation="vertical" style={{ height: '12px' }} />
+              <span>•</span>
               <span>{perfilSaude?.terapia_insulina || 'Caneta'}</span>
-              <Separator orientation="vertical" style={{ height: '12px' }} />
-              <span>{tempoJornada?.textoJornada || '9 anos e 11 meses de jornada'}</span>
+              <span>•</span>
+              <span>{tempoJornada?.textoJornada?.replace(' de jornada', '') || '9 anos e 11 meses'}</span>
 
               {/* Selo Discreto de Alergias Clicável */}
               <button
@@ -578,69 +581,51 @@ export default function PerfilUsuario() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.74rem',
+                  gap: '3px',
+                  fontSize: '0.72rem',
                   fontWeight: 600,
-                  padding: '2px 8px',
+                  padding: '1px 7px',
                   borderRadius: '999px',
                   border: '1px solid',
                   borderColor: alergias.length > 0 ? 'rgba(201, 74, 56, 0.3)' : 'var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                   backgroundColor: alergias.length > 0 ? 'rgba(201, 74, 56, 0.08)' : 'transparent',
                   color: alergias.length > 0 ? '#C94A38' : 'var(--cor-texto-suave, #5C534C)',
                   cursor: 'pointer',
-                  marginLeft: '0.35rem',
+                  marginLeft: '4px',
                   transition: 'all 0.15s ease',
                 }}
-                title="Clique para visualizar o quadro de alergias e sensibilidades"
+                title="Clique para gerenciar alergias e sensibilidades"
               >
-                {alergias.length > 0 ? <AlertTriangle size={12} strokeWidth={2} /> : <ShieldCheck size={12} strokeWidth={2} />}
+                {alergias.length > 0 ? <AlertTriangle size={11} strokeWidth={2} /> : <ShieldCheck size={11} strokeWidth={2} />}
                 <span>{alergias.length === 0 ? '0 alergias' : `${alergias.length} alergia(s)`}</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Direita: Botões de Ação Compactos no Padrão shadcn */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* Botão de Ação Primária: + Registrar Glicemia / Dose (Abre Sheet) */}
-          <Button
-            variante="sucesso"
-            onClick={() => setSheetNovoRegistroAberta(true)}
-            style={{
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              padding: '0.45rem 1rem',
-              borderRadius: '999px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            <span>Registrar Glicemia / Dose</span>
-          </Button>
-
+        {/* Direita: Ações Secundárias Compactas + ÚNICO Botão Primário Verde Alívio */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
           {/* Botão Outline: Card Diagnóstico */}
           <button
             type="button"
             onClick={() => setModalCartaoDiagnosticoAberto(true)}
             style={{
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               fontWeight: 600,
               backgroundColor: 'transparent',
               color: 'var(--cor-texto, #2E2824)',
               border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
               borderRadius: '999px',
-              padding: '0.45rem 0.9rem',
+              padding: '0.4rem 0.8rem',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.35rem',
               transition: 'all 0.15s ease',
             }}
           >
-            <FileText size={14} strokeWidth={1.75} />
-            <span>Card Diagnóstico (PNG/PDF)</span>
+            <FileText size={13} strokeWidth={1.75} />
+            <span>Card Diagnóstico</span>
           </button>
 
           {/* Botão Outline: Resumo Clínico */}
@@ -648,40 +633,40 @@ export default function PerfilUsuario() {
             type="button"
             onClick={() => setModalResumoCompartilhavelAberta(true)}
             style={{
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               fontWeight: 600,
               backgroundColor: 'transparent',
               color: 'var(--cor-primaria, #7C533F)',
               border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
               borderRadius: '999px',
-              padding: '0.45rem 0.9rem',
+              padding: '0.4rem 0.8rem',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.35rem',
               transition: 'all 0.15s ease',
             }}
           >
-            <HeartPulse size={14} strokeWidth={1.75} />
+            <HeartPulse size={13} strokeWidth={1.75} />
             <span>Resumo Clínico</span>
           </button>
 
-          {/* Botão Outline: Editar Perfil */}
+          {/* Botão Outline: Editar */}
           <Link to="/configurar-perfil" style={{ textDecoration: 'none' }}>
             <button
               type="button"
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 backgroundColor: 'transparent',
                 color: 'var(--cor-texto-suave, #5C534C)',
                 border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
-                padding: '0.45rem 0.85rem',
+                padding: '0.4rem 0.75rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -689,8 +674,27 @@ export default function PerfilUsuario() {
               <span>Editar</span>
             </button>
           </Link>
+
+          {/* ÚNICO BOTÃO PRINCIPAL VERDE ALÍVIO */}
+          <Button
+            variante="sucesso"
+            onClick={() => setSheetNovoRegistroAberta(true)}
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              padding: '0.42rem 0.95rem',
+              borderRadius: '999px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            <span>+ Registrar Glicemia / Dose</span>
+          </Button>
         </div>
       </header>
+      {/* FIM DO CABEÇALHO SLIM DO PERFIL */}
 
       {/* ====================================================================
           2. NAVEGAÇÃO EM TABS SEGMENTADAS (SHADCN SEGMENTED CONTROL)
@@ -723,24 +727,27 @@ export default function PerfilUsuario() {
       {abaAtiva === 'diario' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {/* ================================================================
-              BENTO GRID COM 3 KPI CARDS ESTILO SHADCN COM PROPORÇÃO EQUILIBRADA
+              BENTO GRID COM 3 KPI CARDS DE ALTURA UNIFORME (~115px–130px)
               ================================================================ */}
+          {/* INÍCIO DOS KPIS COMPACTOS E PROPORCIONAIS */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
               gap: '1rem',
-              alignItems: 'start',
+              alignItems: 'stretch',
             }}
           >
             {/* INÍCIO DO KPI 1: ÚLTIMA GLICEMIA */}
-            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px' }}>
               <CardContent
                 style={{
-                  padding: '20px 22px',
+                  padding: '16px 20px',
+                  height: '100%',
+                  boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  justifyContent: 'space-between',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -763,7 +770,7 @@ export default function PerfilUsuario() {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                   <span
                     style={{
-                      fontSize: '30px',
+                      fontSize: '28px',
                       fontWeight: 700,
                       fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                       fontVariantNumeric: 'tabular-nums',
@@ -776,31 +783,33 @@ export default function PerfilUsuario() {
                   <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>mg/dL</span>
                 </div>
 
-                <Separator style={{ margin: '2px 0' }} />
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)', borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Activity size={13} color="var(--cor-cta, #3B7E48)" />
+                    <Activity size={12} color="var(--cor-cta, #3B7E48)" />
                     <span>
                       {tendenciaAtual ? `${tendenciaAtual.icone} ${tendenciaAtual.rotulo}` : '↘ Queda moderada'}
                     </span>
                   </div>
                   <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', opacity: 0.85 }}>
-                    {ultimoRegistro?.data_hora_medicao ? new Date(ultimoRegistro.data_hora_medicao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '11:44'}
+                    • {ultimoRegistro?.data_hora_medicao ? new Date(ultimoRegistro.data_hora_medicao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '11:51'}
                   </span>
                 </div>
               </CardContent>
             </Card>
             {/* FIM DO KPI 1: ÚLTIMA GLICEMIA */}
 
-            {/* INÍCIO DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS */}
-            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+            {/* INÍCIO DO KPI 2: INSULINA ATIVA (IOB) COM POPOVER FLUTUANTE DE DOSES */}
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px', overflow: 'visible' }}>
               <CardContent
                 style={{
-                  padding: '20px 22px',
+                  padding: '16px 20px',
+                  height: '100%',
+                  boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                  overflow: 'visible',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -826,43 +835,124 @@ export default function PerfilUsuario() {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <span
-                    style={{
-                      fontSize: '30px',
-                      fontWeight: 700,
-                      fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
-                      fontVariantNumeric: 'tabular-nums',
-                      color: 'var(--cor-texto, #2E2824)',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {infoIOB.iobTotal.toFixed(1)}
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>
-                    UI ativas
-                  </span>
-                  {infoIOB.totalDosesAtivas > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
                     <span
                       style={{
-                        marginLeft: 'auto',
-                        fontSize: '0.68rem',
-                        backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                        color: '#285832',
-                        padding: '1px 7px',
-                        borderRadius: '6px',
+                        fontSize: '28px',
                         fontWeight: 700,
+                        fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--cor-texto, #2E2824)',
+                        lineHeight: 1,
                       }}
                     >
-                      {infoIOB.totalDosesAtivas} doses somadas
+                      {infoIOB.iobTotal.toFixed(1)}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>
+                      UI
+                    </span>
+                  </div>
+
+                  {/* Pill Interativa com Popover de Detalhes das Doses */}
+                  {infoIOB.totalDosesAtivas > 1 ? (
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPopoverDosesAberto(!popoverDosesAberto)}
+                        onMouseEnter={() => setPopoverDosesAberto(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          fontSize: '0.68rem',
+                          backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                          color: '#285832',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          fontWeight: 700,
+                          border: '1px solid rgba(59, 126, 72, 0.25)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        title="Clique ou passe o mouse para ver o detalhamento de cada dose em andamento"
+                      >
+                        <span>{infoIOB.totalDosesAtivas} doses somadas ▾</span>
+                      </button>
+
+                      {/* Popover Flutuante Compacto de Doses */}
+                      {popoverDosesAberto && (
+                        <div
+                          onMouseLeave={() => setPopoverDosesAberto(false)}
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            right: 0,
+                            zIndex: 100,
+                            backgroundColor: 'var(--cor-superficie-elevada, #FFFFFF)',
+                            border: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.2))',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            boxShadow: '0 8px 24px rgba(46, 40, 36, 0.18)',
+                            minWidth: '240px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingBottom: '4px' }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase' }}>
+                              Doses Ativas ({infoIOB.totalDosesAtivas})
+                            </span>
+                            <span style={{ fontSize: '0.65rem', color: '#5C534C' }}>
+                              Curva {duracaoInsulinaHoras}h
+                            </span>
+                          </div>
+
+                          {infoIOB.detalhesDoses.map((dose) => (
+                            <div
+                              key={dose.id}
+                              style={{
+                                fontSize: '0.72rem',
+                                backgroundColor: 'rgba(124, 83, 63, 0.04)',
+                                border: '1px solid rgba(124, 83, 63, 0.08)',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                              }}
+                            >
+                              <div>
+                                <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
+                                <span style={{ color: '#5A5049', marginLeft: '3px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
+                                {dose.contexto && (
+                                  <span style={{ fontSize: '0.64rem', color: '#7C533F', marginLeft: '3px', fontStyle: 'italic' }}>
+                                    ({dose.contexto.split(':')[0]})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontWeight: 700, color: '#285832', whiteSpace: 'nowrap' }}>
+                                restam {dose.iobRestante.toFixed(1)} UI{' '}
+                                <span style={{ fontWeight: 500, fontSize: '0.65rem', color: '#5A5049' }}>
+                                  (~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                      Dose rápida ({duracaoInsulinaHoras}h)
                     </span>
                   )}
                 </div>
 
-                <Separator style={{ margin: '2px 0' }} />
-
-                {/* Barra de progresso fisiológica de decaimento */}
-                <div>
+                {/* Barra fina fisiológica de decaimento no rodapé */}
+                <div style={{ borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                   <div
                     style={{
                       height: '4px',
@@ -882,69 +972,25 @@ export default function PerfilUsuario() {
                       }}
                     />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                    <span>Curva rápida ({duracaoInsulinaHoras}h)</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                    <span>Decaimento rápido ({duracaoInsulinaHoras}h)</span>
                     <span>Prevenção de empilhamento</span>
                   </div>
                 </div>
-
-                {/* DETALHAMENTO COMPACTO DAS DOSES ATIVAS */}
-                {infoIOB.detalhesDoses.length > 0 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '6px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {infoIOB.detalhesDoses.map((dose) => (
-                      <div
-                        key={dose.id}
-                        style={{
-                          fontSize: '0.72rem',
-                          backgroundColor: 'rgba(124, 83, 63, 0.05)',
-                          border: '1px solid rgba(124, 83, 63, 0.08)',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '6px',
-                        }}
-                      >
-                        <div>
-                          <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
-                          <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
-                          {dose.contexto && (
-                            <span style={{ fontSize: '0.65rem', color: '#7C533F', marginLeft: '4px', fontStyle: 'italic' }}>
-                              ({dose.contexto.split(':')[0]})
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontWeight: 700, color: '#285832', whiteSpace: 'nowrap' }}>
-                          restam {dose.iobRestante.toFixed(1)} UI{' '}
-                          <span style={{ fontWeight: 500, fontSize: '0.68rem', color: '#5A5049' }}>
-                            (~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
-            {/* FIM DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS */}
+            {/* FIM DO KPI 2: INSULINA ATIVA (IOB) */}
 
             {/* INÍCIO DO KPI 3: TEMPO NO ALVO (TIR 7D) */}
-            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+            <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px' }}>
               <CardContent
                 style={{
-                  padding: '20px 22px',
+                  padding: '16px 20px',
+                  height: '100%',
+                  boxSizing: 'border-box',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  justifyContent: 'space-between',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -967,7 +1013,7 @@ export default function PerfilUsuario() {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                   <span
                     style={{
-                      fontSize: '30px',
+                      fontSize: '28px',
                       fontWeight: 700,
                       fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                       fontVariantNumeric: 'tabular-nums',
@@ -980,10 +1026,8 @@ export default function PerfilUsuario() {
                   <span style={{ fontSize: '0.8rem', color: 'var(--cor-texto-suave, #5C534C)', fontWeight: 600 }}>70–180 mg/dL</span>
                 </div>
 
-                <Separator style={{ margin: '2px 0' }} />
-
                 {/* Micro-barra segmentada fina de 4px */}
-                <div>
+                <div style={{ borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                   <div
                     style={{
                       height: '4px',
@@ -998,7 +1042,7 @@ export default function PerfilUsuario() {
                     <div style={{ width: `${dadosTIR7d.tir}%`, backgroundColor: 'var(--cor-cta, #3B7E48)' }} title={`${dadosTIR7d.tir}% no alvo`} />
                     <div style={{ width: `${dadosTIR7d.hiper}%`, backgroundColor: '#C88D2A' }} title={`${dadosTIR7d.hiper}% acima`} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)', marginTop: '0.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)', marginTop: '0.2rem' }}>
                     <span style={{ color: '#C94A38' }}>{dadosTIR7d.hipo}% &lt;70</span>
                     <span style={{ fontWeight: 700, color: 'var(--cor-cta, #3B7E48)' }}>{dadosTIR7d.tir}% no alvo</span>
                     <span style={{ color: '#C88D2A' }}>{dadosTIR7d.hiper}% &gt;180</span>
@@ -1008,6 +1052,7 @@ export default function PerfilUsuario() {
             </Card>
             {/* FIM DO KPI 3: TEMPO NO ALVO (TIR 7D) */}
           </div>
+          {/* FIM DOS KPIS COMPACTOS E PROPORCIONAIS */}
 
           {/* ================================================================
               GRÁFICO CURVA DE GLICEMIA ESTILO SHADCN CHARTS (AREACHART SVG)
@@ -1031,6 +1076,7 @@ export default function PerfilUsuario() {
                     Rastreabilidade contínua de doses, glicemias e carboidratos.
                   </CardDescription>
                 </div>
+                {/* Seletor Trilha / Tabela (Botão duplicado de medição removido) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <ToggleGroup
                     type="single"
@@ -1042,21 +1088,6 @@ export default function PerfilUsuario() {
                     <ToggleGroupItem value="trilha">Trilha (Trace)</ToggleGroupItem>
                     <ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
                   </ToggleGroup>
-
-                  <Button
-                    variante="sucesso"
-                    onClick={() => setSheetNovoRegistroAberta(true)}
-                    style={{
-                      fontSize: '0.78rem',
-                      padding: '0.4rem 0.85rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Plus size={14} strokeWidth={2} />
-                    <span>Nova Medição</span>
-                  </Button>
                 </div>
               </div>
             </CardHeader>

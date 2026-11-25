@@ -1355,3 +1355,34 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
 ### D. Integração Completa no Painel do Cuidador (`PainelCuidador.jsx`)
 - Na aba `abaAtiva === 'exames'` do dependente, o cuidador agora acessa diretamente `<CentralExames perfilSaude={filhoAtivo} token={token} usuario={usuario} isCuidador={true} />`.
 - Isso unifica a experiência: o cuidador visualiza o histórico, as trajetórias SVG dos marcadores e o botão *+ Registrar Novo Exame* com o novo Split-View redimensionável para cadastrar laudos dos seus dependentes.
+
+
+---
+
+## 35. REFINAMENTO DE DENSIDADE ESPACIAL, USABILIDADE E INTERATIVIDADE (HEADER SLIM, KPIS COM POPOVER DE DOSES IOB, EIXO X COM HORÁRIOS E TOOLTIP CONTIDO)
+
+### A. Header Slim Unificado & Eliminação de Ações Duplicadas
+- **Perfil do Usuário (`PerfilUsuario.jsx`) e do Cuidador (`PainelCuidador.jsx`):**
+  * O cabeçalho foi compactado para uma única faixa horizontal alinhada (`display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px`), eliminando a perda vertical de espaço na primeira dobra de tela.
+  * **Bloco Esquerdo:** Avatar compacto (`46px`), nome do paciente/dependente com idade, linha única de metadados (`Tipo 1A • Caneta • Tempo de Jornada`) e selo pílula clicável para gerenciar alergias (`0 alergias` ou alerta destacado).
+  * **Bloco Direito:** Agrupamento de ações secundárias compactas em estilo outline (`Card Diagnóstico`, `Resumo Clínico`, `Editar` ou `Cartão Escolar`) e **um único botão primário em Verde Alívio (`+ Registrar Glicemia / Dose`)**.
+- **Eliminação de Duplicidade:** O botão redundante `+ Nova Medição` no cabeçalho da *Linha do Tempo das Medições / Familiar* foi removido, mantendo exclusivamente o seletor `Trilha (Trace) | Tabela`.
+
+### B. Faixa de KPIs Compacta e Proporcional (Altura Uniforme ~118px–130px)
+- **Estrutura Equilibrada dos 3 Cards:**
+  * **Card 1 — Última Glicemia:** Rótulo superior com badge de status (`No Alvo`), valor grande em `28px` com `tabular-nums` e rodapé enxuto `↘ Queda moderada • 11:51`.
+  * **Card 2 — Insulina Ativa (IOB):** Rótulo superior com previsão de expiração (`expira em ~2h35`), valor de `28px` (`5.4 UI`) e pill interativa **`2 doses somadas ▾`**. Ao clicar ou pairar com o mouse, um **Popover flutuante compacto** se abre listando as doses individuais em andamento (`11:51 • 5.0 UI → restam 4.2 UI` e `10:26 • 4.0 UI → restam 1.2 UI`), impedindo qualquer estiramento vertical indesejado no card ou no grid vizinho. Rodapé com barra fina (4px) de decaimento fisiológico.
+  * **Card 3 — Tempo no Alvo (TIR 7D):** Rótulo superior com `Meta ≥ 70%`, percentual em `28px` (`100%`) com faixa `70–180 mg/dL` e micro-barra segmentada fina no rodapé.
+- **Altura Idêntica:** Todos os 3 cards possuem `minHeight: '118px'`, `maxHeight: '130px'` e distribuição vertical perfeita (`display: flex; flex-direction: column; justify-content: space-between`).
+
+### C. Correção Definitiva do Gráfico (`GraficoCurvaGlicemia.jsx`)
+- **Rótulos de Horário no Eixo X:**
+  * Implementada a renderização dos horários/datas correspondentes aos pontos abaixo da linha de `70 mg/dL` no eixo horizontal (ex: `20:16`, `01:16`, `08:16`, `10:26`, `11:51`).
+  * Algoritmo de amostragem inteligente (`rotulosEixoX`) garante espaçamento mínimo de `65px` entre rótulos, preservando o primeiro e o último ponto e eliminando sobreposições ou quebras no mobile.
+- **Tooltip Inteligente Contido no Card:**
+  * **Vertical:** Quando o ponto está na metade superior da curva (`y <= metade vertical` ou `valor >= 130 mg/dL`), o tooltip é renderizado **abaixo** do ponto (+12px), prevenindo sobreposição com a navbar ou corte superior no topo do card. Quando na metade inferior, é renderizado **acima** do ponto (-12px).
+  * **Horizontal:** Quando o ponto está nos últimos 30% da margem direita (`xPct > 70%`, como o ponto final `11:51`), o tooltip alinha-se **à esquerda** do ponto (`transform: translate(-100%, ...)`, `left: calc(${xPct}% + 4px)`), garantindo que todo o cabeçalho (`11:51 • No alvo • 142 mg/dL`) fique 100% visível sem ser cortado lateralmente.
+- **Legenda Externa:** Legenda `Faixa-Alvo: 70–180 mg/dL` mantida limpa e acessível no cabeçalho do card, fora da área de plotagem do SVG.
+
+### D. Limpeza do Rodapé Institucional (`Footer.jsx`) para a Fase 1
+- O componente `Footer.jsx` respeita a flag `FEATURES.TELEMEDICINA_ATIVA === false` ocultando os links de `Especialistas` e `Planos` da coluna *NAVEGUE*, alinhando o rodapé ao escopo ativo da Fase 1.

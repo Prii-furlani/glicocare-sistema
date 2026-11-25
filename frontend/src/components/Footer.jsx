@@ -14,6 +14,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
+import { FEATURES } from '../config/features';
 
 /* INÍCIO DO COMPONENTE FOOTER */
 export default function Footer() {
@@ -115,12 +116,17 @@ export default function Footer() {
               <li>
                 <a href="/#conteudos">Biblioteca / Conteúdos</a>
               </li>
-              <li>
-                <Link to="/especialistas">Especialistas</Link>
-              </li>
-              <li>
-                <a href="/#planos">Planos</a>
-              </li>
+              {/* Links da Fase 2 (Telemedicina & Planos) preservados e ocultos na Fase 1 */}
+              {FEATURES.TELEMEDICINA_ATIVA && (
+                <>
+                  <li>
+                    <Link to="/especialistas">Especialistas</Link>
+                  </li>
+                  <li>
+                    <a href="/#planos">Planos</a>
+                  </li>
+                </>
+              )}
               <li>
                 <a href="/#faq">Perguntas frequentes</a>
               </li>

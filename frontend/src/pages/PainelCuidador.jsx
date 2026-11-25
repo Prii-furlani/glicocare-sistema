@@ -301,6 +301,7 @@ export default function PainelCuidador() {
   const [modoVisualizacaoCuidador, setModoVisualizacaoCuidador] = useState('trilha'); // 'trilha' | 'tabela'
   const [alertaDemaisCuidadores, setAlertaDemaisCuidadores] = useState(true);
   const [compartilharEquipeEscolar, setCompartilharEquipeEscolar] = useState(false);
+  const [popoverDosesCuidadorAberto, setPopoverDosesCuidadorAberto] = useState(false);
 
   // Estados dos Formulários
   /* INÍCIO ESTADOS DE CARREGAMENTO (GLICOLOADER BOTAO) */
@@ -691,29 +692,30 @@ export default function PainelCuidador() {
 
       <div className="container" style={{ width: '92%', maxWidth: '1360px', margin: '0 auto' }}>
         {/* ==================================================================
-            CABEÇALHO UNIFICADO MINIMALISTA DO CUIDADOR & DEPENDENTE
+            CABEÇALHO SLIM DO DEPENDENTE (UX ALINHADA EM LINHA ÚNICA)
             ================================================================== */}
+        {/* INÍCIO DO CABEÇALHO SLIM DO CUIDADOR */}
         <header
           style={{
             backgroundColor: 'var(--cor-superficie)',
             borderRadius: '16px',
-            padding: '1.35rem 1.75rem',
+            padding: '1rem 1.5rem',
             border: '1px solid var(--cor-borda-suave)',
             boxShadow: 'var(--sombra-card, 0 4px 16px rgba(46, 40, 36, 0.04))',
-            marginBottom: '1.75rem',
+            marginBottom: '1.25rem',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '1.25rem',
+            gap: '16px',
           }}
         >
           {/* Esquerda: Avatar + Identidade e Metadados em Linha Única */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
             <div
               style={{
-                width: '54px',
-                height: '54px',
+                width: '46px',
+                height: '46px',
                 borderRadius: '50%',
                 backgroundColor: 'var(--cor-cta-suave)',
                 border: '2px solid var(--cor-cta)',
@@ -724,18 +726,19 @@ export default function PainelCuidador() {
                 flexShrink: 0,
               }}
             >
-              <User size={26} strokeWidth={1.75} />
+              <User size={22} strokeWidth={2} />
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h1
                   style={{
-                    fontFamily: 'var(--fonte-titulo)',
-                    fontSize: '1.5rem',
+                    fontFamily: 'var(--fonte-titulo, Fraunces)',
+                    fontSize: '1.35rem',
                     color: 'var(--cor-texto)',
                     margin: 0,
                     lineHeight: 1.2,
+                    fontWeight: 700,
                   }}
                 >
                   {filhoAtivo.nome_crianca}
@@ -743,11 +746,11 @@ export default function PainelCuidador() {
 
                 <span
                   style={{
-                    fontSize: '0.76rem',
+                    fontSize: '0.72rem',
                     color: 'var(--cor-primaria)',
                     backgroundColor: 'var(--cor-fundo)',
-                    padding: '2px 8px',
-                    borderRadius: '8px',
+                    padding: '1px 7px',
+                    borderRadius: '6px',
                     fontWeight: 600,
                   }}
                 >
@@ -756,7 +759,7 @@ export default function PainelCuidador() {
 
                 <span
                   style={{
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     color: 'var(--cor-texto-suave)',
                   }}
                 >
@@ -769,19 +772,19 @@ export default function PainelCuidador() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.45rem',
                   flexWrap: 'wrap',
-                  marginTop: '0.3rem',
-                  fontSize: '0.82rem',
+                  marginTop: '2px',
+                  fontSize: '0.8rem',
                   color: 'var(--cor-texto-suave)',
                 }}
               >
                 <span>{filhoAtivo.tipo_diabetes || 'Tipo 1A'}</span>
-                <Separator orientation="vertical" style={{ height: '12px' }} />
+                <span>•</span>
                 <span>{filhoAtivo.terapia_insulina || 'Caneta'}</span>
-                <Separator orientation="vertical" style={{ height: '12px' }} />
+                <span>•</span>
                 <span>{filhoAtivo.escola_nome}</span>
-                <Separator orientation="vertical" style={{ height: '12px' }} />
+                <span>•</span>
                 <span>{filhoAtivo.tempo_diagnostico_extenso}</span>
 
                 {/* Selo Discreto de Alergias */}
@@ -791,31 +794,32 @@ export default function PainelCuidador() {
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.76rem',
+                    gap: '3px',
+                    fontSize: '0.72rem',
                     fontWeight: 600,
-                    padding: '2px 8px',
+                    padding: '1px 7px',
                     borderRadius: '999px',
                     border: '1px solid',
                     borderColor: (filhoAtivo.alergias?.length || 0) > 0 ? '#F0C9B6' : 'var(--cor-borda-suave)',
                     backgroundColor: (filhoAtivo.alergias?.length || 0) > 0 ? '#FDF2F0' : 'var(--cor-fundo)',
                     color: (filhoAtivo.alergias?.length || 0) > 0 ? '#A23B2A' : 'var(--cor-texto-suave)',
                     cursor: 'pointer',
-                    marginLeft: '0.25rem',
+                    marginLeft: '4px',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Clique para gerenciar alergias e sensibilidades"
                 >
-                  {(filhoAtivo.alergias?.length || 0) > 0 ? <AlertTriangle size={12} strokeWidth={2} /> : <ShieldCheck size={12} strokeWidth={2} />}
+                  {(filhoAtivo.alergias?.length || 0) > 0 ? <AlertTriangle size={11} strokeWidth={2} /> : <ShieldCheck size={11} strokeWidth={2} />}
                   <span>{filhoAtivo.alergias?.length ? `${filhoAtivo.alergias.length} alergia(s)` : '0 alergias'}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Direita: Ações do Responsável e Alternância de Dependentes */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {/* Direita: Ações Secundárias Compactas + ÚNICO Botão Primário Verde Alívio */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             {dependentes.length > 1 && (
-              <div style={{ width: '160px' }}>
+              <div style={{ width: '150px' }}>
                 <CustomSelect
                   value={indiceFilhoAtivo}
                   onChange={(val) => setIndiceFilhoAtivo(Number(val))}
@@ -827,91 +831,95 @@ export default function PainelCuidador() {
               </div>
             )}
 
-            <Button
-              variante="sucesso"
-              onClick={() => setSheetNovaMedicaoAberta(true)}
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                padding: '0.45rem 1rem',
-                borderRadius: '999px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              <Plus size={15} strokeWidth={2.5} />
-              <span>Registrar Medição</span>
-            </Button>
-
             {/* Botão Outline: Card Diagnóstico */}
             <button
               type="button"
               onClick={() => setModalCartaoDiagnosticoAberto(true)}
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 backgroundColor: 'transparent',
                 color: 'var(--cor-texto, #2E2824)',
                 border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
-                padding: '0.45rem 0.9rem',
+                padding: '0.4rem 0.8rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
               }}
             >
-              <FileText size={14} strokeWidth={1.75} />
-              <span>Card Diagnóstico (PNG/PDF)</span>
+              <FileText size={13} strokeWidth={1.75} />
+              <span>Card Diagnóstico</span>
             </button>
 
+            {/* Botão Outline: Cartão Escolar */}
             <button
               type="button"
               onClick={() => setAbaAtiva('escola')}
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 backgroundColor: 'transparent',
                 color: 'var(--cor-texto, #2E2824)',
                 border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
-                padding: '0.45rem 0.9rem',
+                padding: '0.4rem 0.8rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
               }}
             >
-              <FileText size={14} strokeWidth={1.75} />
-              <span>Cartão Escolar (PDF)</span>
+              <FileText size={13} strokeWidth={1.75} />
+              <span>Cartão Escolar</span>
             </button>
 
+            {/* Botão Outline: Adicionar Filho */}
             <button
               type="button"
               onClick={() => setModalNovoFilho(true)}
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 backgroundColor: 'transparent',
                 color: 'var(--cor-texto-suave, #5C534C)',
                 border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.2))',
                 borderRadius: '999px',
-                padding: '0.45rem 0.85rem',
+                padding: '0.4rem 0.75rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
               }}
             >
               <Plus size={13} strokeWidth={2} />
-              <span>Adicionar Filho(a)</span>
+              <span>Adicionar Filho</span>
             </button>
+
+            {/* ÚNICO BOTÃO PRINCIPAL VERDE ALÍVIO */}
+            <Button
+              variante="sucesso"
+              onClick={() => setSheetNovaMedicaoAberta(true)}
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                padding: '0.42rem 0.95rem',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              <span>+ Registrar Glicemia / Dose</span>
+            </Button>
           </div>
         </header>
+        {/* FIM DO CABEÇALHO SLIM DO CUIDADOR */}
 
         {/* MENSAGEM TEMPORÁRIA DE FEEDBACK */}
         {feedbackMsg.texto && (
@@ -1008,24 +1016,27 @@ export default function PainelCuidador() {
 
               const iobVal = infoIOBCuidador.iobTotal;
 
+              /* INÍCIO DOS KPIS COMPACTOS E PROPORCIONAIS DO CUIDADOR */
               return (
                 <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                     gap: '1rem',
-                    marginBottom: '1.75rem',
-                    alignItems: 'start',
+                    marginBottom: '1.5rem',
+                    alignItems: 'stretch',
                   }}
                 >
                   {/* INÍCIO DO KPI 1: ÚLTIMA GLICEMIA (CUIDADOR) */}
-                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px' }}>
                     <CardContent
                       style={{
-                        padding: '20px 22px',
+                        padding: '16px 20px',
+                        height: '100%',
+                        boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '10px',
+                        justifyContent: 'space-between',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1048,7 +1059,7 @@ export default function PainelCuidador() {
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                         <span
                           style={{
-                            fontSize: '30px',
+                            fontSize: '28px',
                             fontWeight: 700,
                             fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                             fontVariantNumeric: 'tabular-nums',
@@ -1061,26 +1072,31 @@ export default function PainelCuidador() {
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
                       </div>
 
-                      <Separator style={{ margin: '2px 0' }} />
-
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--cor-texto-suave, #5C534C)', borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <Activity size={13} color="var(--cor-cta, #3B7E48)" />
-                          <span>{ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao} • ↘ Estável</span>
+                          <Activity size={12} color="var(--cor-cta, #3B7E48)" />
+                          <span>↘ Estável</span>
                         </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', opacity: 0.85 }}>
+                          • {ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao || '11:51'}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
                   {/* FIM DO KPI 1: ÚLTIMA GLICEMIA (CUIDADOR) */}
 
-                  {/* INÍCIO DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS (CUIDADOR) */}
-                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+                  {/* INÍCIO DO KPI 2: INSULINA ATIVA (IOB) COM POPOVER FLUTUANTE (CUIDADOR) */}
+                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px', overflow: 'visible' }}>
                     <CardContent
                       style={{
-                        padding: '20px 22px',
+                        padding: '16px 20px',
+                        height: '100%',
+                        boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '10px',
+                        justifyContent: 'space-between',
+                        position: 'relative',
+                        overflow: 'visible',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1106,41 +1122,121 @@ export default function PainelCuidador() {
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <span
-                          style={{
-                            fontSize: '30px',
-                            fontWeight: 700,
-                            fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
-                            fontVariantNumeric: 'tabular-nums',
-                            color: 'var(--cor-texto, #2E2824)',
-                            lineHeight: 1,
-                          }}
-                        >
-                          {iobVal.toFixed(1)}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>UI</span>
-                        {infoIOBCuidador.totalDosesAtivas > 1 && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
                           <span
                             style={{
-                              marginLeft: 'auto',
-                              fontSize: '0.68rem',
-                              backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                              color: '#285832',
-                              padding: '1px 7px',
-                              borderRadius: '6px',
+                              fontSize: '28px',
                               fontWeight: 700,
+                              fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
+                              fontVariantNumeric: 'tabular-nums',
+                              color: 'var(--cor-texto, #2E2824)',
+                              lineHeight: 1,
                             }}
                           >
-                            {infoIOBCuidador.totalDosesAtivas} doses somadas
+                            {iobVal.toFixed(1)}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>UI</span>
+                        </div>
+
+                        {/* Pill Interativa com Popover de Doses */}
+                        {infoIOBCuidador.totalDosesAtivas > 1 ? (
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={() => setPopoverDosesCuidadorAberto(!popoverDosesCuidadorAberto)}
+                              onMouseEnter={() => setPopoverDosesCuidadorAberto(true)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '0.68rem',
+                                backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                                color: '#285832',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontWeight: 700,
+                                border: '1px solid rgba(59, 126, 72, 0.25)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Clique para ver o detalhamento de cada dose em andamento"
+                            >
+                              <span>{infoIOBCuidador.totalDosesAtivas} doses somadas ▾</span>
+                            </button>
+
+                            {popoverDosesCuidadorAberto && (
+                              <div
+                                onMouseLeave={() => setPopoverDosesCuidadorAberto(false)}
+                                style={{
+                                  position: 'absolute',
+                                  top: 'calc(100% + 6px)',
+                                  right: 0,
+                                  zIndex: 100,
+                                  backgroundColor: 'var(--cor-superficie-elevada, #FFFFFF)',
+                                  border: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.2))',
+                                  borderRadius: '10px',
+                                  padding: '8px 10px',
+                                  boxShadow: '0 8px 24px rgba(46, 40, 36, 0.18)',
+                                  minWidth: '240px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '6px',
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingBottom: '4px' }}>
+                                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--cor-primaria, #7C533F)', textTransform: 'uppercase' }}>
+                                    Doses Ativas da Criança ({infoIOBCuidador.totalDosesAtivas})
+                                  </span>
+                                  <span style={{ fontSize: '0.65rem', color: '#5C534C' }}>
+                                    Curva {filhoAtivo.duracao_insulina_horas || 3}h
+                                  </span>
+                                </div>
+
+                                {infoIOBCuidador.detalhesDoses.map((dose) => (
+                                  <div
+                                    key={dose.id}
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      backgroundColor: 'rgba(124, 83, 63, 0.04)',
+                                      border: '1px solid rgba(124, 83, 63, 0.08)',
+                                      padding: '5px 8px',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '8px',
+                                    }}
+                                  >
+                                    <div>
+                                      <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
+                                      <span style={{ color: '#5A5049', marginLeft: '3px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
+                                      {dose.contexto && (
+                                        <span style={{ fontSize: '0.64rem', color: '#7C533F', marginLeft: '3px', fontStyle: 'italic' }}>
+                                          ({dose.contexto.split(':')[0]})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ fontWeight: 700, color: '#285832', whiteSpace: 'nowrap' }}>
+                                      restam {dose.iobRestante.toFixed(1)} UI{' '}
+                                      <span style={{ fontWeight: 500, fontSize: '0.65rem', color: '#5A5049' }}>
+                                        (~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                            Rápida ({filhoAtivo.duracao_insulina_horas || 3}h)
                           </span>
                         )}
                       </div>
 
-                      <Separator style={{ margin: '2px 0' }} />
-
-                      {/* Barra de progresso fisiológica de decaimento */}
-                      <div>
+                      {/* Barra fina fisiológica de decaimento */}
+                      <div style={{ borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                         <div
                           style={{
                             height: '4px',
@@ -1159,69 +1255,25 @@ export default function PainelCuidador() {
                             }}
                           />
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
-                          <span>Rápida ({filhoAtivo.duracao_insulina_horas || 3}h)</span>
-                          <span>Prevenção empilhamento</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                          <span>Decaimento rápido ({filhoAtivo.duracao_insulina_horas || 3}h)</span>
+                          <span>Prevenção de empilhamento</span>
                         </div>
                       </div>
-
-                      {/* DETALHAMENTO COMPACTO DAS DOSES ATIVAS DA CRIANÇA */}
-                      {infoIOBCuidador.detalhesDoses.length > 0 && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                            marginTop: '2px',
-                          }}
-                        >
-                          {infoIOBCuidador.detalhesDoses.map((dose) => (
-                            <div
-                              key={dose.id}
-                              style={{
-                                fontSize: '0.72rem',
-                                backgroundColor: 'rgba(124, 83, 63, 0.05)',
-                                border: '1px solid rgba(124, 83, 63, 0.08)',
-                                padding: '8px 10px',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '6px',
-                              }}
-                            >
-                              <div>
-                                <strong style={{ color: '#2E2824' }}>{dose.horarioFormatado}</strong>
-                                <span style={{ color: '#5A5049', marginLeft: '4px' }}>• {dose.doseOriginal.toFixed(1)} UI</span>
-                                {dose.contexto && (
-                                  <span style={{ fontSize: '0.65rem', color: '#7C533F', marginLeft: '4px', fontStyle: 'italic' }}>
-                                    ({dose.contexto.split(':')[0]})
-                                  </span>
-                                )}
-                              </div>
-
-                              <div style={{ fontWeight: 700, color: '#285832', whiteSpace: 'nowrap' }}>
-                                restam {dose.iobRestante.toFixed(1)} UI{' '}
-                                <span style={{ fontWeight: 500, fontSize: '0.68rem', color: '#5A5049' }}>
-                                  (~{Math.floor(dose.minutosRestantes / 60)}h{String(dose.minutosRestantes % 60).padStart(2, '0')})
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
-                  {/* FIM DO KPI 2: INSULINA ATIVA (IOB) COM DECAIMENTO MULTI-BOLUS (CUIDADOR) */}
+                  {/* FIM DO KPI 2: INSULINA ATIVA (IOB) (CUIDADOR) */}
 
                   {/* INÍCIO DO KPI 3: TEMPO NO ALVO (TIR) (CUIDADOR) */}
-                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)' }}>
+                  <Card style={{ borderRadius: '12px', border: '1px solid var(--cor-borda)', height: '100%', minHeight: '118px', maxHeight: '130px' }}>
                     <CardContent
                       style={{
-                        padding: '20px 22px',
+                        padding: '16px 20px',
+                        height: '100%',
+                        boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '10px',
+                        justifyContent: 'space-between',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1244,7 +1296,7 @@ export default function PainelCuidador() {
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
                         <span
                           style={{
-                            fontSize: '30px',
+                            fontSize: '28px',
                             fontWeight: 700,
                             fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
                             fontVariantNumeric: 'tabular-nums',
@@ -1257,10 +1309,8 @@ export default function PainelCuidador() {
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--cor-texto-suave, #5C534C)' }}>70–180 mg/dL</span>
                       </div>
 
-                      <Separator style={{ margin: '2px 0' }} />
-
                       {/* Micro-barra segmentada fina de 4px */}
-                      <div>
+                      <div style={{ borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))', paddingTop: '6px' }}>
                         <div
                           style={{
                             height: '4px',
@@ -1274,7 +1324,7 @@ export default function PainelCuidador() {
                           <div style={{ width: `${tirPct}%`, backgroundColor: 'var(--cor-cta, #3B7E48)' }} title={`No alvo: ${tirPct}%`} />
                           <div style={{ width: `${acimaPct}%`, backgroundColor: '#C88D2A' }} title={`Acima: ${acimaPct}%`} />
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--cor-texto-suave, #5C534C)' }}>
                           <span style={{ color: '#C94A38' }}>{abaixoPct}% &lt;70</span>
                           <span style={{ color: 'var(--cor-cta, #3B7E48)', fontWeight: 700 }}>{tirPct}% no alvo</span>
                           <span style={{ color: '#C88D2A' }}>{acimaPct}% &gt;180</span>
@@ -1285,6 +1335,7 @@ export default function PainelCuidador() {
                   {/* FIM DO KPI 3: TEMPO NO ALVO (TIR) (CUIDADOR) */}
                 </div>
               );
+              /* FIM DOS KPIS COMPACTOS E PROPORCIONAIS DO CUIDADOR */
             })()}
             {/* /* FIM DO COMPONENTE: BENTO GRID COM 3 KPI CARDS */}
 
@@ -1315,21 +1366,6 @@ export default function PainelCuidador() {
                       <ToggleGroupItem value="trilha">Trilha (Trace)</ToggleGroupItem>
                       <ToggleGroupItem value="tabela">Tabela</ToggleGroupItem>
                     </ToggleGroup>
-
-                    <Button
-                      variante="sucesso"
-                      onClick={() => setSheetNovaMedicaoAberta(true)}
-                      style={{
-                        fontSize: '0.78rem',
-                        padding: '0.4rem 0.85rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                      }}
-                    >
-                      <Plus size={14} strokeWidth={2} />
-                      <span>Nova Medição</span>
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
