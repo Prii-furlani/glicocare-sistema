@@ -78,6 +78,7 @@ export const EXAMES_DEMO_PADRAO = [
 export default function ComparativoExames({
   exames = [],
   onNovoExameClick,
+  onVerLaudo = null,
 }) {
   // Lista normalizada de exames (ordenada do mais recente para o mais antigo)
   const coletasOrdenadas = useMemo(() => {
@@ -574,26 +575,27 @@ export default function ComparativoExames({
                         {coleta.laboratorio || coleta.nome_laboratorio}
                       </span>
                       {coleta.arquivo_anexo_path ? (
-                        <a
-                          href={coleta.arquivo_anexo_path}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ textDecoration: 'none' }}
+                        <Button
+                          variante="secundario"
+                          type="button"
+                          onClick={() => {
+                            if (onVerLaudo) {
+                              onVerLaudo(coleta);
+                            } else {
+                              window.open(coleta.arquivo_anexo_path, '_blank');
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.74rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.3rem 0.75rem',
+                          }}
                         >
-                          <Button
-                            variante="secundario"
-                            style={{
-                              fontSize: '0.74rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.3rem 0.75rem',
-                            }}
-                          >
-                            <FileText size={13} strokeWidth={1.75} />
-                            Laudo PDF
-                          </Button>
-                        </a>
+                          <FileText size={13} strokeWidth={1.75} />
+                          Laudo PDF
+                        </Button>
                       ) : null}
                     </div>
                   }

@@ -9,6 +9,7 @@ const ResizableContext = createContext(null);
  */
 export function ResizablePanelGroup({
   direction = 'horizontal', // 'horizontal' | 'vertical'
+  initialSizes,
   children,
   className = '',
   style = {},
@@ -17,8 +18,23 @@ export function ResizablePanelGroup({
   const containerRef = useRef(null);
   const isHorizontal = direction === 'horizontal';
 
-  // Por padrão divide em proporção igual (50 / 50)
-  const [sizes, setSizes] = useState([50, 50]);
+  // Inicializa proporções respeitando initialSizes ou defaultSize dos painéis filhos
+  const [sizes, setSizes] = useState(() => {
+    if (Array.isArray(initialSizes) && initialSizes.length >= 2) {
+      return initialSizes;
+    }
+    const childArray = React.Children.toArray(children);
+    const panelSizes = [];
+    childArray.forEach((child) => {
+      if (child && child.props && child.props.defaultSize !== undefined) {
+        panelSizes.push(Number(child.props.defaultSize));
+      }
+    });
+    if (panelSizes.length >= 2) {
+      return panelSizes;
+    }
+    return [50, 50];
+  });
   const [isDragging, setIsDragging] = useState(false);
 
   const startDrag = (handleIndex, e) => {
@@ -72,6 +88,7 @@ export function ResizablePanelGroup({
           minHeight: isHorizontal ? '380px' : 'auto',
           overflow: 'hidden',
           userSelect: isDragging ? 'none' : 'auto',
+          position: 'relative',
           ...style,
         }}
         {...props}
@@ -89,6 +106,7 @@ export function ResizablePanelGroup({
 export function ResizablePanel({
   order = 0, // 0 para o primeiro, 1 para o segundo
   defaultSize,
+  minSize = 20,
   children,
   className = '',
   style = {},
@@ -100,9 +118,9 @@ export function ResizablePanel({
     return <div className={className} style={style} {...props}>{children}</div>;
   }
 
-  const { sizes, direction } = context;
+  const { sizes, direction, isDragging } = context;
   const isHorizontal = direction === 'horizontal';
-  const size = sizes[order] !== undefined ? sizes[order] : 50;
+  const size = sizes[order] !== undefined ? sizes[order] : (defaultSize || 50);
 
   return (
     <div
@@ -114,7 +132,8 @@ export function ResizablePanel({
         maxWidth: `${size}%`,
         maxHeight: !isHorizontal ? `${size}%` : undefined,
         overflow: 'auto',
-        transition: context.isDragging ? 'none' : 'flex-basis 0.1s ease',
+        transition: isDragging ? 'none' : 'flex-basis 0.1s ease',
+        pointerEvents: isDragging ? 'none' : 'auto',
         ...style,
       }}
       {...props}

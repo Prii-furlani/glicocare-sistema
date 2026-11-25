@@ -13,6 +13,8 @@ import Button from './Button';
 import CustomSelect from './CustomSelect';
 import GlicoLoader from './GlicoLoader';
 import ComparativoExames from './ComparativoExames';
+import VisualizadorDocumentoAnexo from './VisualizadorDocumentoAnexo';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/Resizable';
 import { FEATURES } from '../config/features';
 
 // Dados demonstrativos padrão (espelhados com o seed do banco de dados TiDB)
@@ -113,19 +115,36 @@ const SUGESTOES_MARCADORES = [
   { nome: 'Colesterol Total', unidade: 'mg/dL', ref: '< 150 mg/dL' },
 ];
 
-export default function CentralExames({ perfilSaude, token, usuario }) {
-  const [exames, setExames] = useState([]);
+export default function CentralExames({ perfilSaude, token, usuario, isCuidador = false }) {
+  const [exames, setExames] = useState(() => {
+    if (Array.isArray(perfilSaude?.exames) && perfilSaude.exames.length > 0) {
+      return perfilSaude.exames;
+    }
+    return [];
+  });
   const [solicitacoes, setSolicitacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
   // Filtro por marcador para acompanhar evolução histórica
   const [filtroMarcador, setFiltroMarcador] = useState('');
 
-  // Controle do modal de cadastro de novo exame
+  // Controle do modal de cadastro de novo exame (Split-View)
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erroForm, setErroForm] = useState('');
   const [sucessoMsg, setSucessoMsg] = useState('');
+
+  // Modal para visualização independente de laudo digital anexado
+  const [modalLaudoVisualizar, setModalLaudoVisualizar] = useState(null);
+
+  // Detecção responsiva para adaptação do ResizablePanelGroup no mobile
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 900);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Formulário do novo exame
   const [formLaboratorio, setFormLaboratorio] = useState('');
@@ -196,8 +215,13 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
   };
 
   useEffect(() => {
+    if (isCuidador && Array.isArray(perfilSaude?.exames) && perfilSaude.exames.length > 0) {
+      setExames(perfilSaude.exames);
+      setCarregando(false);
+      return;
+    }
     carregarExames();
-  }, [token, perfilSaude?.id]);
+  }, [token, perfilSaude?.id, perfilSaude?.exames, isCuidador]);
 
   /**
    * Adiciona um novo marcador no construtor dinâmico
@@ -492,6 +516,7 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
           setFormSolicitacaoId('');
           setModalAberto(true);
         }}
+        onVerLaudo={(coleta) => setModalLaudoVisualizar(coleta)}
       />
 
       {/* ==================================================================
@@ -804,28 +829,23 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
                       </span>
                     </div>
 
-                    {/* Ação de download do laudo original anexado */}
-                    {exame.arquivo_anexo_path ? (
-                      <a
-                        href={exame.arquivo_anexo_path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ textDecoration: 'none' }}
+                    {/* Ação de visualização do laudo digital anexado via modal com VisualizadorDocumentoAnexo */}
+                    {exame.arquivo_anexo_path || exame.arquivo_laudo_url ? (
+                      <Button
+                        type="button"
+                        variante="secundario"
+                        onClick={() => setModalLaudoVisualizar(exame)}
+                        style={{
+                          fontSize: '0.82rem',
+                          padding: '0.45rem 0.85rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                        }}
                       >
-                        <Button
-                          variante="secundario"
-                          style={{
-                            fontSize: '0.82rem',
-                            padding: '0.45rem 0.85rem',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                          }}
-                        >
-                          <span>📄</span>
-                          <span>Ver Laudo Digital Anexado</span>
-                        </Button>
-                      </a>
+                        <span>📄</span>
+                        <span>Ver Laudo Digital Anexado</span>
+                      </Button>
                     ) : (
                       <span style={{ fontSize: '0.78rem', color: '#999', fontStyle: 'italic' }}>
                         Sem anexo digital (registro manual)
@@ -917,8 +937,9 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
       </div>
 
       {/* ==================================================================
-          BLOCO 2: MODAL "+ REGISTRAR NOVO EXAME" (RN-EXA-01)
+          BLOCO 2: MODAL "+ REGISTRAR NOVO EXAME" (SPLIT-VIEW RESIZABLE)
           ================================================================== */}
+      {/* INÍCIO DO MODAL SPLIT-VIEW: REGISTRAR EXAME LABORATORIAL */}
       {modalAberto && (
         <div
           style={{
@@ -927,12 +948,12 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(46, 40, 36, 0.65)',
-            backdropFilter: 'blur(3px)',
+            backgroundColor: 'rgba(30, 24, 20, 0.65)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem',
+            padding: isMobile ? '0.75rem' : '1.5rem',
             zIndex: 9999,
             boxSizing: 'border-box',
           }}
@@ -942,27 +963,51 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
         >
           <div
             style={{
-              backgroundColor: 'var(--cor-superficie)',
+              backgroundColor: 'var(--cor-superficie, #FFFFFF)',
               borderRadius: '20px',
-              padding: 'clamp(1.25rem, 3.5vw, 2.25rem)',
-              maxWidth: '720px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              border: '1px solid rgba(124, 83, 63, 0.2)',
+              maxWidth: isMobile ? '640px' : 'min(1260px, 95vw)',
+              width: '95vw',
+              maxHeight: isMobile ? '92vh' : 'calc(100vh - 40px)',
+              height: isMobile ? 'auto' : '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.22)',
+              border: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.2))',
               boxSizing: 'border-box',
+              overflow: 'hidden',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cabeçalho do Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.4rem' }}>🔬</span>
-                <h3 style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.5rem', color: 'var(--cor-texto)', margin: 0 }}>
-                  Registrar Exame Laboratorial
-                </h3>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1.2rem 1.75rem',
+                borderBottom: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.12))',
+                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ fontSize: '1.35rem' }}>🔬</span>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, Fraunces)',
+                      fontSize: '1.25rem',
+                      color: 'var(--cor-texto, #2E2824)',
+                      margin: 0,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Registrar Exame Laboratorial
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#6A5E57', margin: 0, marginTop: '2px' }}>
+                    Visualize o laudo original e preencha os marcadores simultaneamente com precisão.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -971,408 +1016,744 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '1.5rem',
+                  fontSize: '1.35rem',
                   cursor: 'pointer',
                   color: '#6A5E57',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
                 }}
+                aria-label="Fechar modal"
               >
                 ✕
               </button>
             </div>
 
-            <p style={{ fontSize: '0.9rem', color: '#5A5049', margin: '0 0 1.5rem 0', lineHeight: 1.5 }}>
-              Preencha os dados do laboratório, anexe o arquivo PDF ou foto do laudo e insira os principais marcadores
-              para que a equipe médica acompanhe seu histórico com tranquilidade.
-            </p>
-
-            {/* Mensagem de Erro ou Sucesso */}
-            {erroForm && (
-              <div
-                style={{
-                  backgroundColor: '#FDF2F0',
-                  border: '1px solid #E06A55',
-                  color: '#A23B2A',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  fontSize: '0.88rem',
-                }}
-              >
-                ⚠️ {erroForm}
-              </div>
-            )}
-
-            {sucessoMsg && (
-              <div
-                style={{
-                  backgroundColor: '#EFF7F1',
-                  border: '1px solid #B8E2BE',
-                  color: '#285832',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem',
-                  fontSize: '0.88rem',
-                }}
-              >
-                ✓ {sucessoMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleSalvarExame} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-                {/* Laboratório */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Laboratório ou Unidade de Saúde *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Delboni, Fleury, Lavoisier ou UBS Central"
-                    value={formLaboratorio}
-                    onChange={(e) => setFormLaboratorio(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: '8px',
-                      border: '1px solid #D8D0C5',
-                      fontSize: '0.92rem',
-                    }}
-                  />
-                </div>
-
-                {/* Data de Realização */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Data da Coleta / Realização *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formDataRealizacao}
-                    onChange={(e) => setFormDataRealizacao(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: '8px',
-                      border: '1px solid #D8D0C5',
-                      fontSize: '0.92rem',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Vinculação a uma Guia Médica */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Vincular a uma Guia Médica Solicitada (Opcional)
-                </label>
-                <CustomSelect
-                  value={formSolicitacaoId}
-                  onChange={(e) => setFormSolicitacaoId(e.target.value)}
-                  placeholder="Exame avulso / Sem vínculo com guia específica"
-                  options={[
-                    { value: '', label: 'Exame avulso / Sem vínculo com guia específica' },
-                    ...solicitacoes.map((s) => ({
-                      value: s.id,
-                      label: `Guia #${s.id}: ${s.titulo_pedido} (${s.especialista_nome} - ${s.status})`,
-                      icone: '📋',
-                    })),
-                  ]}
-                />
-              </div>
-
-              {/* Upload de Laudo Digital */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Anexar Laudo Digital (PDF, JPG, PNG — até 10 MB)
-                </label>
+            {/* Conteúdo com Split-View ou Fallback Mobile */}
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {isMobile ? (
+                /* Layout Empilhado no Mobile */
                 <div
                   style={{
-                    border: '2px dashed #D8D0C5',
-                    borderRadius: '12px',
+                    flex: 1,
+                    overflowY: 'auto',
                     padding: '1.25rem',
-                    textAlign: 'center',
-                    backgroundColor: '#FAF8F5',
-                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1.25rem',
                   }}
                 >
-                  <input
-                    type="file"
-                    accept=".pdf,image/png,image/jpeg,image/jpg"
-                    onChange={(e) => setFormArquivo(e.target.files[0] || null)}
+                  <div
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      opacity: 0,
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <span style={{ fontSize: '1.5rem', display: 'block', marginBottom: '0.25rem' }}>📎</span>
-                  {formArquivo ? (
-                    <div>
-                      <strong style={{ color: '#3B7E48', fontSize: '0.9rem' }}>
-                        Arquivo selecionado: {formArquivo.name}
-                      </strong>
-                      <span style={{ display: 'block', fontSize: '0.78rem', color: '#6A5E57' }}>
-                        {(formArquivo.size / 1024 / 1024).toFixed(2)} MB • Clique para trocar
-                      </span>
-                    </div>
-                  ) : (
-                    <div>
-                      <strong style={{ color: '#2E2824', fontSize: '0.9rem' }}>
-                        Clique ou arraste o arquivo do laudo aqui
-                      </strong>
-                      <span style={{ display: 'block', fontSize: '0.78rem', color: '#6A5E57' }}>
-                        Suporta laudos em PDF emitidos pelos laboratórios ou fotos nítidas dos resultados
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Construtor Dinâmico de Marcadores Clínicos (1:N) */}
-              <div
-                style={{
-                  backgroundColor: '#FAF8F5',
-                  padding: '1.25rem',
-                  borderRadius: '12px',
-                  border: '1px solid #ECE7E0',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div>
-                    <label style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--cor-texto)', display: 'block' }}>
-                      Marcadores Clínicos & Resultados
-                    </label>
-                    <span style={{ fontSize: '0.78rem', color: '#6A5E57' }}>
-                      Adicione os valores dos exames para que o sistema gere a linha de evolução histórica.
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAdicionarMarcador()}
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #3B7E48',
-                      color: '#3B7E48',
-                      borderRadius: '8px',
-                      padding: '0.35rem 0.75rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
+                      height: '320px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--cor-borda, #ECE7E0)',
                     }}
                   >
-                    + Novo Marcador
-                  </button>
-                </div>
+                    <VisualizadorDocumentoAnexo
+                      arquivo={formArquivo}
+                      onArquivoSelecionado={(file) => setFormArquivo(file)}
+                      onRemover={() => setFormArquivo(null)}
+                    />
+                  </div>
 
-                {/* Chips de Sugestão Rápida em 1 Clique */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.76rem', color: '#6A5E57', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
-                    Sugestões rápidas para DM1 (clique para incluir):
-                  </span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    {SUGESTOES_MARCADORES.map((sug, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => handleAdicionarMarcador(sug)}
+                  {/* Formulário Clínico no Mobile */}
+                  <form onSubmit={handleSalvarExame} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    {erroForm && (
+                      <div
                         style={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #D8D0C5',
-                          borderRadius: '999px',
-                          padding: '0.25rem 0.65rem',
-                          fontSize: '0.76rem',
-                          color: '#4A4039',
-                          cursor: 'pointer',
+                          backgroundColor: '#FDF2F0',
+                          border: '1px solid #E06A55',
+                          color: '#A23B2A',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          fontSize: '0.88rem',
                         }}
                       >
-                        + {sug.nome} ({sug.unidade})
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                        ⚠️ {erroForm}
+                      </div>
+                    )}
+                    {sucessoMsg && (
+                      <div
+                        style={{
+                          backgroundColor: '#EFF7F1',
+                          border: '1px solid #B8E2BE',
+                          color: '#285832',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          fontSize: '0.88rem',
+                        }}
+                      >
+                        ✓ {sucessoMsg}
+                      </div>
+                    )}
 
-                {/* ==================================================================
-                    INÍCIO DA LISTA DE MARCADORES CLÍNICOS RESPONSIVOS (FLEX-WRAP ANTI-OVERFLOW)
-                    Campos adaptáveis (Nome, Valor, Unidade, Referência e Exclusão)
-                    com quebra de linha inteligente para eliminar qualquer rolagem horizontal
-                    ================================================================== */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', boxSizing: 'border-box' }}>
-                  {formMarcadores.map((item, idx) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                          Laboratório ou Unidade de Saúde *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Delboni, Fleury, Lavoisier ou UBS Central"
+                          value={formLaboratorio}
+                          onChange={(e) => setFormLaboratorio(e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.75rem 0.9rem',
+                            borderRadius: '8px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.92rem',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                          Data da Coleta / Realização *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={formDataRealizacao}
+                          onChange={(e) => setFormDataRealizacao(e.target.value)}
+                          style={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '0.75rem 0.9rem',
+                            borderRadius: '8px',
+                            border: '1px solid #D8D0C5',
+                            fontSize: '0.92rem',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                        Vincular a uma Guia Médica (Opcional)
+                      </label>
+                      <CustomSelect
+                        value={formSolicitacaoId}
+                        onChange={(e) => setFormSolicitacaoId(e.target.value)}
+                        placeholder="Exame avulso / Sem vínculo com guia específica"
+                        options={[
+                          { value: '', label: 'Exame avulso / Sem vínculo com guia específica' },
+                          ...solicitacoes.map((s) => ({
+                            value: s.id,
+                            label: `Guia #${s.id}: ${s.titulo_pedido} (${s.especialista_nome} - ${s.status})`,
+                            icone: '📋',
+                          })),
+                        ]}
+                      />
+                    </div>
+
+                    {/* Construtor Dinâmico de Marcadores */}
                     <div
-                      key={idx}
-                      className="marcador-linha-responsiva"
                       style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '0.5rem',
-                        alignItems: 'center',
-                        backgroundColor: '#FFFFFF',
-                        padding: '0.65rem 0.75rem',
-                        borderRadius: '10px',
-                        border: '1px solid #E2DBD0',
-                        boxSizing: 'border-box',
-                        width: '100%',
+                        backgroundColor: '#FAF8F5',
+                        padding: '1.15rem',
+                        borderRadius: '12px',
+                        border: '1px solid #ECE7E0',
                       }}
                     >
-                      {/* Campo 1: Nome do Marcador (flex-grow generoso para acomodar títulos clínicos) */}
-                      <div style={{ flex: '2 1 140px', minWidth: '120px' }}>
-                        <input
-                          type="text"
-                          placeholder="Nome (ex: HbA1c)"
-                          value={item.nome_marcador}
-                          onChange={(e) => handleAlterarMarcador(idx, 'nome_marcador', e.target.value)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--cor-texto)', display: 'block' }}>
+                            Marcadores Clínicos & Resultados
+                          </label>
+                          <span style={{ fontSize: '0.76rem', color: '#6A5E57' }}>
+                            Insira os valores extraídos do laudo para compor o histórico.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAdicionarMarcador()}
                           style={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            padding: '0.48rem 0.6rem',
-                            borderRadius: '6px',
-                            border: '1px solid #D8D0C5',
-                            fontSize: '0.84rem',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #3B7E48',
+                            color: '#3B7E48',
+                            borderRadius: '8px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
                           }}
-                          aria-label="Nome do marcador clínico"
-                        />
+                        >
+                          + Novo Marcador
+                        </button>
                       </div>
 
-                      {/* Campo 2: Valor do Resultado Clínico */}
-                      <div style={{ flex: '1 1 80px', minWidth: '70px' }}>
-                        <input
-                          type="text"
-                          placeholder="Valor (ex: 6.8)"
-                          value={item.valor_resultado}
-                          onChange={(e) => handleAlterarMarcador(idx, 'valor_resultado', e.target.value)}
-                          style={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            padding: '0.48rem 0.6rem',
-                            borderRadius: '6px',
-                            border: '1px solid #D8D0C5',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                          }}
-                          aria-label="Valor do resultado"
-                        />
+                      <div style={{ marginBottom: '0.85rem' }}>
+                        <span style={{ fontSize: '0.74rem', color: '#6A5E57', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          Sugestões rápidas para DM1:
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {SUGESTOES_MARCADORES.map((sug, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => handleAdicionarMarcador(sug)}
+                              style={{
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #D8D0C5',
+                                borderRadius: '999px',
+                                padding: '0.2rem 0.6rem',
+                                fontSize: '0.74rem',
+                                color: '#4A4039',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              + {sug.nome} ({sug.unidade})
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      {/* Campo 3: Unidade de Medida */}
-                      <div style={{ flex: '1 1 75px', minWidth: '65px' }}>
-                        <input
-                          type="text"
-                          placeholder="Unid. (%)"
-                          value={item.unidade}
-                          onChange={(e) => handleAlterarMarcador(idx, 'unidade', e.target.value)}
-                          style={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            padding: '0.48rem 0.6rem',
-                            borderRadius: '6px',
-                            border: '1px solid #D8D0C5',
-                            fontSize: '0.84rem',
-                          }}
-                          aria-label="Unidade de medida"
-                        />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', width: '100%', boxSizing: 'border-box' }}>
+                        {formMarcadores.map((item, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '0.45rem',
+                              alignItems: 'center',
+                              backgroundColor: '#FFFFFF',
+                              padding: '0.6rem 0.7rem',
+                              borderRadius: '10px',
+                              border: '1px solid #E2DBD0',
+                              boxSizing: 'border-box',
+                              width: '100%',
+                            }}
+                          >
+                            <input
+                              type="text"
+                              placeholder="Nome (ex: HbA1c)"
+                              value={item.nome_marcador}
+                              onChange={(e) => handleAlterarMarcador(idx, 'nome_marcador', e.target.value)}
+                              style={{ flex: '2 1 120px', minWidth: '110px', padding: '0.45rem 0.55rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Valor (ex: 6.8)"
+                              value={item.valor_resultado}
+                              onChange={(e) => handleAlterarMarcador(idx, 'valor_resultado', e.target.value)}
+                              style={{ flex: '1 1 70px', minWidth: '60px', padding: '0.45rem 0.55rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem', fontWeight: 700, boxSizing: 'border-box' }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Unid. (%)"
+                              value={item.unidade}
+                              onChange={(e) => handleAlterarMarcador(idx, 'unidade', e.target.value)}
+                              style={{ flex: '1 1 65px', minWidth: '55px', padding: '0.45rem 0.55rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Ref. (< 7.0%)"
+                              value={item.valor_referencia}
+                              onChange={(e) => handleAlterarMarcador(idx, 'valor_referencia', e.target.value)}
+                              style={{ flex: '1.5 1 100px', minWidth: '85px', padding: '0.45rem 0.55rem', borderRadius: '6px', border: '1px solid #D8D0C5', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverMarcador(idx)}
+                              disabled={formMarcadores.length === 1}
+                              style={{
+                                marginLeft: 'auto',
+                                background: 'none',
+                                border: 'none',
+                                color: '#A23B2A',
+                                cursor: formMarcadores.length === 1 ? 'not-allowed' : 'pointer',
+                                fontSize: '1rem',
+                                padding: '0.3rem',
+                                opacity: formMarcadores.length === 1 ? 0.35 : 1,
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        ))}
                       </div>
-
-                      {/* Campo 4: Valor de Referência Laboratorial */}
-                      <div style={{ flex: '1.5 1 110px', minWidth: '95px' }}>
-                        <input
-                          type="text"
-                          placeholder="Ref. (< 7.0%)"
-                          value={item.valor_referencia}
-                          onChange={(e) => handleAlterarMarcador(idx, 'valor_referencia', e.target.value)}
-                          style={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            padding: '0.48rem 0.6rem',
-                            borderRadius: '6px',
-                            border: '1px solid #D8D0C5',
-                            fontSize: '0.84rem',
-                          }}
-                          aria-label="Valor de referência laboratorial"
-                        />
-                      </div>
-
-                      {/* Botão de Exclusão do Marcador (Lixeira) */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoverMarcador(idx)}
-                        disabled={formMarcadores.length === 1}
-                        style={{
-                          flex: '0 0 auto',
-                          marginLeft: 'auto',
-                          background: 'none',
-                          border: 'none',
-                          color: '#A23B2A',
-                          cursor: formMarcadores.length === 1 ? 'not-allowed' : 'pointer',
-                          fontSize: '1.1rem',
-                          padding: '0.35rem 0.5rem',
-                          opacity: formMarcadores.length === 1 ? 0.35 : 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        title={formMarcadores.length === 1 ? 'Mínimo de 1 marcador obrigatório' : 'Remover este marcador'}
-                      >
-                        🗑️
-                      </button>
                     </div>
-                  ))}
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                        Observações da Coleta (Opcional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Ex: Coleta em jejum de 8h sem choro na punção..."
+                        value={formObservacoes}
+                        onChange={(e) => setFormObservacoes(e.target.value)}
+                        style={{
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: '1px solid #D8D0C5',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <Button type="button" variante="secundario" onClick={() => setModalAberto(false)} disabled={salvando}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" variante="primario" loading={salvando} disabled={salvando}>
+                        {salvando ? 'Salvando...' : 'Salvar e Anexar Exame'}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-                {/* FIM DA LISTA DE MARCADORES CLÍNICOS RESPONSIVOS */}
-              </div>
+              ) : (
+                /* Desktop: Modo Split-View com ResizablePanelGroup */
+                <ResizablePanelGroup direction="horizontal" style={{ flex: 1, height: '100%', minHeight: 0 }}>
+                  {/* Painel Esquerdo: Visualizador de Documento / Dropzone */}
+                  <ResizablePanel defaultSize={48} minSize={30} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, backgroundColor: 'var(--cor-fundo, #FAF8F5)', overflow: 'hidden' }}>
+                    <VisualizadorDocumentoAnexo
+                      arquivo={formArquivo}
+                      onArquivoSelecionado={(file) => setFormArquivo(file)}
+                      onRemover={() => setFormArquivo(null)}
+                    />
+                  </ResizablePanel>
 
-              {/* Observações da Coleta */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Observações ou Contexto da Coleta (Opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Ex: Coleta em jejum de 8h sem choro na punção; aplicada dose normal de insulina basal na noite anterior."
-                  value={formObservacoes}
-                  onChange={(e) => setFormObservacoes(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 0.9rem',
-                    borderRadius: '8px',
-                    border: '1px solid #D8D0C5',
-                    fontSize: '0.88rem',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </div>
+                  <ResizableHandle withHandle />
 
-              {/* Botões do Rodapé do Modal */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <Button
-                  type="button"
-                  variante="secundario"
-                  onClick={() => setModalAberto(false)}
-                  disabled={salvando}
-                  style={{ fontSize: '0.9rem' }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variante="primario"
-                  loading={salvando}
-                  disabled={salvando}
-                  style={{ fontSize: '0.9rem' }}
-                >
-                  {salvando ? 'Salvando Exame...' : 'Salvar e Anexar Exame'}
-                </Button>
-              </div>
-            </form>
+                  {/* Painel Direito: Formulário Clínico com Scroll Independente */}
+                  <ResizablePanel defaultSize={52} minSize={35} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, backgroundColor: 'var(--cor-superficie, #FFFFFF)' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column' }}>
+                      <form onSubmit={handleSalvarExame} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', height: '100%' }}>
+                        {erroForm && (
+                          <div
+                            style={{
+                              backgroundColor: '#FDF2F0',
+                              border: '1px solid #E06A55',
+                              color: '#A23B2A',
+                              padding: '0.75rem 1rem',
+                              borderRadius: '8px',
+                              fontSize: '0.88rem',
+                            }}
+                          >
+                            ⚠️ {erroForm}
+                          </div>
+                        )}
+                        {sucessoMsg && (
+                          <div
+                            style={{
+                              backgroundColor: '#EFF7F1',
+                              border: '1px solid #B8E2BE',
+                              color: '#285832',
+                              padding: '0.75rem 1rem',
+                              borderRadius: '8px',
+                              fontSize: '0.88rem',
+                            }}
+                          >
+                            ✓ {sucessoMsg}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                              Laboratório ou Unidade de Saúde *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Ex: Delboni, Fleury, Lavoisier ou UBS"
+                              value={formLaboratorio}
+                              onChange={(e) => setFormLaboratorio(e.target.value)}
+                              style={{
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                padding: '0.75rem 0.9rem',
+                                borderRadius: '8px',
+                                border: '1px solid #D8D0C5',
+                                fontSize: '0.92rem',
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                              Data da Coleta / Realização *
+                            </label>
+                            <input
+                              type="date"
+                              required
+                              value={formDataRealizacao}
+                              onChange={(e) => setFormDataRealizacao(e.target.value)}
+                              style={{
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                padding: '0.75rem 0.9rem',
+                                borderRadius: '8px',
+                                border: '1px solid #D8D0C5',
+                                fontSize: '0.92rem',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                            Vincular a uma Guia Médica (Opcional)
+                          </label>
+                          <CustomSelect
+                            value={formSolicitacaoId}
+                            onChange={(e) => setFormSolicitacaoId(e.target.value)}
+                            placeholder="Exame avulso / Sem vínculo com guia específica"
+                            options={[
+                              { value: '', label: 'Exame avulso / Sem vínculo com guia específica' },
+                              ...solicitacoes.map((s) => ({
+                                value: s.id,
+                                label: `Guia #${s.id}: ${s.titulo_pedido} (${s.especialista_nome} - ${s.status})`,
+                                icone: '📋',
+                              })),
+                            ]}
+                          />
+                        </div>
+
+                        {/* Construtor Dinâmico de Marcadores */}
+                        <div
+                          style={{
+                            backgroundColor: '#FAF8F5',
+                            padding: '1.25rem',
+                            borderRadius: '12px',
+                            border: '1px solid #ECE7E0',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div>
+                              <label style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--cor-texto)', display: 'block' }}>
+                                Marcadores Clínicos & Resultados
+                              </label>
+                              <span style={{ fontSize: '0.78rem', color: '#6A5E57' }}>
+                                Acompanhe o laudo aberto à esquerda e digite os valores correspondentes.
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleAdicionarMarcador()}
+                              style={{
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #3B7E48',
+                                color: '#3B7E48',
+                                borderRadius: '8px',
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              + Novo Marcador
+                            </button>
+                          </div>
+
+                          <div style={{ marginBottom: '1rem' }}>
+                            <span style={{ fontSize: '0.76rem', color: '#6A5E57', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
+                              Sugestões rápidas para DM1 (clique para incluir):
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                              {SUGESTOES_MARCADORES.map((sug, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => handleAdicionarMarcador(sug)}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    border: '1px solid #D8D0C5',
+                                    borderRadius: '999px',
+                                    padding: '0.25rem 0.65rem',
+                                    fontSize: '0.76rem',
+                                    color: '#4A4039',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  + {sug.nome} ({sug.unidade})
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', boxSizing: 'border-box' }}>
+                            {formMarcadores.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="marcador-linha-responsiva"
+                                style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '0.5rem',
+                                  alignItems: 'center',
+                                  backgroundColor: '#FFFFFF',
+                                  padding: '0.65rem 0.75rem',
+                                  borderRadius: '10px',
+                                  border: '1px solid #E2DBD0',
+                                  boxSizing: 'border-box',
+                                  width: '100%',
+                                }}
+                              >
+                                <div style={{ flex: '2 1 140px', minWidth: '120px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Nome (ex: HbA1c)"
+                                    value={item.nome_marcador}
+                                    onChange={(e) => handleAlterarMarcador(idx, 'nome_marcador', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      boxSizing: 'border-box',
+                                      padding: '0.48rem 0.6rem',
+                                      borderRadius: '6px',
+                                      border: '1px solid #D8D0C5',
+                                      fontSize: '0.84rem',
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ flex: '1 1 80px', minWidth: '70px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Valor (ex: 6.8)"
+                                    value={item.valor_resultado}
+                                    onChange={(e) => handleAlterarMarcador(idx, 'valor_resultado', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      boxSizing: 'border-box',
+                                      padding: '0.48rem 0.6rem',
+                                      borderRadius: '6px',
+                                      border: '1px solid #D8D0C5',
+                                      fontSize: '0.84rem',
+                                      fontWeight: 700,
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ flex: '1 1 75px', minWidth: '65px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Unid. (%)"
+                                    value={item.unidade}
+                                    onChange={(e) => handleAlterarMarcador(idx, 'unidade', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      boxSizing: 'border-box',
+                                      padding: '0.48rem 0.6rem',
+                                      borderRadius: '6px',
+                                      border: '1px solid #D8D0C5',
+                                      fontSize: '0.84rem',
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ flex: '1.5 1 110px', minWidth: '95px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Ref. (< 7.0%)"
+                                    value={item.valor_referencia}
+                                    onChange={(e) => handleAlterarMarcador(idx, 'valor_referencia', e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      boxSizing: 'border-box',
+                                      padding: '0.48rem 0.6rem',
+                                      borderRadius: '6px',
+                                      border: '1px solid #D8D0C5',
+                                      fontSize: '0.84rem',
+                                    }}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoverMarcador(idx)}
+                                  disabled={formMarcadores.length === 1}
+                                  style={{
+                                    flex: '0 0 auto',
+                                    marginLeft: 'auto',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#A23B2A',
+                                    cursor: formMarcadores.length === 1 ? 'not-allowed' : 'pointer',
+                                    fontSize: '1.1rem',
+                                    padding: '0.35rem 0.5rem',
+                                    opacity: formMarcadores.length === 1 ? 0.35 : 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  title={formMarcadores.length === 1 ? 'Mínimo de 1 marcador obrigatório' : 'Remover este marcador'}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                            Observações ou Contexto da Coleta (Opcional)
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder="Ex: Coleta em jejum de 8h sem choro na punção; aplicada dose normal de insulina basal."
+                            value={formObservacoes}
+                            onChange={(e) => setFormObservacoes(e.target.value)}
+                            style={{
+                              width: '100%',
+                              boxSizing: 'border-box',
+                              padding: '0.75rem 0.9rem',
+                              borderRadius: '8px',
+                              border: '1px solid #D8D0C5',
+                              fontSize: '0.88rem',
+                              fontFamily: 'inherit',
+                            }}
+                          />
+                        </div>
+
+                        {/* Barra Fixa de Ações no Rodapé */}
+                        <div
+                          style={{
+                            marginTop: 'auto',
+                            paddingTop: '1rem',
+                            borderTop: '1px solid var(--cor-borda, #ECE7E0)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '0.75rem',
+                            backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                            position: 'sticky',
+                            bottom: 0,
+                            zIndex: 10,
+                          }}
+                        >
+                          <Button
+                            type="button"
+                            variante="secundario"
+                            onClick={() => setModalAberto(false)}
+                            disabled={salvando}
+                            style={{ fontSize: '0.9rem' }}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="submit"
+                            variante="primario"
+                            loading={salvando}
+                            disabled={salvando}
+                            style={{ fontSize: '0.9rem' }}
+                          >
+                            {salvando ? 'Salvando Exame...' : 'Salvar e Anexar Exame'}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              )}
+            </div>
           </div>
         </div>
       )}
+      {/* FIM DO MODAL SPLIT-VIEW: REGISTRAR EXAME LABORATORIAL */}
+
+      {/* ==================================================================
+          BLOCO 4: MODAL DE VISUALIZAÇÃO DE LAUDO DIGITAL EXISTENTE
+          ================================================================== */}
+      {/* INÍCIO DO MODAL: VISUALIZAR LAUDO DIGITAL EXISTENTE */}
+      {modalLaudoVisualizar && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(30, 24, 20, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            zIndex: 99999,
+            boxSizing: 'border-box',
+          }}
+          onClick={() => setModalLaudoVisualizar(null)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+              borderRadius: '20px',
+              width: '95vw',
+              maxWidth: '1000px',
+              height: '88vh',
+              maxHeight: 'calc(100vh - 40px)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              border: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.2))',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabeçalho */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1.15rem 1.5rem',
+                borderBottom: '1px solid var(--cor-borda, rgba(124, 83, 63, 0.12))',
+                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <span style={{ fontSize: '1.3rem' }}>📄</span>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, Fraunces)',
+                      fontSize: '1.2rem',
+                      color: 'var(--cor-texto, #2E2824)',
+                      margin: 0,
+                    }}
+                  >
+                    Laudo Digital — {modalLaudoVisualizar.laboratorio || modalLaudoVisualizar.nome_laboratorio || 'Exame'}
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
+                    Coleta realizada em {formatarData(modalLaudoVisualizar.data_realizacao)}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalLaudoVisualizar(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.35rem',
+                  cursor: 'pointer',
+                  color: '#6A5E57',
+                  padding: '4px 8px',
+                }}
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Visualizador Readonly */}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <VisualizadorDocumentoAnexo
+                arquivoUrl={modalLaudoVisualizar.arquivo_anexo_path || modalLaudoVisualizar.arquivo_laudo_url}
+                nomeArquivo={modalLaudoVisualizar.arquivo_nome_original || `Laudo_${modalLaudoVisualizar.laboratorio || 'Exame'}_${modalLaudoVisualizar.data_realizacao}.pdf`}
+                readonly={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* FIM DO MODAL: VISUALIZAR LAUDO DIGITAL EXISTENTE */}
     </div>
   );
 }

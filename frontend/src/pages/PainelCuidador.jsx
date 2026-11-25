@@ -16,7 +16,7 @@ import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
 import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
 import GraficoCurvaGlicemia from '../components/GraficoCurvaGlicemia';
-import ComparativoExames from '../components/ComparativoExames';
+import CentralExames from '../components/CentralExames';
 import { calcularInsulinaAtiva } from '../utils/glicemiaAnalytics';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/Tabs';
@@ -277,7 +277,7 @@ const DEPENDENTE_PADRAO_THEO = {
 
 /* INÍCIO DO COMPONENTE PRINCIPAL PAINEL CUIDADOR */
 export default function PainelCuidador() {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const navigate = useNavigate();
   const notificar = useNotify();
   const { confirmar } = useConfirm();
@@ -1813,9 +1813,14 @@ export default function PainelCuidador() {
             ================================================================== */}
         {abaAtiva === 'exames' && (
           <div style={{ display: 'grid', gap: '2rem' }}>
-            {/* /* INÍCIO DO COMPONENTE: COMPARATIVO AUTOMÁTICO DE EXAMES */}
-            <ComparativoExames exames={filhoAtivo.exames || []} />
-            {/* /* FIM DO COMPONENTE: COMPARATIVO AUTOMÁTICO DE EXAMES */}
+            {/* /* INÍCIO DO COMPONENTE: CENTRAL DE EXAMES DO DEPENDENTE */}
+            <CentralExames
+              perfilSaude={filhoAtivo}
+              token={token}
+              usuario={usuario}
+              isCuidador={true}
+            />
+            {/* /* FIM DO COMPONENTE: CENTRAL DE EXAMES DO DEPENDENTE */}
 
             {/* /* INÍCIO DA SEÇÃO ENXUTA DE ALERGIAS & SENSIBILIDADES */}
             <div

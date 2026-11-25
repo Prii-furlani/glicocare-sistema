@@ -1323,3 +1323,35 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
 
 
 
+
+
+---
+
+## 34. SPLIT-VIEW LADO A LADO NO MODAL DE REGISTRAR EXAME LABORATORIAL (`ResizablePanelGroup` + `VisualizadorDocumentoAnexo`)
+
+### A. Componente Robusto `VisualizadorDocumentoAnexo.jsx`
+- **Detecção Automática de Tipo & Estado:**
+  * Suporta objetos `File` (upload em andamento com `URL.createObjectURL` e descarte seguro no unmount via `URL.revokeObjectURL`) e URLs estáticas / remotas de laudos já salvos.
+  * Identificação automática de extensão (`.pdf`, `.png`, `.jpg`, `.jpeg`).
+- **Toolbar Superior do Laudo:**
+  * Exibe ícone do tipo de arquivo, nome completo do documento e peso formatado (ex: `1.85 MB`).
+  * Ações integradas: *Abrir em Nova Aba*, *Baixar Arquivo*, controles de zoom interativo (*+*, *-*, *100%*) para imagens, e botões *Trocar* e *Remover* (quando não em modo `readonly`).
+- **Dropzone Acolhedor Integrado:** Quando nenhum arquivo é anexado, o painel exibe uma dropzone interativa estilizada na paleta Porto Seguro com suporte a arraste e clique para seleção imediata.
+
+### B. Modal Largo com Split-View e Painéis Redimensionáveis (`CentralExames.jsx`)
+- **Dimensões e Respiro Desktop (`>= 900px`):**
+  * Modal ampliado para `width: 95vw`, `maxWidth: min(1260px, 95vw)` e `height: 88vh` (`maxHeight: calc(100vh - 40px)`).
+  * Painéis divididos via `<ResizablePanelGroup direction="horizontal">`:
+    - **Painel Esquerdo (`defaultSize={48}`, `minSize={30}`):** Visualizador de documento com o laudo carregado ou dropzone de anexo.
+    - **Alça Central:** `<ResizableHandle withHandle />` com arraste fluido e proteção `pointerEvents: isDragging ? 'none' : 'auto'` para evitar captura acidental do cursor por iframes/PDFs embutidos.
+    - **Painel Direito (`defaultSize={52}`, `minSize={35}`):** Formulário clínico com rolagem independente, permitindo ao usuário examinar o laudo à esquerda enquanto digita dados do laboratório, data, guia médica vinculada, marcadores 1:N (com chips de sugestão rápida para DM1) e observações.
+    - **Barra de Ações Fixa no Rodapé:** Botões *Cancelar* e *Salvar e Anexar Exame* fixos no rodapé do painel direito com `position: sticky; bottom: 0`.
+- **Fallback Gracioso para Telas Menores / Mobile (`< 900px`):**
+  * Layout responsivo vertical empilhado com rolagem fluida e altura adaptada para o visualizador (`320px`), mantendo 100% da usabilidade em smartphones e tablets.
+
+### C. Modal Dedicado para Visualização de Laudos Existentes
+- Ao clicar em *"Ver Laudo Digital Anexado"* na linha do tempo histórica ou na tabela consolidada do `ComparativoExames`, o sistema abre um modal centralizado de `maxWidth: 1000px` e `height: 88vh` renderizando `<VisualizadorDocumentoAnexo readonly={true} />`, permitindo visualização de alta fidelidade e download direto.
+
+### D. Integração Completa no Painel do Cuidador (`PainelCuidador.jsx`)
+- Na aba `abaAtiva === 'exames'` do dependente, o cuidador agora acessa diretamente `<CentralExames perfilSaude={filhoAtivo} token={token} usuario={usuario} isCuidador={true} />`.
+- Isso unifica a experiência: o cuidador visualiza o histórico, as trajetórias SVG dos marcadores e o botão *+ Registrar Novo Exame* com o novo Split-View redimensionável para cadastrar laudos dos seus dependentes.
