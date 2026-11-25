@@ -683,7 +683,7 @@ async function main() {
     console.log('ℹ️ cuidadores_dependentes:', err.message);
   }
   // ==========================================================================
-  // INÍCIO — 21. TABELA contatos_emergencia (MÚLTIPLOS CONTATOS, MÍNIMO 1 OBRIGATÓRIO)
+  // INÍCIO — 21. TABELA contatos_emergencia (MÚLTIPLOS CONTATOS E MÚLTIPLOS TELEFONES 1:N)
   // ==========================================================================
   try {
     await connection.query(`
@@ -692,7 +692,8 @@ async function main() {
         \`perfil_saude_id\` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
         \`nome_contato\` VARCHAR(120) NOT NULL COMMENT 'Nome completo do contato de emergência',
         \`relacao\` VARCHAR(60) NOT NULL DEFAULT 'Familiar' COMMENT 'Grau de parentesco ou relação',
-        \`telefone\` VARCHAR(25) NOT NULL COMMENT 'Telefone de emergência com DDD',
+        \`telefone\` VARCHAR(25) NOT NULL COMMENT 'Telefone principal com DDD',
+        \`telefones\` JSON DEFAULT NULL COMMENT 'Array JSON de telefones do contato: [{"numero":"...","tipo":"..."}]',
         \`ordem\` INT NOT NULL DEFAULT 1 COMMENT 'Prioridade de contato (1 = principal)',
         \`criado_em\` DATETIME NOT NULL COMMENT 'Data e hora do registro em America/Sao_Paulo',
         PRIMARY KEY (\`id\`),
@@ -702,7 +703,14 @@ async function main() {
           ON DELETE CASCADE ON UPDATE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contatos de emergência do paciente ou dependente DM1';
     `);
-    console.log('✅ Tabela contatos_emergencia criada/verificada com sucesso.');
+
+    // Assegura existência da coluna telefones em bancos já criados
+    await connection.query(`
+      ALTER TABLE \`contatos_emergencia\`
+      ADD COLUMN IF NOT EXISTS \`telefones\` JSON DEFAULT NULL COMMENT 'Array JSON de telefones do contato: [{"numero":"...","tipo":"..."}]';
+    `);
+
+    console.log('✅ Tabela contatos_emergencia criada/verificada com suporte a 1:N telefones (JSON).');
   } catch (err) {
     console.log('ℹ️ contatos_emergencia:', err.message);
   }

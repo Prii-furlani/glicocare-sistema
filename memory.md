@@ -1386,3 +1386,39 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
 
 ### D. Limpeza do Rodapé Institucional (`Footer.jsx`) para a Fase 1
 - O componente `Footer.jsx` respeita a flag `FEATURES.TELEMEDICINA_ATIVA === false` ocultando os links de `Especialistas` e `Planos` da coluna *NAVEGUE*, alinhando o rodapé ao escopo ativo da Fase 1.
+
+---
+
+## 36. MODAL SOBREPOSTO DE GERENCIAMENTO DE CONTATOS DE EMERGÊNCIA E MODELO 1:N DE TELEFONES
+
+### A. Modal Sobreposto Dedicado (`Dialog`) no Cartão de Diagnóstico (`CartaoDiagnosticoDownload.jsx`)
+- **Eliminação do Painel Inline Deslocador:**
+  * O antigo container colapsável inline entre a toolbar e o cartão (que empurrava o preview do cartão e crachá para baixo ao abrir) foi completamente substituído por um **Modal Sobreposto Dedicado (`Dialog`)**.
+  * Propriedades do Modal: `position: fixed; inset: 0; z-index: 100000; background-color: rgba(30, 24, 20, 0.72); backdrop-filter: blur(5px)`.
+  * Janela centralizada com estilo `shadcn/ui`, paleta "Porto Seguro" (`#FFFFFF`, borda `rgba(124, 83, 63, 0.25)`, `border-radius: 16px`, sombra `0 24px 50px rgba(0, 0, 0, 0.3)` e largura máxima de `680px`).
+  * O preview do cartão/crachá permanece estático e visível sob o backdrop desfocado.
+- **Fechamento e Usabilidade:**
+  * Suporta fechamento via botão `✕` no cabeçalho, clique fora da janela no overlay escuro, botão `Fechar` no rodapé e tecla de atalho `Escape` (via listener de teclado em `useEffect`).
+
+### B. Modelo Relacional 1 para N (1 Contato para N Telefones) & Validação Estrita
+- **Banco de Dados TiDB Cloud MySQL (`database_tidb.sql` & `migrar_banco.mjs`):**
+  * Coluna `telefones JSON DEFAULT NULL` adicionada à tabela `contatos_emergencia` para armazenar `[{"numero": "(11) 98888-7777", "tipo": "Celular"}, ...]`.
+  * A coluna legada `telefone VARCHAR(25)` é mantida preenchida com o primeiro número do contato para 100% de retrocompatibilidade com queries existentes e fallbacks.
+- **Back-End PHP (`backend/api/perfil/contatos_emergencia.php`):**
+  * **GET:** Carrega todos os contatos e aplica normalização `formatarListaContatos(...)` para entregar `telefones` como array de objetos `{ numero, tipo }`.
+  * **POST:** Valida obrigatoriedade do `nome_contato` e exige **pelo menos 1 telefone válido com DDD (mínimo 10 dígitos numéricos)**. Se ausente ou inválido, retorna HTTP 400 com mensagem amigável.
+  * Gravação compulsória em `AuditLogger::registrar(...)` com timezone `America/Sao_Paulo`.
+  * **DELETE (RN-EMERG-01):** Impede a exclusão caso o perfil possua apenas 1 contato restante, garantindo que o paciente ou dependente nunca fique desamparado de contato de emergência.
+- **Formulário Dinâmico no Frontend (`CartaoDiagnosticoDownload.jsx`):**
+  * O formulário inicia com 1 campo de telefone obrigatório com máscara `(XX) XXXXX-XXXX` e seletor de tipo (`Celular`, `WhatsApp`, `Trabalho`, `Residencial`, `Recado`, `Consultório`).
+  * Botão **`+ Adicionar outro telefone`** permite incluir múltiplos telefones no mesmo contato.
+  * O botão de remover telefone só é exibido quando houver mais de 1 telefone cadastrado no formulário, impedindo que o usuário envie um contato sem número.
+
+### C. Apresentação Harmoniosa no Cartão e no Crachá
+- **Ficha Completa (Celular / A4):**
+  * No bloco de destaque do **1º Contato (Principal)**, renderiza todos os telefones vinculados em botões interativos `tel:` com links de discagem direta e tags de tipo (`Celular`, `Trabalho`, etc.).
+  * Nos contatos adicionais, lista todos os números vinculados de forma compacta e alinhada à direita.
+- **Crachá de Pescoço Frente e Verso (54×86mm — CR80):**
+  * No 1º Contato de emergência, exibe o nome e o número principal em destaque tipográfico (`0.90rem`, negrito 900) acompanhado de badge de tipo.
+  * Se o 1º Contato possuir um segundo telefone cadastrado (ex: Trabalho ou Recado), exibe-o em uma linha secundária discreta (`• Trabalho: (11) 3333-4444`).
+  * O 2º Contato (se houver) é exibido logo abaixo com seu número principal, preservando rigorosamente a altura máxima do crachá para não quebrar a proporção física de 54mm × 86mm nem a exportação em PNG/PDF.

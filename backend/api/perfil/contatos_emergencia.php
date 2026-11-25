@@ -89,24 +89,86 @@ if (!$autorizado) {
 }
 
 // =============================================================================
+// FUNÇÕES AUXILIARES: Normalização e Formatação de Telefones 1:N
+// =============================================================================
+
+/**
+ * Normaliza e estrutura a lista de telefones de um contato
+ * Formato retornado: [ ['numero' => '(11) 98888-7777', 'tipo' => 'Celular'], ... ]
+ */
+function normalizarTelefonesContato($telefonesRaw, $telefoneLegado = '') {
+    $telefones = [];
+    if (!empty($telefonesRaw)) {
+        if (is_string($telefonesRaw)) {
+            $dec = json_decode($telefonesRaw, true);
+            if (is_array($dec)) {
+                $telefones = $dec;
+            }
+        } elseif (is_array($telefonesRaw)) {
+            $telefones = $telefonesRaw;
+        }
+    }
+
+    $resultado = [];
+    foreach ($telefones as $item) {
+        if (is_array($item)) {
+            $num = trim($item['numero'] ?? $item['telefone'] ?? '');
+            $tipo = trim($item['tipo'] ?? 'Celular');
+            if (!empty($num)) {
+                $resultado[] = [
+                    'numero' => $num,
+                    'tipo' => !empty($tipo) ? $tipo : 'Celular'
+                ];
+            }
+        } elseif (is_string($item) && !empty(trim($item))) {
+            $resultado[] = [
+                'numero' => trim($item),
+                'tipo' => 'Celular'
+            ];
+        }
+    }
+
+    // Fallback retrocompatível para telefone principal se lista estiver vazia
+    if (empty($resultado) && !empty(trim($telefoneLegado))) {
+        $resultado[] = [
+            'numero' => trim($telefoneLegado),
+            'tipo' => 'Principal'
+        ];
+    }
+
+    return $resultado;
+}
+
+/**
+ * Aplica formatação de telefones 1:N para cada item da lista de contatos
+ */
+function formatarListaContatos($lista) {
+    return array_map(function ($row) {
+        $row['telefones'] = normalizarTelefonesContato($row['telefones'] ?? null, $row['telefone'] ?? '');
+        return $row;
+    }, $lista);
+}
+
+// =============================================================================
 // MÉTODO GET: Listar contatos de emergência ordenados por prioridade
 // =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $stmt = $db->prepare('
-            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em
+            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, telefones, ordem, criado_em
             FROM contatos_emergencia
             WHERE perfil_saude_id = :pid
             ORDER BY ordem ASC, id ASC
         ');
         $stmt->execute([':pid' => $perfilSaudeId]);
         $contatos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $contatosFormatados = formatarListaContatos($contatos);
 
         http_response_code(200);
         echo json_encode([
             'sucesso' => true,
-            'total' => count($contatos),
-            'contatos' => $contatos,
+            'total' => count($contatosFormatados),
+            'contatos' => $contatosFormatados,
         ]);
         exit;
     } catch (Exception $e) {
@@ -120,12 +182,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // =============================================================================
-// MÉTODO POST: Cadastrar novo contato de emergência
+// MÉTODO POST: Cadastrar novo contato de emergência (1:N telefones)
 // =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nomeContato = trim($input['nome_contato'] ?? '');
     $relacao = trim($input['relacao'] ?? 'Familiar');
-    $telefone = trim($input['telefone'] ?? '');
     $ordem = isset($input['ordem']) ? (int)$input['ordem'] : 0;
 
     if (empty($nomeContato)) {
@@ -137,14 +198,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (empty($telefone)) {
+    // Processa telefones: aceita array "telefones" ou string "telefone"
+    $telefonesRaw = $input['telefones'] ?? null;
+    $telefoneLegado = trim($input['telefone'] ?? '');
+    $telefonesNormalizados = normalizarTelefonesContato($telefonesRaw, $telefoneLegado);
+
+    // Validação estrita: pelo menos 1 telefone válido com DDD (mínimo 10 dígitos)
+    $telefonesValidados = [];
+    foreach ($telefonesNormalizados as $telItem) {
+        $digitos = preg_replace('/\D/', '', $telItem['numero']);
+        if (strlen($digitos) >= 10) {
+            $telefonesValidados[] = [
+                'numero' => $telItem['numero'],
+                'tipo' => $telItem['tipo'] ?? 'Celular',
+            ];
+        }
+    }
+
+    if (empty($telefonesValidados)) {
         http_response_code(400);
         echo json_encode([
             'sucesso' => false,
-            'mensagem' => 'O telefone com DDD do contato de emergência é obrigatório.'
+            'mensagem' => 'É obrigatório cadastrar pelo menos 1 telefone com DDD (mínimo 10 dígitos) para o contato de emergência.'
         ]);
         exit;
     }
+
+    $telefonePrincipal = $telefonesValidados[0]['numero'];
+    $telefonesJson = json_encode($telefonesValidados, JSON_UNESCAPED_UNICODE);
 
     try {
         // Se a ordem não foi explicitamente fornecida, calcula MAX(ordem) + 1
@@ -158,14 +239,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dataHoraCriacao = $agora->format('Y-m-d H:i:s');
 
         $stmtInsert = $db->prepare('
-            INSERT INTO contatos_emergencia (perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em)
-            VALUES (:pid, :nome, :relacao, :tel, :ordem, :criado_em)
+            INSERT INTO contatos_emergencia (perfil_saude_id, nome_contato, relacao, telefone, telefones, ordem, criado_em)
+            VALUES (:pid, :nome, :relacao, :tel, :telefones, :ordem, :criado_em)
         ');
         $stmtInsert->execute([
             ':pid' => $perfilSaudeId,
             ':nome' => $nomeContato,
             ':relacao' => $relacao,
-            ':tel' => $telefone,
+            ':tel' => $telefonePrincipal,
+            ':telefones' => $telefonesJson,
             ':ordem' => $ordem,
             ':criado_em' => $dataHoraCriacao,
         ]);
@@ -175,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Atualiza contato_emergencia_telefone do perfil caso seja o 1º contato
         if ($ordem === 1) {
             $stmtUpdPerfil = $db->prepare('UPDATE perfis_saude SET contato_emergencia_telefone = :tel WHERE id = :pid');
-            $stmtUpdPerfil->execute([':tel' => $telefone, ':pid' => $perfilSaudeId]);
+            $stmtUpdPerfil->execute([':tel' => $telefonePrincipal, ':pid' => $perfilSaudeId]);
         }
 
         // Auditoria imutável (RN-AUD-01)
@@ -189,7 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [
                 'nome_contato' => $nomeContato,
                 'relacao' => $relacao,
-                'telefone' => $telefone,
+                'telefone' => $telefonePrincipal,
+                'telefones' => $telefonesValidados,
                 'ordem' => $ordem,
             ],
             $usuarioId,
@@ -198,13 +281,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Retorna a lista atualizada
         $stmtAtualizados = $db->prepare('
-            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em
+            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, telefones, ordem, criado_em
             FROM contatos_emergencia
             WHERE perfil_saude_id = :pid
             ORDER BY ordem ASC, id ASC
         ');
         $stmtAtualizados->execute([':pid' => $perfilSaudeId]);
-        $contatosAtualizados = $stmtAtualizados->fetchAll(PDO::FETCH_ASSOC);
+        $contatosAtualizados = formatarListaContatos($stmtAtualizados->fetchAll(PDO::FETCH_ASSOC));
 
         http_response_code(201);
         echo json_encode([
@@ -245,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     try {
         // Valida se o contato existe e pertence ao perfil autorizado
         $stmtCheck = $db->prepare('
-            SELECT id, nome_contato, telefone, ordem
+            SELECT id, nome_contato, telefone, telefones, ordem
             FROM contatos_emergencia
             WHERE id = :cid AND perfil_saude_id = :pid
             LIMIT 1
@@ -296,13 +379,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
         // Retorna a lista atualizada
         $stmtAtualizados = $db->prepare('
-            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em
+            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, telefones, ordem, criado_em
             FROM contatos_emergencia
             WHERE perfil_saude_id = :pid
             ORDER BY ordem ASC, id ASC
         ');
         $stmtAtualizados->execute([':pid' => $perfilSaudeId]);
-        $contatosAtualizados = $stmtAtualizados->fetchAll(PDO::FETCH_ASSOC);
+        $contatosAtualizados = formatarListaContatos($stmtAtualizados->fetchAll(PDO::FETCH_ASSOC));
 
         // Atualiza telefone principal do perfil se necessário
         if (!empty($contatosAtualizados)) {

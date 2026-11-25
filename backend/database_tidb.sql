@@ -999,26 +999,27 @@ INSERT INTO `configuracoes_home` (`secao`, `chave`, `tipo_campo`, `rotulo_admin`
 ON DUPLICATE KEY UPDATE `rotulo_admin` = VALUES(`rotulo_admin`), `valor` = VALUES(`valor`), `atualizado_em` = VALUES(`atualizado_em`);
 
 -- =============================================================================
--- INÍCIO: TABELA contatos_emergencia (Múltiplos contatos com mínimo 1 obrigatório)
+-- INÍCIO: TABELA contatos_emergencia (Múltiplos contatos e múltiplos telefones 1:N)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `contatos_emergencia` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do contato de emergência',
   `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
   `nome_contato` VARCHAR(120) NOT NULL COMMENT 'Nome completo do contato de emergência',
   `relacao` VARCHAR(60) NOT NULL DEFAULT 'Familiar' COMMENT 'Grau de parentesco ou relação (Mãe, Pai, Cônjuge, Responsável, Escola)',
-  `telefone` VARCHAR(25) NOT NULL COMMENT 'Telefone de emergência com DDD',
+  `telefone` VARCHAR(25) NOT NULL COMMENT 'Telefone principal com DDD (retrocompatibilidade)',
+  `telefones` JSON DEFAULT NULL COMMENT 'Array JSON de telefones do contato: [{"numero":"(XX) XXXXX-XXXX","tipo":"Celular"}]',
   `ordem` INT NOT NULL DEFAULT 1 COMMENT 'Prioridade de contato (1 = principal)',
   `criado_em` DATETIME NOT NULL COMMENT 'Data e hora do registro em America/Sao_Paulo',
   PRIMARY KEY (`id`),
   KEY `idx_contatos_perfil` (`perfil_saude_id`),
   CONSTRAINT `fk_contatos_perfil` FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contatos de emergência do paciente ou dependente DM1';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contatos de emergência (1:N telefones e mínimo 1 contato obrigatório)';
 
 -- Carga inicial demonstrativa de contatos de emergência
-INSERT INTO `contatos_emergencia` (`id`, `perfil_saude_id`, `nome_contato`, `relacao`, `telefone`, `ordem`, `criado_em`) VALUES
-(1, 1, 'Mariana Silva', 'Cônjuge / Familiar', '(11) 97777-2001', 1, NOW()),
-(2, 1, 'Dra. Camila Alencar', 'Endocrinologista', '(11) 98888-3002', 2, NOW())
-ON DUPLICATE KEY UPDATE `nome_contato` = VALUES(`nome_contato`), `telefone` = VALUES(`telefone`);
+INSERT INTO `contatos_emergencia` (`id`, `perfil_saude_id`, `nome_contato`, `relacao`, `telefone`, `telefones`, `ordem`, `criado_em`) VALUES
+(1, 1, 'Mariana Silva', 'Cônjuge / Familiar', '(11) 97777-2001', '[{"numero": "(11) 97777-2001", "tipo": "Celular"}, {"numero": "(11) 3333-4444", "tipo": "Trabalho"}]', 1, NOW()),
+(2, 1, 'Dra. Camila Alencar', 'Endocrinologista', '(11) 98888-3002', '[{"numero": "(11) 98888-3002", "tipo": "Consultório"}]', 2, NOW())
+ON DUPLICATE KEY UPDATE `nome_contato` = VALUES(`nome_contato`), `telefone` = VALUES(`telefone`), `telefones` = VALUES(`telefones`);
 -- =============================================================================
 -- FIM: TABELA contatos_emergencia
 -- =============================================================================

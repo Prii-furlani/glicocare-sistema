@@ -100,12 +100,35 @@ export default function CartaoDiagnosticoDownload({
     '(11) 97777-2001';
 
   /* ==========================================================================
-     GERENCIAMENTO DE MÚLTIPLOS CONTATOS DE EMERGÊNCIA
+     GERENCIAMENTO DE MÚLTIPLOS CONTATOS DE EMERGÊNCIA (MODELO 1:N TELEFONES)
      ========================================================================== */
+  const obterTelefonesContato = (contato) => {
+    if (!contato) return [];
+    if (Array.isArray(contato.telefones) && contato.telefones.length > 0) {
+      return contato.telefones.map((t) =>
+        typeof t === 'string'
+          ? { numero: formatarTelefone(t), tipo: 'Celular' }
+          : { numero: formatarTelefone(t.numero || t.telefone || ''), tipo: t.tipo || 'Celular' }
+      );
+    }
+    if (contato.telefone) {
+      return [{ numero: formatarTelefone(contato.telefone), tipo: 'Principal' }];
+    }
+    return [];
+  };
+
   const montarContatosIniciais = () => {
-    if (contatos && contatos.length > 0) return contatos;
+    if (contatos && contatos.length > 0) {
+      return contatos.map((c) => ({
+        ...c,
+        telefones: obterTelefonesContato(c),
+      }));
+    }
     if (paciente?.contatos_emergencia && paciente.contatos_emergencia.length > 0) {
-      return paciente.contatos_emergencia;
+      return paciente.contatos_emergencia.map((c) => ({
+        ...c,
+        telefones: obterTelefonesContato(c),
+      }));
     }
     // Fallback inicial acolhedor se não houver contatos registrados
     return [
@@ -114,44 +137,92 @@ export default function CartaoDiagnosticoDownload({
         nome_contato: nomeResponsavelPadrao,
         relacao: parentescoPadrao,
         telefone: telefoneEmergenciaPadrao,
+        telefones: [{ numero: telefoneEmergenciaPadrao, tipo: 'Celular' }],
         ordem: 1,
       },
     ];
   };
 
   const [listaContatos, setListaContatos] = useState(montarContatosIniciais);
-  const [painelContatosAberto, setPainelContatosAberto] = useState(false);
+  const [modalContatosAberto, setModalContatosAberto] = useState(false);
   const [salvandoContato, setSalvandoContato] = useState(false);
   const [novoContato, setNovoContato] = useState({
     nome_contato: '',
     relacao: 'Mãe',
-    telefone: '',
+    telefones: [{ numero: '', tipo: 'Celular' }],
   });
 
   useEffect(() => {
     if (contatos && contatos.length > 0) {
-      setListaContatos(contatos);
+      setListaContatos(contatos.map((c) => ({ ...c, telefones: obterTelefonesContato(c) })));
     } else if (paciente?.contatos_emergencia && paciente.contatos_emergencia.length > 0) {
-      setListaContatos(paciente.contatos_emergencia);
+      setListaContatos(paciente.contatos_emergencia.map((c) => ({ ...c, telefones: obterTelefonesContato(c) })));
     }
   }, [contatos, paciente?.contatos_emergencia]);
+
+  // Listener para fechar o modal sobreposto via tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && modalContatosAberto) {
+        setModalContatosAberto(false);
+      }
+    };
+    if (modalContatosAberto) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalContatosAberto]);
 
   // Primeiro contato (Prioritário) e segundo contato (Secundário)
   const contatoPrincipal = listaContatos[0] || null;
   const contatoSecundario = listaContatos[1] || null;
   const contatosAdicionais = listaContatos.slice(1);
 
-  // Adicionar novo contato de emergência
+  // Manipuladores de múltiplos telefones no formulário
+  const handleAdicionarCampoTelefone = () => {
+    setNovoContato((prev) => ({
+      ...prev,
+      telefones: [...prev.telefones, { numero: '', tipo: 'Celular' }],
+    }));
+  };
+
+  const handleRemoverCampoTelefone = (indexParaRemover) => {
+    if (novoContato.telefones.length <= 1) return;
+    setNovoContato((prev) => ({
+      ...prev,
+      telefones: prev.telefones.filter((_, idx) => idx !== indexParaRemover),
+    }));
+  };
+
+  const handleAlterarCampoTelefone = (index, campo, valor) => {
+    setNovoContato((prev) => {
+      const novos = [...prev.telefones];
+      novos[index] = {
+        ...novos[index],
+        [campo]: campo === 'numero' ? formatarTelefone(valor) : valor,
+      };
+      return { ...prev, telefones: novos };
+    });
+  };
+
+  // Adicionar novo contato de emergência (1 contato para N telefones com mínimo 1 obrigatório)
   const handleAdicionarContato = async (e) => {
     e?.preventDefault();
-    if (!novoContato.nome_contato.trim() || !novoContato.telefone.trim()) {
-      notificar.alerta('Informe o nome e o telefone do contato de emergência.');
+    if (!novoContato.nome_contato.trim()) {
+      notificar.alerta('Informe o nome do contato de emergência.');
       return;
     }
 
-    const numerosTel = novoContato.telefone.replace(/\D/g, '');
-    if (numerosTel.length < 10) {
-      notificar.alerta('Informe um telefone válido com DDD (mínimo 10 dígitos).');
+    // Filtra e valida telefones preenchidos
+    const telefonesValidados = novoContato.telefones
+      .map((t) => ({
+        numero: formatarTelefone(t.numero.trim()),
+        tipo: t.tipo || 'Celular',
+      }))
+      .filter((t) => t.numero.replace(/\D/g, '').length >= 10);
+
+    if (telefonesValidados.length === 0) {
+      notificar.alerta('Informe pelo menos 1 telefone válido com DDD (mínimo 10 dígitos) para este contato.');
       return;
     }
 
@@ -160,7 +231,8 @@ export default function CartaoDiagnosticoDownload({
       id: Date.now(),
       nome_contato: novoContato.nome_contato.trim(),
       relacao: novoContato.relacao || 'Familiar',
-      telefone: formatarTelefone(novoContato.telefone),
+      telefone: telefonesValidados[0].numero,
+      telefones: telefonesValidados,
       ordem: listaContatos.length + 1,
     };
 
@@ -169,10 +241,31 @@ export default function CartaoDiagnosticoDownload({
         try {
           const res = await contatosEmergenciaService.adicionar({
             perfil_saude_id: paciente?.id || paciente?.perfil_saude_id,
-            ...novoItem,
+            nome_contato: novoItem.nome_contato,
+            relacao: novoItem.relacao,
+            telefone: novoItem.telefone,
+            telefones: telefonesValidados,
+            ordem: novoItem.ordem,
           });
-          if (res?.dados?.id) {
-            novoItem.id = res.dados.id;
+
+          if (res?.data?.contatos && Array.isArray(res.data.contatos)) {
+            const formatados = res.data.contatos.map((c) => ({
+              ...c,
+              telefones: obterTelefonesContato(c),
+            }));
+            setListaContatos(formatados);
+            if (onAtualizarContatos) onAtualizarContatos(formatados);
+            setNovoContato({
+              nome_contato: '',
+              relacao: 'Mãe',
+              telefones: [{ numero: '', tipo: 'Celular' }],
+            });
+            notificar.sucesso('Contato de emergência adicionado com sucesso!');
+            return;
+          }
+
+          if (res?.data?.id || res?.dados?.id) {
+            novoItem.id = res?.data?.id || res?.dados?.id;
           }
         } catch {
           // Continua em fallback local
@@ -182,7 +275,11 @@ export default function CartaoDiagnosticoDownload({
       const atualizada = [...listaContatos, novoItem];
       setListaContatos(atualizada);
       if (onAtualizarContatos) onAtualizarContatos(atualizada);
-      setNovoContato({ nome_contato: '', relacao: 'Mãe', telefone: '' });
+      setNovoContato({
+        nome_contato: '',
+        relacao: 'Mãe',
+        telefones: [{ numero: '', tipo: 'Celular' }],
+      });
       notificar.sucesso('Contato de emergência adicionado com sucesso!');
     } catch {
       notificar.erro('Erro ao cadastrar contato de emergência.');
@@ -195,7 +292,7 @@ export default function CartaoDiagnosticoDownload({
   const handleRemoverContato = async (contatoId) => {
     if (listaContatos.length <= 1) {
       notificar.alerta(
-        'Regra de Segurança: É obrigatório manter no mínimo 1 contato de emergência ativo para sua proteção.'
+        'Regra de Segurança (RN-EMERG-01): É obrigatório manter no mínimo 1 contato de emergência ativo para sua proteção.'
       );
       return;
     }
@@ -213,7 +310,17 @@ export default function CartaoDiagnosticoDownload({
 
     try {
       try {
-        await contatosEmergenciaService.remover(contatoId);
+        const res = await contatosEmergenciaService.remover(contatoId);
+        if (res?.data?.contatos && Array.isArray(res.data.contatos)) {
+          const formatados = res.data.contatos.map((c) => ({
+            ...c,
+            telefones: obterTelefonesContato(c),
+          }));
+          setListaContatos(formatados);
+          if (onAtualizarContatos) onAtualizarContatos(formatados);
+          notificar.sucesso('Contato de emergência removido com sucesso!');
+          return;
+        }
       } catch {
         // Fallback local
       }
@@ -446,241 +553,479 @@ export default function CartaoDiagnosticoDownload({
           </TabsList>
         </Tabs>
 
-        {/* BOTÃO PARA GERENCIAR CONTATOS DE EMERGÊNCIA */}
+        {/* BOTÃO PARA GERENCIAR CONTATOS DE EMERGÊNCIA (MODAL DEDICADO SOBREPOSTO) */}
         <Button
           tipo="button"
           variante="secundario"
-          onClick={() => setPainelContatosAberto((prev) => !prev)}
+          onClick={() => setModalContatosAberto(true)}
           style={{
             fontSize: '0.82rem',
-            padding: '0.45rem 0.9rem',
+            padding: '0.45rem 0.95rem',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
+            gap: '0.45rem',
             fontWeight: 700,
           }}
         >
           <span>📞</span>
           <span>
-            {painelContatosAberto ? 'Fechar Contatos' : `Editar Contatos de Emergência (${listaContatos.length})`}
+            {`Gerenciar Contatos (${listaContatos.length})`}
           </span>
         </Button>
       </div>
 
-      {/* PAINEL INLINE COLAPSÁVEL DE GERENCIAMENTO DE CONTATOS */}
-      {painelContatosAberto && (
+      {/* MODAL SOBREPOSTO DEDICADO DE GERENCIAMENTO DE CONTATOS (DIALOG) */}
+      {modalContatosAberto && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-contatos-titulo"
           className="cartao-no-print"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalContatosAberto(false);
+          }}
           style={{
-            backgroundColor: '#FFFFFF',
-            border: '1.5px solid rgba(124, 83, 63, 0.3)',
-            borderRadius: '14px',
-            padding: '1.25rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 4px 14px rgba(46, 40, 36, 0.06)',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000,
+            backgroundColor: 'rgba(30, 24, 20, 0.72)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-            <div>
-              <h4 style={{ fontFamily: 'var(--fonte-titulo, Fraunces)', fontSize: '1.1rem', margin: 0, color: '#2E2824' }}>
-                Gerenciar Contatos de Emergência
-              </h4>
-              <p style={{ fontSize: '0.8rem', color: '#5A5049', margin: '2px 0 0' }}>
-                Mantenha no mínimo 1 contato obrigatório. O 1º contato terá destaque prioritário em crachás e chamadas rápidas.
-              </p>
-            </div>
-            <span
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid rgba(124, 83, 63, 0.25)',
+              boxShadow: '0 24px 50px rgba(0, 0, 0, 0.3)',
+              width: '100%',
+              maxWidth: '680px',
+              maxHeight: 'calc(100vh - 40px)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Cabeçalho do Modal */}
+            <div
               style={{
-                backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                color: '#3B7E48',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
+                padding: '18px 24px',
+                borderBottom: '1px solid rgba(124, 83, 63, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: '#FBF9F7',
               }}
             >
-              RN-EMERG-01 Ativa
-            </span>
-          </div>
-
-          {/* LISTA ATUAL DE CONTATOS */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
-            {listaContatos.map((contato, idx) => (
-              <div
-                key={contato.id || idx}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '10px',
-                  backgroundColor: idx === 0 ? '#EFF7F1' : '#F6F3EE',
-                  border: idx === 0 ? '1.5px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.15)',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '1.25rem' }}>📞</span>
+                  <h3
+                    id="modal-contatos-titulo"
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, Fraunces)',
+                      fontSize: '1.18rem',
+                      fontWeight: 700,
+                      margin: 0,
+                      color: '#2E2824',
+                    }}
+                  >
+                    Gerenciar Contatos de Emergência
+                  </h3>
                   <span
                     style={{
-                      backgroundColor: idx === 0 ? '#3B7E48' : '#7C533F',
-                      color: '#FFFFFF',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      backgroundColor: 'rgba(59, 126, 72, 0.12)',
+                      color: '#3B7E48',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
                       fontSize: '0.72rem',
                       fontWeight: 800,
                     }}
                   >
-                    {idx + 1}
+                    RN-EMERG-01
                   </span>
-                  <div>
-                    <strong style={{ fontSize: '0.88rem', color: '#2E2824' }}>{contato.nome_contato}</strong>
-                    <span
-                      style={{
-                        marginLeft: '0.45rem',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        color: idx === 0 ? '#285832' : '#7C533F',
-                        backgroundColor: '#FFFFFF',
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        border: `1px solid ${idx === 0 ? '#3B7E48' : 'rgba(124, 83, 63, 0.3)'}`,
-                      }}
-                    >
-                      {contato.relacao} {idx === 0 ? '• Principal' : ''}
-                    </span>
-                  </div>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#5A5049', lineHeight: 1.35 }}>
+                  Mantenha pelo menos 1 contato obrigatório. Cada contato suporta múltiplos números com rótulos (Celular, Trabalho, Recado, etc.).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setModalContatosAberto(false)}
+                aria-label="Fechar modal"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem',
+                  color: '#5A5049',
+                  padding: '6px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Conteúdo com Rolagem Interna */}
+            <div
+              style={{
+                padding: '20px 24px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+              }}
+            >
+              {/* Seção 1: Lista Atual de Contatos */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                    Contatos Cadastrados ({listaContatos.length})
+                  </span>
+                  <span style={{ fontSize: '0.74rem', color: '#7C533F', fontWeight: 600 }}>
+                    1º Contato = Destaque Prioritário no Crachá
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#2E2824' }}>
-                    📞 {contato.telefone}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoverContato(contato.id)}
-                    title={
-                      listaContatos.length <= 1
-                        ? 'Obrigatório manter no mínimo 1 contato de emergência.'
-                        : 'Remover contato'
-                    }
-                    style={{
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      color: listaContatos.length <= 1 ? '#A89F91' : '#C94A38',
-                      cursor: listaContatos.length <= 1 ? 'not-allowed' : 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      padding: '4px 8px',
-                      borderRadius: '6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span>🗑️</span>
-                    <span>Remover</span>
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {listaContatos.map((contato, idx) => {
+                    const tels = obterTelefonesContato(contato);
+                    return (
+                      <div
+                        key={contato.id || idx}
+                        style={{
+                          borderRadius: '12px',
+                          backgroundColor: idx === 0 ? '#EFF7F1' : '#FBF9F7',
+                          border: idx === 0 ? '1.5px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.18)',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <span
+                            style={{
+                              backgroundColor: idx === 0 ? '#3B7E48' : '#7C533F',
+                              color: '#FFFFFF',
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.76rem',
+                              fontWeight: 800,
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          >
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <strong style={{ fontSize: '0.94rem', color: '#2E2824' }}>
+                                {contato.nome_contato}
+                              </strong>
+                              <span
+                                style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  color: idx === 0 ? '#285832' : '#7C533F',
+                                  backgroundColor: '#FFFFFF',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${idx === 0 ? '#3B7E48' : 'rgba(124, 83, 63, 0.3)'}`,
+                                }}
+                              >
+                                {contato.relacao} {idx === 0 ? '• Principal' : ''}
+                              </span>
+                            </div>
+
+                            {/* Telefones do Contato (1:N) */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                              {tels.map((tel, tIdx) => (
+                                <span
+                                  key={tIdx}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 700,
+                                    color: '#285832',
+                                    backgroundColor: '#FFFFFF',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(59, 126, 72, 0.25)',
+                                  }}
+                                >
+                                  <span>📞</span>
+                                  <span>{tel.numero}</span>
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#7C533F' }}>
+                                    ({tel.tipo || 'Celular'})
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ação de Remoção com Trava RN-EMERG-01 */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverContato(contato.id)}
+                          disabled={listaContatos.length <= 1}
+                          title={
+                            listaContatos.length <= 1
+                              ? 'Obrigatório manter no mínimo 1 contato de emergência (RN-EMERG-01).'
+                              : 'Remover contato'
+                          }
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: listaContatos.length <= 1 ? '#A89F91' : '#C94A38',
+                            cursor: listaContatos.length <= 1 ? 'not-allowed' : 'pointer',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            opacity: listaContatos.length <= 1 ? 0.6 : 1,
+                          }}
+                        >
+                          <span>🗑️</span>
+                          <span>Remover</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* FORMULÁRIO RÁPIDO INLINE PARA NOVO CONTATO */}
-          <form
-            onSubmit={handleAdicionarContato}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) 140px',
-              gap: '0.65rem',
-              alignItems: 'flex-end',
-              backgroundColor: '#FBF9F7',
-              padding: '0.85rem',
-              borderRadius: '10px',
-              border: '1px dashed rgba(124, 83, 63, 0.25)',
-            }}
-          >
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
-                Nome do Contato *
-              </label>
-              <input
-                type="text"
-                value={novoContato.nome_contato}
-                onChange={(e) => setNovoContato({ ...novoContato, nome_contato: e.target.value })}
-                placeholder="Ex: Carlos Silva"
+              {/* Seção 2: Formulário para Adicionar Novo Contato com 1:N Telefones */}
+              <div
                 style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(124, 83, 63, 0.25)',
-                  fontSize: '0.84rem',
-                  boxSizing: 'border-box',
+                  backgroundColor: '#FBF9F7',
+                  borderRadius: '12px',
+                  border: '1.5px dashed rgba(124, 83, 63, 0.3)',
+                  padding: '16px 18px',
                 }}
-              />
+              >
+                <h4
+                  style={{
+                    fontFamily: 'var(--fonte-titulo, Fraunces)',
+                    fontSize: '1rem',
+                    margin: '0 0 12px 0',
+                    color: '#2E2824',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>➕</span>
+                  <span>Adicionar Novo Contato</span>
+                </h4>
+
+                <form onSubmit={handleAdicionarContato} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '4px' }}>
+                        Nome do Contato *
+                      </label>
+                      <input
+                        type="text"
+                        value={novoContato.nome_contato}
+                        onChange={(e) => setNovoContato({ ...novoContato, nome_contato: e.target.value })}
+                        placeholder="Ex: Carlos Silva"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(124, 83, 63, 0.25)',
+                          fontSize: '0.86rem',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '4px' }}>
+                        Relação / Vínculo *
+                      </label>
+                      <CustomSelect
+                        value={novoContato.relacao}
+                        onChange={(e) => setNovoContato({ ...novoContato, relacao: e.target.value })}
+                        options={[
+                          { value: 'Mãe', label: 'Mãe' },
+                          { value: 'Pai', label: 'Pai' },
+                          { value: 'Cônjuge', label: 'Cônjuge / Parceiro(a)' },
+                          { value: 'Responsável', label: 'Responsável Legal' },
+                          { value: 'Familiar', label: 'Familiar / Parente' },
+                          { value: 'Escola', label: 'Escola / Coordenação' },
+                          { value: 'Cuidador', label: 'Cuidador / Acompanhante' },
+                          { value: 'Médico', label: 'Médico(a) / Endocrinologista' },
+                          { value: 'Outro', label: 'Outro' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Seção Dinâmica de Telefones (1:N) */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F' }}>
+                        Telefones do Contato (Mínimo 1 obrigatório com DDD) *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAdicionarCampoTelefone}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          color: '#3B7E48',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        <span>➕</span>
+                        <span>Adicionar outro telefone</span>
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {novoContato.telefones.map((telItem, idxTel) => (
+                        <div
+                          key={idxTel}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 140px auto',
+                            gap: '8px',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <input
+                            type="tel"
+                            value={telItem.numero}
+                            onChange={(e) => handleAlterarCampoTelefone(idxTel, 'numero', e.target.value)}
+                            placeholder={`Telefone ${idxTel + 1} com DDD (ex: (11) 98888-7777)`}
+                            maxLength={15}
+                            required={idxTel === 0}
+                            style={{
+                              width: '100%',
+                              padding: '0.55rem 0.75rem',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(124, 83, 63, 0.25)',
+                              fontSize: '0.84rem',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+
+                          <CustomSelect
+                            value={telItem.tipo}
+                            onChange={(e) => handleAlterarCampoTelefone(idxTel, 'tipo', e.target.value)}
+                            options={[
+                              { value: 'Celular', label: '📱 Celular' },
+                              { value: 'WhatsApp', label: '💬 WhatsApp' },
+                              { value: 'Trabalho', label: '💼 Trabalho' },
+                              { value: 'Residencial', label: '🏠 Residencial' },
+                              { value: 'Recado', label: '📝 Recado' },
+                              { value: 'Consultório', label: '🩺 Consultório' },
+                            ]}
+                          />
+
+                          {novoContato.telefones.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoverCampoTelefone(idxTel)}
+                              title="Remover este telefone"
+                              style={{
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                color: '#C94A38',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                padding: '6px',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          ) : (
+                            <div style={{ width: '28px' }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botão Salvar Contato */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                    <Button
+                      tipo="submit"
+                      variante="primario"
+                      loading={salvandoContato}
+                      style={{
+                        padding: '0.65rem 1.25rem',
+                        fontSize: '0.86rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Salvar Contato de Emergência
+                    </Button>
+                  </div>
+                </form>
+              </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
-                Relação / Vínculo *
-              </label>
-              <CustomSelect
-                value={novoContato.relacao}
-                onChange={(e) => setNovoContato({ ...novoContato, relacao: e.target.value })}
-                options={[
-                  { value: 'Mãe', label: 'Mãe' },
-                  { value: 'Pai', label: 'Pai' },
-                  { value: 'Cônjuge', label: 'Cônjuge' },
-                  { value: 'Responsável', label: 'Responsável Legal' },
-                  { value: 'Familiar', label: 'Familiar' },
-                  { value: 'Escola', label: 'Escola / Coordenação' },
-                  { value: 'Cuidador', label: 'Cuidador / Acompanhante' },
-                  { value: 'Outro', label: 'Outro' },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
-                Telefone com DDD *
-              </label>
-              <input
-                type="tel"
-                value={novoContato.telefone}
-                onChange={(e) => setNovoContato({ ...novoContato, telefone: formatarTelefone(e.target.value) })}
-                placeholder="(11) 98888-7777"
-                maxLength={15}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(124, 83, 63, 0.25)',
-                  fontSize: '0.84rem',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            <div>
+            {/* Rodapé do Modal */}
+            <div
+              style={{
+                padding: '12px 24px',
+                borderTop: '1px solid rgba(124, 83, 63, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                backgroundColor: '#FBF9F7',
+              }}
+            >
               <Button
-                tipo="submit"
-                variante="primario"
-                loading={salvandoContato}
+                tipo="button"
+                variante="secundario"
+                onClick={() => setModalContatosAberto(false)}
                 style={{
-                  width: '100%',
-                  padding: '0.6rem 0.8rem',
-                  fontSize: '0.82rem',
+                  padding: '0.55rem 1.25rem',
+                  fontSize: '0.84rem',
                   fontWeight: 700,
                 }}
               >
-                + Adicionar
+                Fechar
               </Button>
             </div>
-          </form>
+          </div>
         </div>
       )}
 
@@ -847,7 +1192,7 @@ export default function CartaoDiagnosticoDownload({
               </span>
             </div>
 
-            {/* Contato 1 (Prioridade 1 em destaque) */}
+            {/* Contato 1 (Prioridade 1 em destaque com 1:N telefones) */}
             {contatoPrincipal && (
               <div
                 style={{
@@ -886,64 +1231,104 @@ export default function CartaoDiagnosticoDownload({
                   </div>
                 </div>
 
-                <a
-                  href={`tel:${contatoPrincipal.telefone.replace(/\D/g, '')}`}
-                  style={{
-                    backgroundColor: '#3B7E48',
-                    color: '#FFFFFF',
-                    padding: '0.45rem 0.95rem',
-                    borderRadius: '8px',
-                    fontSize: '0.92rem',
-                    fontWeight: 800,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    textDecoration: 'none',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <span>📞</span>
-                  <span>{contatoPrincipal.telefone}</span>
-                </a>
+                {/* Lista de Telefones do 1º Contato */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {obterTelefonesContato(contatoPrincipal).map((tel, telIdx) => (
+                    <a
+                      key={telIdx}
+                      href={`tel:${tel.numero.replace(/\D/g, '')}`}
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        padding: '0.45rem 0.85rem',
+                        borderRadius: '8px',
+                        fontSize: '0.88rem',
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        textDecoration: 'none',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      <span>📞</span>
+                      <span>{tel.numero}</span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {tel.tipo || 'Celular'}
+                      </span>
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Contatos Adicionais (2, 3...) em grid limpo */}
+            {/* Contatos Adicionais (2, 3...) em grid limpo com todos os telefones */}
             {contatosAdicionais && contatosAdicionais.length > 0 && (
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                   gap: '10px',
                 }}
               >
-                {contatosAdicionais.map((c, i) => (
-                  <div
-                    key={c.id || i}
-                    style={{
-                      backgroundColor: '#F6F3EE',
-                      borderRadius: '8px',
-                      padding: '10px 14px',
-                      border: '1px solid rgba(124, 83, 63, 0.18)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '0.68rem', color: '#7C533F', fontWeight: 700 }}>
-                        {i + 2}º Contato ({c.relacao})
+                {contatosAdicionais.map((c, i) => {
+                  const tels = obterTelefonesContato(c);
+                  return (
+                    <div
+                      key={c.id || i}
+                      style={{
+                        backgroundColor: '#F6F3EE',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        border: '1px solid rgba(124, 83, 63, 0.18)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.68rem', color: '#7C533F', fontWeight: 700 }}>
+                          {i + 2}º Contato ({c.relacao})
+                        </div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2E2824' }}>
+                          {c.nome_contato}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2E2824' }}>
-                        {c.nome_contato}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
+                        {tels.map((tel, tIdx) => (
+                          <a
+                            key={tIdx}
+                            href={`tel:${tel.numero.replace(/\D/g, '')}`}
+                            style={{
+                              fontSize: '0.84rem',
+                              fontWeight: 800,
+                              color: '#285832',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span>📞 {tel.numero}</span>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#7C533F' }}>
+                              ({tel.tipo || 'Celular'})
+                            </span>
+                          </a>
+                        ))}
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#285832' }}>
-                      📞 {c.telefone}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1480,9 +1865,27 @@ export default function CartaoDiagnosticoDownload({
                   <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#2E2824', lineHeight: 1.15 }}>
                     {contatoPrincipal.nome_contato}
                   </div>
-                  <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#285832', letterSpacing: '0.02em', marginTop: '1px' }}>
-                    {contatoPrincipal.telefone}
-                  </div>
+                  {(() => {
+                    const telsP = obterTelefonesContato(contatoPrincipal);
+                    const telPrimario = telsP[0] || { numero: contatoPrincipal.telefone, tipo: 'Celular' };
+                    const telSecundario = telsP[1] || null;
+                    return (
+                      <>
+                        <div style={{ fontSize: '0.90rem', fontWeight: 900, color: '#285832', letterSpacing: '0.02em', marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>{telPrimario.numero}</span>
+                          <span style={{ fontSize: '0.55rem', fontWeight: 700, color: '#3B7E48', backgroundColor: 'rgba(59, 126, 72, 0.1)', padding: '1px 4px', borderRadius: '3px' }}>
+                            {telPrimario.tipo || 'Principal'}
+                          </span>
+                        </div>
+                        {telSecundario && (
+                          <div style={{ fontSize: '0.62rem', color: '#5A5049', marginTop: '1px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>• {telSecundario.tipo}:</span>
+                            <strong style={{ color: '#285832' }}>{telSecundario.numero}</strong>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </>
               ) : (
                 <div style={{ fontSize: '0.68rem', color: '#C94A38', fontWeight: 700 }}>
@@ -1507,7 +1910,9 @@ export default function CartaoDiagnosticoDownload({
                   <span>
                     <strong>2º:</strong> {contatoSecundario.nome_contato} ({contatoSecundario.relacao})
                   </span>
-                  <strong style={{ color: '#285832' }}>{contatoSecundario.telefone}</strong>
+                  <strong style={{ color: '#285832' }}>
+                    {obterTelefonesContato(contatoSecundario)[0]?.numero || contatoSecundario.telefone}
+                  </strong>
                 </div>
               )}
 
