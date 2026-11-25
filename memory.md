@@ -935,6 +935,55 @@ O **Card de Diagnóstico & Cuidado** consolida as informações médicas e terap
 - **`MeuPerfil.jsx` / `PerfilUsuario.jsx`:** Exibido com preview ao vivo na aba principal do Diário Inteligente, acompanhado de botão de navegação rápida no cabeçalho (*"🪪 Card de Diagnóstico (PNG/PDF)"*).
 - **`PainelCuidador.jsx`:** Exibido com preview ao vivo na aba principal do Diário da Criança e integrado também na aba do Cartão Escolar, exibindo em evidência os dados da mãe/pai e o telefone de emergência da família.
 
+---
+
+## 23. Redesign UI/UX Minimalista com Curva Glicêmica Interativa e Comparativo de Exames (Fase 1)
+
+### A. Diretrizes Estruturais e Filosofia de Design ("Porto Seguro")
+Refatoração completa das telas de acompanhamento clínico da Fase 1 (`PerfilUsuario.jsx` / `MeuPerfil.jsx` e `PainelCuidador.jsx`), eliminando redundâncias visuais, bordas pesadas e excesso de caixas aninhadas:
+1. **Sincronia Rigorosa de Identidade:** O nome exibido na `Navbar.jsx`, nos cartões de boas-vindas e nos cabeçalhos dos perfis reflete consistentemente o usuário autenticado (`usuario.nome_completo || usuario.nome`), sem divergências de nomes mockados.
+2. **Respeito Estrito à Flag da Fase 1 (`FEATURES.TELEMEDICINA_ATIVA === false`):** Seções dependentes da Fase 2 (como *"Guias Solicitadas pelos Especialistas"* na Central de Exames e agendamento de teleconsultas no painel do cuidador) são condicionadas para manter o foco total no acompanhamento diário, diário glicêmico e laudos do usuário.
+3. **Minimalismo e Limpeza Visual:**
+   - Eliminação de "caixas dentro de caixas" e sombras carregadas. Uso exclusivo de superfícies limpas (`var(--cor-superficie)`), espaçamentos generosos (`gap: 20px / 32px`) e bordas delicadas (`var(--cor-borda-suave, rgba(124, 83, 63, 0.12))`).
+   - Tipografia `Fraunces` nos títulos de seções e `Plus Jakarta Sans` nos valores numéricos com `font-variant-numeric: tabular-nums` para alinhamento escaneável.
+   - Substituição de emojis excessivos por ícones vetoriais finos (`lucide-react`, `strokeWidth={1.75}`).
+   - Botão flutuante do Lufy reestilizado como pílula compacta e discreta (`.lufy-floating-trigger--discreto`), prevenindo obstrução de cards ou botões de ação na interface.
+
+### B. Cabeçalho Unificado do Perfil & Selo Discreto de Alergias
+- **Linha Única de Identificação:** Avatar com iniciais, Nome Completo, Idade e metadados terapêuticos compactos (`Tipo 1A • Caneta • 9 anos e 11 meses de jornada`).
+- **Selo Discreto de Alergias:** Badge sutil clicável (`0 alergias` em verde alívio ou badge terracota em caso de alerta) que aciona popover/modal com os detalhes clínicos das substâncias registradas.
+- **Ações Compactas Alinhadas à Direita:** Botões em pílula para download do Card Diagnóstico (PNG/PDF), Resumo Clínico e Edição de Perfil.
+
+### C. Aba 1 — Diário Inteligente & Gráfico da Curva de Glicemia (`<GraficoCurvaGlicemia />`)
+1. **Barra de KPIs Minimalistas (3 Colunas):**
+   - **Última Glicemia:** Valor em destaque (`142 mg/dL`), horário, tendência e badge de status semântico (Verde = no alvo, Âmbar = atenção, Terracota = hipo/hiper).
+   - **Insulina Ativa (IOB):** Valor (`2.9 UI`), estimativa de decaimento (`expira em 2h15`) e micro-barra de progresso indicando o decaimento fisiológico e prevenção de empilhamento.
+   - **Tempo no Alvo (TIR — 7 dias):** Percentual dinâmico calculado com base nos registros do histórico (meta $\ge 70\%$) e micro-barra segmentada (abaixo / no alvo / acima).
+2. **Componente `<GraficoCurvaGlicemia />` (Pure React SVG):**
+   - Gráfico responsivo com curva de Bézier contínua (`M ... C ...`), sem dependências externas pesadas.
+   - **Faixa-Alvo Translúcida Sombreada:** Destaque visual da zona de 70 a 180 mg/dL em Verde Alívio suave (`rgba(59, 126, 72, 0.12)`).
+   - **Interatividade & Tooltip Flutuante:** Pontos interativos com hover/touch exibindo hora exata, glicemia, carboidratos ingeridos (g), insulina aplicada (UI) e notas de contexto.
+   - **Seletor de Períodos em Pílulas:** Filtros rápidos `Hoje (24h)`, `7 dias` e `30 dias`.
+3. **Formulário de Registro Rápido Enxuto:** Alinhamento horizontal limpo em grade responsiva (Glicemia, Momento, Carboidratos, Insulina, Observação) + Botão de envio em Verde Alívio.
+4. **Histórico de Leituras:** Tabela/cards limpos em superfície neutra para auditoria e conferência cronológica familiar.
+
+### D. Aba 2 / 3 — Exames & Comparativo de Evolução Laboratorial (`<ComparativoExames />`)
+1. **Seletor de Marcadores em Pílulas:** Alternância instantânea entre marcadores clínicos chave (`HbA1c (%)`, `Glicemia em Jejum`, `Vitamina D (25-OH)`, `Creatinina`, `TSH`).
+2. **Card Hero de Comparação (Último Exame vs. Anterior):**
+   - Cálculo automático do delta (ex: `-0.6%` na HbA1c ou `-10 mg/dL` na glicemia de jejum).
+   - Badge semântico de evolução clínica (`↓ Melhora • Meta Atingida <= 7.0%`).
+3. **Gráfico Temporal de Evolução Laboratorial (SVG):**
+   - Curva com marcadores circulares e linha pontilhada de referência máxima/mínima recomendada.
+4. **Tabela Comparativa Consolidada:**
+   - Matriz cruzando marcadores laboratoriais nas colunas com as datas das últimas coletas nas linhas, permitindo leitura clínica comparativa em segundos.
+5. **Histórico de Coletas e Laudos:**
+   - Lista enxuta de baterias com identificação do laboratório (*Delboni*, *Lavoisier*, *Fleury*), link verificado para laudo em PDF e botão de registro de novo exame.
+
+### E. Compatibilidade com Dark Mode e Acessibilidade
+- Todos os gráficos SVG e elementos de contraste utilizam estritamente variáveis semânticas CSS (`--cor-fundo`, `--cor-superficie`, `--cor-texto`, `--cor-primaria`, `--cor-cta`, `--cor-borda-suave`).
+- Total legibilidade garantida tanto no Tema Claro (`#EAE4D9` / `#F6F3EE`) quanto no Dark Mode ("Noturno Acolhedor", `#181513` / `#231F1D`).
+
+
 
 
 

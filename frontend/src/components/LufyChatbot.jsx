@@ -319,35 +319,37 @@ export default function LufyChatbot() {
       {/* FIM DA JANELA DE CHAT FLUTUANTE DO LUFY */}
 
       {/* ====================================================================
-          INÍCIO DO BOTÃO FLUTUANTE (TRIGGER) NO CANTO INFERIOR DIREITO
-          (position: fixed, bottom: 24px, right: 24px)
+          INÍCIO DO BOTÃO FLUTUANTE DISCRETO (TRIGGER) NO CANTO INFERIOR DIREITO
+          Redesenhado de forma compacta e discreta para nunca obstruir cards ou ações
           ==================================================================== */}
       <button
         type="button"
-        className="lufy-floating-trigger"
+        className="lufy-floating-trigger lufy-floating-trigger--discreto"
         onClick={() => setAberto(!aberto)}
         aria-expanded={aberto}
+        title="Fale com o Lufy — Apoio GlicoCare"
+        aria-label="Fale com o Lufy — Assistente virtual de apoio em diabetes"
       >
         {/* Imagem circular do Lufy com indicador verde */}
-        <div style={{ position: 'relative', width: 46, height: 46, flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: 42, height: 42, flexShrink: 0 }}>
           <img
             src={logoGlicoCare}
             alt="Mascote Lufy — Guardião GlicoCare"
             style={{
-              width: 46,
-              height: 46,
+              width: 42,
+              height: 42,
               borderRadius: '50%',
               objectFit: 'cover',
-              border: '1px solid var(--cor-borda)',
+              border: '1.5px solid var(--cor-borda)',
             }}
           />
           <span
             style={{
               position: 'absolute',
-              bottom: 1,
-              right: 1,
-              width: 11,
-              height: 11,
+              bottom: 0,
+              right: 0,
+              width: 10,
+              height: 10,
               borderRadius: '50%',
               backgroundColor: 'var(--cor-cta)', // Verde alívio (#3B7E48)
               border: '2px solid var(--cor-superficie)',
@@ -355,33 +357,10 @@ export default function LufyChatbot() {
           />
         </div>
 
-        {/* Tag discreta "PRECISA DE APOIO? / Fale com o Lufy" */}
-        <div>
-          <span
-            style={{
-              display: 'block',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: 'var(--cor-primaria)', // #7C533F
-              lineHeight: 1.2,
-            }}
-          >
-            PRECISA DE APOIO?
-          </span>
-          <strong
-            style={{
-              display: 'block',
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              color: 'var(--cor-texto)', // #2E2824
-              lineHeight: 1.25,
-            }}
-          >
-            Fale com o Lufy
-          </strong>
-        </div>
+        {/* Rótulo compacto que surge suavemente em desktop ou hover sem obstruir a tela */}
+        <span className="lufy-floating-trigger__label">
+          Lufy
+        </span>
       </button>
       {/* FIM DO BOTÃO FLUTUANTE (TRIGGER) */}
     </div>

@@ -12,6 +12,8 @@ import React, { useState, useEffect } from 'react';
 import Button from './Button';
 import CustomSelect from './CustomSelect';
 import GlicoLoader from './GlicoLoader';
+import ComparativoExames from './ComparativoExames';
+import { FEATURES } from '../config/features';
 
 // Dados demonstrativos padrão (espelhados com o seed do banco de dados TiDB)
 export const EXAMES_DEMO_INICIAIS = [
@@ -481,8 +483,22 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
       </div>
 
       {/* ==================================================================
-          BLOCO 1: GUIAS SOLICITADAS PELOS ESPECIALISTAS (RN-EXA-01)
+          NOVO BLOCO: COMPARATIVO AUTOMÁTICO DE EVOLUÇÃO LABORATORIAL (FASE 1)
+          Card Hero Último vs Anterior + Trajetória SVG + Tabela Consolidada
           ================================================================== */}
+      <ComparativoExames
+        exames={exames}
+        onNovoExameClick={() => {
+          setFormSolicitacaoId('');
+          setModalAberto(true);
+        }}
+      />
+
+      {/* ==================================================================
+          BLOCO 1: GUIAS SOLICITADAS PELOS ESPECIALISTAS (RN-EXA-01)
+          Oculto na Fase 1 (FEATURES.TELEMEDICINA_ATIVA === false)
+          ================================================================== */}
+      {FEATURES.TELEMEDICINA_ATIVA && (
       <div
         style={{
           backgroundColor: 'var(--cor-superficie)',
@@ -627,6 +643,7 @@ export default function CentralExames({ perfilSaude, token, usuario }) {
           </div>
         )}
       </div>
+      )}
 
       {/* ==================================================================
           BLOCO 3: LINHA DO TEMPO HISTÓRICA DE EXAMES & EVOLUÇÃO (RN-EXA-01)

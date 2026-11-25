@@ -7,7 +7,7 @@
              alergias, teleconsultas, pré-atendimento e cartão de cuidado escolar.
    ========================================================================== */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { cuidadorService } from '../services/api';
@@ -15,6 +15,26 @@ import CustomSelect from '../components/CustomSelect';
 import Button from '../components/Button';
 import GlicoLoader from '../components/GlicoLoader';
 import CartaoDiagnosticoDownload from '../components/CartaoDiagnosticoDownload';
+import GraficoCurvaGlicemia from '../components/GraficoCurvaGlicemia';
+import ComparativoExames from '../components/ComparativoExames';
+import {
+  Activity,
+  FileText,
+  Clock,
+  Zap,
+  TrendingDown,
+  TrendingUp,
+  ShieldCheck,
+  AlertTriangle,
+  User,
+  Plus,
+  Trash2,
+  Calendar,
+  Utensils,
+  ChevronRight,
+  ExternalLink,
+  Edit3,
+} from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/Alert';
 import { useNotify } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -171,10 +191,37 @@ const DEPENDENTE_PADRAO_THEO = {
   exames: [
     {
       id: 1,
-      nome_laboratorio: 'Laboratório Fleury Medicina e Saúde',
-      data_realizacao: '2026-10-15',
-      arquivo_laudo_url: '/backend/uploads/exames/hba1c_theo_out2026.pdf',
-      observacoes_paciente: 'Hemoglobina Glicada (HbA1c): 7.1%. Excelente estabilidade!',
+      nome_laboratorio: 'Delboni Auriemo',
+      laboratorio: 'Delboni Auriemo',
+      data_realizacao: '2026-10-25',
+      arquivo_anexo_path: '/backend/uploads/exames/delboni_laudo_outubro_theo.pdf',
+      arquivo_laudo_url: '/backend/uploads/exames/delboni_laudo_outubro_theo.pdf',
+      observacoes_paciente: 'Rotina pediátrica com Dra. Helena. Excelente controle glicêmico.',
+      observacoes: 'Rotina pediátrica com Dra. Helena. Excelente controle glicêmico.',
+      marcadores: [
+        { nome: 'HbA1c (%)', valor: 6.8, unidade: '%', ref: '< 7.0%', meta: 7.0, tipoMenorMelhor: true },
+        { nome: 'Glicemia em Jejum', valor: 104, unidade: 'mg/dL', ref: '70–99 mg/dL', meta: 99, tipoMenorMelhor: true },
+        { nome: 'Vitamina D (25-OH)', valor: 36.5, unidade: 'ng/mL', ref: '> 30 ng/mL', meta: 30, tipoMenorMelhor: false },
+        { nome: 'Creatinina', valor: 0.52, unidade: 'mg/dL', ref: '0.30–0.70 mg/dL', meta: 0.70, tipoMenorMelhor: true },
+        { nome: 'TSH', valor: 2.1, unidade: 'mUI/L', ref: '0.4–4.5 mUI/L', meta: 4.5, tipoMenorMelhor: true },
+      ],
+    },
+    {
+      id: 2,
+      nome_laboratorio: 'Lavoisier',
+      laboratorio: 'Lavoisier',
+      data_realizacao: '2026-07-20',
+      arquivo_anexo_path: '/backend/uploads/exames/lavoisier_laudo_julho_theo.pdf',
+      arquivo_laudo_url: '/backend/uploads/exames/lavoisier_laudo_julho_theo.pdf',
+      observacoes_paciente: 'Exame de rotina de 3 meses após ajuste de insulina basal.',
+      observacoes: 'Exame de rotina de 3 meses após ajuste de insulina basal.',
+      marcadores: [
+        { nome: 'HbA1c (%)', valor: 7.4, unidade: '%', ref: '< 7.0%', meta: 7.0, tipoMenorMelhor: true },
+        { nome: 'Glicemia em Jejum', valor: 118, unidade: 'mg/dL', ref: '70–99 mg/dL', meta: 99, tipoMenorMelhor: true },
+        { nome: 'Vitamina D (25-OH)', valor: 24.0, unidade: 'ng/mL', ref: '> 30 ng/mL', meta: 30, tipoMenorMelhor: false },
+        { nome: 'Creatinina', valor: 0.54, unidade: 'mg/dL', ref: '0.30–0.70 mg/dL', meta: 0.70, tipoMenorMelhor: true },
+        { nome: 'TSH', valor: 2.3, unidade: 'mUI/L', ref: '0.4–4.5 mUI/L', meta: 4.5, tipoMenorMelhor: true },
+      ],
     },
   ],
 };
@@ -545,46 +592,185 @@ export default function PainelCuidador() {
 
       <div className="container" style={{ width: '92%', maxWidth: '1360px', margin: '0 auto' }}>
         {/* ==================================================================
-            CABEÇALHO GERAL & IDENTIDADE DO CUIDADOR
+            CABEÇALHO UNIFICADO MINIMALISTA DO CUIDADOR & DEPENDENTE
             ================================================================== */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              backgroundColor: 'rgba(59, 126, 72, 0.12)',
-              color: '#3B7E48',
-              borderRadius: '20px',
-              padding: '0.3rem 0.85rem',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              marginBottom: '0.5rem',
-            }}
-          >
-            <span>🤝</span>
-            <span>Espaço dos Pais e Cuidadores de Menores com DM1</span>
+        <header
+          style={{
+            backgroundColor: 'var(--cor-superficie)',
+            borderRadius: '16px',
+            padding: '1.35rem 1.75rem',
+            border: '1px solid var(--cor-borda-suave)',
+            boxShadow: 'var(--sombra-card, 0 4px 16px rgba(46, 40, 36, 0.04))',
+            marginBottom: '1.75rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem',
+          }}
+        >
+          {/* Esquerda: Avatar + Identidade e Metadados em Linha Única */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--cor-cta-suave)',
+                border: '2px solid var(--cor-cta)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--cor-cta)',
+                flexShrink: 0,
+              }}
+            >
+              <User size={26} strokeWidth={1.75} />
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <h1
+                  style={{
+                    fontFamily: 'var(--fonte-titulo)',
+                    fontSize: '1.5rem',
+                    color: 'var(--cor-texto)',
+                    margin: 0,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {filhoAtivo.nome_crianca}
+                </h1>
+
+                <span
+                  style={{
+                    fontSize: '0.76rem',
+                    color: 'var(--cor-primaria)',
+                    backgroundColor: 'var(--cor-fundo)',
+                    padding: '2px 8px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {filhoAtivo.idade_extenso}
+                </span>
+
+                <span
+                  style={{
+                    fontSize: '0.74rem',
+                    color: 'var(--cor-texto-suave)',
+                  }}
+                >
+                  (Cuidado por: <strong>{usuario?.nome_completo || 'Mariana Silva'}</strong>)
+                </span>
+              </div>
+
+              {/* Metadados em Linha Única Limpa + Selo Discreto de Alergias */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                  marginTop: '0.3rem',
+                  fontSize: '0.82rem',
+                  color: 'var(--cor-texto-suave)',
+                }}
+              >
+                <span>{filhoAtivo.tipo_diabetes || 'Tipo 1A'}</span>
+                <span>•</span>
+                <span>{filhoAtivo.terapia_insulina || 'Caneta'}</span>
+                <span>•</span>
+                <span>{filhoAtivo.escola_nome}</span>
+                <span>•</span>
+                <span>{filhoAtivo.tempo_diagnostico_extenso}</span>
+
+                {/* Selo Discreto de Alergias */}
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva('exames')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    border: '1px solid',
+                    borderColor: (filhoAtivo.alergias?.length || 0) > 0 ? '#F0C9B6' : 'var(--cor-borda-suave)',
+                    backgroundColor: (filhoAtivo.alergias?.length || 0) > 0 ? '#FDF2F0' : 'var(--cor-fundo)',
+                    color: (filhoAtivo.alergias?.length || 0) > 0 ? '#A23B2A' : 'var(--cor-texto-suave)',
+                    cursor: 'pointer',
+                    marginLeft: '0.25rem',
+                  }}
+                  title="Clique para ver exames e alergias"
+                >
+                  {(filhoAtivo.alergias?.length || 0) > 0 ? <AlertTriangle size={12} strokeWidth={2} /> : <ShieldCheck size={12} strokeWidth={2} />}
+                  <span>{filhoAtivo.alergias?.length ? `${filhoAtivo.alergias.length} alergia(s)` : '0 alergias'}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <h1
-            style={{
-              fontFamily: 'var(--fonte-titulo, Fraunces)',
-              fontSize: 'clamp(1.6rem, 2.5vw, 2.3rem)',
-              color: '#2E2824',
-              margin: '0.2rem 0 0.5rem',
-              lineHeight: 1.2,
-            }}
-          >
-            Acolhimento da Família de <span style={{ color: '#7C533F', fontStyle: 'italic' }}>{filhoAtivo.nome_crianca}</span>
-          </h1>
+          {/* Direita: Ações do Responsável e Alternância de Dependentes */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {dependentes.length > 1 && (
+              <div style={{ width: '160px' }}>
+                <CustomSelect
+                  value={indiceFilhoAtivo}
+                  onChange={(val) => setIndiceFilhoAtivo(Number(val))}
+                  options={dependentes.map((d, idx) => ({
+                    value: idx,
+                    label: d.nome_crianca,
+                  }))}
+                />
+              </div>
+            )}
 
-          <p style={{ fontSize: '0.94rem', color: '#5A5049', margin: 0, maxWidth: '780px' }}>
-            Acompanhamento integrado de rotina, prevenção de empilhamento de doses (IOB),
-            alinhamento com a escola e teleconsultas com especialistas credenciados.
-          </p>
-        </div>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva('escola')}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                backgroundColor: 'var(--cor-fundo)',
+                color: 'var(--cor-primaria)',
+                border: '1px solid var(--cor-borda-suave)',
+                borderRadius: '999px',
+                padding: '0.45rem 0.95rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              <FileText size={14} strokeWidth={1.75} />
+              <span>Cartão Escolar (PDF)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModalNovoFilho(true)}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                backgroundColor: 'transparent',
+                color: 'var(--cor-texto)',
+                border: '1px solid var(--cor-borda-suave)',
+                borderRadius: '999px',
+                padding: '0.45rem 0.85rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              <Plus size={13} strokeWidth={2} />
+              <span>Adicionar Filho(a)</span>
+            </button>
+          </div>
+        </header>
 
         {/* MENSAGEM TEMPORÁRIA DE FEEDBACK */}
         {feedbackMsg.texto && (
@@ -598,148 +784,6 @@ export default function PainelCuidador() {
             </Alert>
           </div>
         )}
-
-        {/* ==================================================================
-            HERO CARD DO DEPENDENTE & SELETOR DE FILHOS
-            ================================================================== */}
-        <div
-          style={{
-            backgroundColor: 'var(--cor-superficie, #F6F3EE)',
-            borderRadius: '18px',
-            padding: '1.75rem 2rem',
-            border: '1px solid rgba(124, 83, 63, 0.18)',
-            boxShadow: '0 8px 24px rgba(46, 40, 36, 0.05)',
-            marginBottom: '2rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '1.25rem',
-            }}
-          >
-            {/* Dados Principais do Filho Selecionado */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(59, 126, 72, 0.15)',
-                  border: '2px solid #3B7E48',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.8rem',
-                }}
-              >
-                👦
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                  <h2
-                    style={{
-                      fontFamily: 'var(--fonte-titulo, Fraunces)',
-                      fontSize: '1.5rem',
-                      color: '#2E2824',
-                      margin: 0,
-                    }}
-                  >
-                    {filhoAtivo.nome_crianca}
-                  </h2>
-
-                  <span
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid rgba(124, 83, 63, 0.25)',
-                      borderRadius: '12px',
-                      padding: '2px 10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      color: '#7C533F',
-                    }}
-                  >
-                    {filhoAtivo.idade_extenso}
-                  </span>
-
-                  <span
-                    style={{
-                      backgroundColor: 'rgba(59, 126, 72, 0.12)',
-                      color: '#2D6337',
-                      borderRadius: '12px',
-                      padding: '2px 10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {filhoAtivo.tempo_diagnostico_extenso}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flexWrap: 'wrap',
-                    fontSize: '0.84rem',
-                    color: '#5A5049',
-                    marginTop: '0.45rem',
-                  }}
-                >
-                  <span>
-                    📟 <strong>Sensor:</strong> FreeStyle Libre 2
-                  </span>
-                  <span>
-                    💉 <strong>Terapia:</strong> {filhoAtivo.terapia_insulina}
-                  </span>
-                  <span>
-                    🏫 <strong>Escola:</strong> {filhoAtivo.escola_nome}
-                  </span>
-                  <span>
-                    📞 <strong>Emergência:</strong> {filhoAtivo.contato_emergencia_telefone}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Ações do Responsável e Alternância de Dependentes */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              {dependentes.length > 1 && (
-                <div style={{ width: '180px' }}>
-                  <CustomSelect
-                    value={indiceFilhoAtivo}
-                    onChange={(val) => setIndiceFilhoAtivo(Number(val))}
-                    options={dependentes.map((d, idx) => ({
-                      value: idx,
-                      label: d.nome_crianca,
-                    }))}
-                  />
-                </div>
-              )}
-
-              <Button
-                variante="secundario"
-                onClick={() => setModalNovoFilho(true)}
-                style={{ fontSize: '0.82rem', padding: '0.5rem 0.95rem' }}
-              >
-                + Adicionar Filho(a)
-              </Button>
-
-              <Button
-                variante="primario"
-                onClick={() => setModalConvidarFamiliar(true)}
-                style={{ fontSize: '0.82rem', padding: '0.5rem 0.95rem' }}
-              >
-                🔗 Convidar Familiar (Pai/Mãe)
-              </Button>
-            </div>
-          </div>
-        </div>
 
         {/* ==================================================================
             NAVEGAÇÃO EM 5 ABAS CLARAS ("PORTO SEGURO")
@@ -907,336 +951,494 @@ export default function PainelCuidador() {
               </div>
             )}
 
+            {/* /* INÍCIO DO COMPONENTE: BARRA DE KPIS MINIMALISTAS (FASE 1) */}
+            {(() => {
+              const leituras = filhoAtivo.leituras_recentes || [];
+              const ultima = leituras[0] || { valor_mg_dl: 142, data_hora_medicao: '10:30', momento_medicao: 'Pré-prandial' };
+              const v = Number(ultima.valor_mg_dl) || 142;
+              const statusCor = v < 70 ? '#C94A38' : v > 180 ? '#C88D2A' : '#3B7E48';
+              const statusBg = v < 70 ? 'rgba(201, 74, 56, 0.12)' : v > 180 ? 'rgba(200, 141, 42, 0.12)' : 'rgba(59, 126, 72, 0.12)';
+              const statusTexto = v < 70 ? 'Hipo' : v > 180 ? 'Atenção' : 'No Alvo';
+
+              const totalL = leituras.length || 1;
+              const noAlvoCount = leituras.filter((l) => Number(l.valor_mg_dl) >= 70 && Number(l.valor_mg_dl) <= 180).length;
+              const abaixoCount = leituras.filter((l) => Number(l.valor_mg_dl) < 70).length;
+              const tirPct = Math.round((noAlvoCount / totalL) * 100);
+              const abaixoPct = Math.round((abaixoCount / totalL) * 100);
+              const acimaPct = Math.max(0, 100 - tirPct - abaixoPct);
+
+              const iobVal = filhoAtivo.alerta_empilhamento?.iob_ativa || 2.1;
+
+              return (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.75rem',
+                  }}
+                >
+                  {/* KPI 1: Última Glicemia */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                      borderRadius: '16px',
+                      padding: '1.25rem 1.5rem',
+                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Última Glicemia
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          backgroundColor: statusBg,
+                          color: statusCor,
+                        }}
+                      >
+                        {statusTexto}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span
+                        style={{
+                          fontSize: '2rem',
+                          fontWeight: 800,
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: statusCor,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {v}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#7C533F' }}>mg/dL</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.75rem', color: '#5A5049' }}>
+                      <Activity size={13} color="#3B7E48" />
+                      <span>{ultima.data_hora_medicao?.split(' ')[1] || ultima.data_hora_medicao} • ↘ Tendência estável</span>
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Insulina Ativa (IOB) */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                      borderRadius: '16px',
+                      padding: '1.25rem 1.5rem',
+                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Insulina Ativa (IOB)
+                      </span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#5A5049' }}>
+                        expira em 2h15
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span
+                        style={{
+                          fontSize: '2rem',
+                          fontWeight: 800,
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: '#2E2824',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {iobVal}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#7C533F' }}>UI</span>
+                    </div>
+                    {/* Barra de progresso do decaimento da insulina */}
+                    <div style={{ marginTop: '0.65rem' }}>
+                      <div
+                        style={{
+                          height: '6px',
+                          borderRadius: '3px',
+                          backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${Math.min(100, Math.round((iobVal / 4) * 100))}%`,
+                            height: '100%',
+                            backgroundColor: '#3B7E48',
+                            borderRadius: '3px',
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.7rem', color: '#5A5049' }}>
+                        <span>Ação rápida</span>
+                        <span>Prevenção empilhamento</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Tempo no Alvo (TIR — 7 dias) */}
+                  <div
+                    style={{
+                      backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                      borderRadius: '16px',
+                      padding: '1.25rem 1.5rem',
+                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Tempo no Alvo (TIR)
+                      </span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3B7E48' }}>
+                        Meta &ge; 70%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span
+                        style={{
+                          fontSize: '2rem',
+                          fontWeight: 800,
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: tirPct >= 70 ? '#3B7E48' : '#C88D2A',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {tirPct}%
+                      </span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#5A5049' }}>70–180 mg/dL</span>
+                    </div>
+                    {/* Micro-barra segmentada */}
+                    <div style={{ marginTop: '0.65rem' }}>
+                      <div
+                        style={{
+                          height: '6px',
+                          borderRadius: '3px',
+                          display: 'flex',
+                          overflow: 'hidden',
+                          backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                        }}
+                      >
+                        <div style={{ width: `${abaixoPct}%`, backgroundColor: '#C94A38' }} title={`Abaixo: ${abaixoPct}%`} />
+                        <div style={{ width: `${tirPct}%`, backgroundColor: '#3B7E48' }} title={`No alvo: ${tirPct}%`} />
+                        <div style={{ width: `${acimaPct}%`, backgroundColor: '#C88D2A' }} title={`Acima: ${acimaPct}%`} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.7rem', color: '#5A5049' }}>
+                        <span style={{ color: '#C94A38' }}>{abaixoPct}% &lt;70</span>
+                        <span style={{ color: '#3B7E48', fontWeight: 700 }}>{tirPct}% no alvo</span>
+                        <span style={{ color: '#C88D2A' }}>{acimaPct}% &gt;180</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {/* /* FIM DO COMPONENTE: BARRA DE KPIS MINIMALISTAS */}
+
+            {/* /* INÍCIO DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA (SVG INTERATIVO) */}
+            <div style={{ marginBottom: '1.75rem' }}>
+              <GraficoCurvaGlicemia registros={filhoAtivo.leituras_recentes || []} />
+            </div>
+            {/* /* FIM DO COMPONENTE: GRÁFICO CURVA DE GLICEMIA */}
+
+            {/* /* INÍCIO DO FORMULÁRIO ENXUTO DE NOVO REGISTRO (FASE 1) */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: '1.75rem',
+                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
+                marginBottom: '1.75rem',
               }}
             >
-              {/* Card Formulário de Registro Rápido */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '1.75rem',
-                  border: '1px solid rgba(124, 83, 63, 0.15)',
-                  boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
                   <h3
                     style={{
                       fontFamily: 'var(--fonte-titulo, Fraunces)',
-                      fontSize: '1.25rem',
-                      color: '#2E2824',
+                      fontSize: '1.2rem',
+                      color: 'var(--cor-texto, #2E2824)',
                       margin: 0,
                     }}
                   >
-                    Registrar Medição / Dose
+                    Registrar Medição / Dose para {filhoAtivo.nome_crianca}
                   </h3>
-
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      color: '#3B7E48',
-                      backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                      borderRadius: '8px',
-                      padding: '3px 8px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Identificado como: {usuario?.nome_completo || 'Mariana Silva'} (Mãe)
-                  </span>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#5A5049' }}>
+                    Registro com identificação auditável do responsável conectado.
+                  </p>
                 </div>
 
-                <form onSubmit={handleRegistrarGlicemia}>
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: '#7C533F',
-                        marginBottom: '0.35rem',
-                      }}
-                    >
-                      Glicemia Medida (mg/dL) *
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#3B7E48',
+                    backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                    borderRadius: '8px',
+                    padding: '3px 8px',
+                    fontWeight: 700,
+                  }}
+                >
+                  Registrado por: {usuario?.nome_completo || 'Mariana Silva'} ({filhoAtivo.parentesco || 'Responsável'})
+                </span>
+              </div>
+
+              <form onSubmit={handleRegistrarGlicemia}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.25rem',
+                  }}
+                >
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                      Glicemia (mg/dL) *
                     </label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="number"
-                        placeholder="Ex: 115"
-                        value={formGlicemia.valor_mg_dl}
-                        onChange={(e) => setFormGlicemia({ ...formGlicemia, valor_mg_dl: e.target.value })}
-                        style={{
-                          width: '100%',
-                          fontSize: '1.2rem',
-                          fontWeight: 700,
-                          color: obterCorGlicemia(formGlicemia.valor_mg_dl),
-                        }}
-                        required
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      placeholder="Ex: 115"
+                      value={formGlicemia.valor_mg_dl}
+                      onChange={(e) => setFormGlicemia({ ...formGlicemia, valor_mg_dl: e.target.value })}
+                      required
+                      min="20"
+                      max="600"
+                      style={{
+                        width: '100%',
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        color: obterCorGlicemia(formGlicemia.valor_mg_dl),
+                        borderRadius: '10px',
+                        border: '1.5px solid rgba(124, 83, 63, 0.25)',
+                        padding: '0.55rem 0.85rem',
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                      }}
+                    />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <div>
-                      <label
-                        style={{
-                          display: 'block',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#7C533F',
-                          marginBottom: '0.35rem',
-                        }}
-                      >
-                        Dose Insulina (UI)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        placeholder="Ex: 1.5"
-                        value={formGlicemia.dose_insulina}
-                        onChange={(e) => setFormGlicemia({ ...formGlicemia, dose_insulina: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        style={{
-                          display: 'block',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#7C533F',
-                          marginBottom: '0.35rem',
-                        }}
-                      >
-                        Carboidratos (g)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="Ex: 30"
-                        value={formGlicemia.carboidratos_g}
-                        onChange={(e) => setFormGlicemia({ ...formGlicemia, carboidratos_g: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: '#7C533F',
-                        marginBottom: '0.35rem',
-                      }}
-                    >
-                      Momento da Medição
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                      Momento
                     </label>
-                    <CustomSelect
+                    <select
                       value={formGlicemia.momento_medicao}
-                      onChange={(val) => setFormGlicemia({ ...formGlicemia, momento_medicao: val })}
-                      options={[
-                        { value: 'Jejum', label: 'Jejum (Ao acordar)' },
-                        { value: 'Antes da Refeicao', label: 'Antes da Refeição (Pré-prandial)' },
-                        { value: '1h/2h Apos Refeicao', label: '1h ou 2h Após Refeição (Pós-prandial)' },
-                        { value: 'Lanche Escolar', label: 'Recreio / Lanche Escolar' },
-                        { value: 'Antes de Dormir', label: 'Antes de Dormir' },
-                        { value: 'Madrugada', label: 'Madrugada' },
-                      ]}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label
+                      onChange={(e) => setFormGlicemia({ ...formGlicemia, momento_medicao: e.target.value })}
                       style={{
-                        display: 'block',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: '#7C533F',
-                        marginBottom: '0.35rem',
+                        width: '100%',
+                        fontSize: '0.88rem',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        padding: '0.65rem 0.85rem',
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
                       }}
                     >
-                      Ação Realizada
+                      <option value="Jejum">Jejum matinal</option>
+                      <option value="Antes do Lanche">Antes do lanche</option>
+                      <option value="Antes do Almoço">Antes do almoço</option>
+                      <option value="2h pós Almoço">2h pós almoço</option>
+                      <option value="Antes do Jantar">Antes do jantar</option>
+                      <option value="Madrugada">Madrugada</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                      Carboidratos (g)
                     </label>
-                    <CustomSelect
-                      value={formGlicemia.acao_realizada}
-                      onChange={(val) => setFormGlicemia({ ...formGlicemia, acao_realizada: val })}
-                      options={[
-                        { value: 'Nenhuma Acao', label: 'Nenhuma Ação (Estável)' },
-                        { value: 'Bolus para Refeicao', label: 'Bolus para Refeição' },
-                        { value: 'Bolus de Correcao', label: 'Bolus de Correção' },
-                        { value: 'Bolus Correcao + Refeicao', label: 'Bolus Correção + Refeição' },
-                        { value: 'Carboidrato de Resgate', label: 'Carboidrato de Resgate (Hipo)' },
-                      ]}
+                    <input
+                      type="number"
+                      placeholder="Ex: 35"
+                      value={formGlicemia.carboidratos_g}
+                      onChange={(e) => setFormGlicemia({ ...formGlicemia, carboidratos_g: e.target.value })}
+                      min="0"
+                      max="300"
+                      style={{
+                        width: '100%',
+                        fontSize: '0.92rem',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        padding: '0.65rem 0.85rem',
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                      }}
                     />
                   </div>
 
-                  <div style={{ marginBottom: '1.25rem' }}>
-                    <label
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                      Insulina (UI)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="Ex: 1.5"
+                      value={formGlicemia.dose_insulina}
+                      onChange={(e) => setFormGlicemia({ ...formGlicemia, dose_insulina: e.target.value })}
+                      min="0"
+                      max="50"
                       style={{
-                        display: 'block',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        color: '#7C533F',
-                        marginBottom: '0.35rem',
+                        width: '100%',
+                        fontSize: '0.92rem',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        padding: '0.65rem 0.85rem',
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
                       }}
-                    >
-                      Contexto ou Sintomas (Opcional)
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#7C533F', marginBottom: '0.35rem' }}>
+                      Observação / Contexto
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Educação física, lanche com fruta, suor frio..."
+                      placeholder="Ex: Lanche da tarde na escola"
                       value={formGlicemia.fator_contexto}
                       onChange={(e) => setFormGlicemia({ ...formGlicemia, fator_contexto: e.target.value })}
+                      style={{
+                        width: '100%',
+                        fontSize: '0.88rem',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(124, 83, 63, 0.25)',
+                        padding: '0.65rem 0.85rem',
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                      }}
                     />
                   </div>
+                </div>
 
-                  {/* ALERTA DE HIPOGLICEMIA (< 70 mg/dL) */}
-                  {Number(formGlicemia.valor_mg_dl) > 0 && Number(formGlicemia.valor_mg_dl) < 70 && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <Alert variant="destructive">
-                        <AlertTitle>Glicemia Baixa (&lt; 70 mg/dL) — Atenção Imediata</AlertTitle>
-                        <AlertDescription>
-                          Aplicar a <strong>Regra dos 15g</strong> imediatamente: ofertar 15g de carboidrato de rápida absorção (1 sachê de mel, 150ml de suco integral ou 1 colher de sopa de açúcar na água). Aguarde 15 minutos em repouso e meça novamente.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
-
-                  {/* ALERTA DE INSULINA ATIVA (IOB) */}
-                  {filhoAtivo.iob_ativa > 0 && Number(formGlicemia.dose_insulina) > 0 && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <Alert variant="warning">
-                        <AlertTitle>Atenção: Insulina Ativa em Circulação ({filhoAtivo.iob_ativa} UI)</AlertTitle>
-                        <AlertDescription>
-                          {filhoAtivo.nome_crianca} ainda possui {filhoAtivo.iob_ativa} UI de insulina ativa no organismo. Administrar uma nova dose agora eleva o risco de hipoglicemia por empilhamento de doses.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  )}
-
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                   <Button
-                    variante="primario"
-                    type="submit"
-                    loading={salvandoGlicemia}
-                    disabled={salvandoGlicemia}
-                    style={{ width: '100%', padding: '0.75rem' }}
-                  >
-                    ✓ Registrar para {filhoAtivo.nome_crianca}
-                  </Button>
-                </form>
-              </div>
-
-              {/* Linha do Tempo e Histórico com Identificação de Quem Registrou */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '1.75rem',
-                  border: '1px solid rgba(124, 83, 63, 0.15)',
-                  boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3
+                    tipo="submit"
+                    variante="sucesso"
+                    carregando={salvandoGlicemia}
                     style={{
-                      fontFamily: 'var(--fonte-titulo, Fraunces)',
-                      fontSize: '1.25rem',
-                      color: '#2E2824',
-                      margin: 0,
+                      padding: '0.65rem 1.75rem',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
                     }}
                   >
-                    Linha do Tempo Familiar
-                  </h3>
-
-                  <span style={{ fontSize: '0.8rem', color: '#5A5049' }}>
-                    Últimas {filhoAtivo.leituras_recentes?.length || 0} medições
-                  </span>
+                    <CheckCircle2 size={16} />
+                    <span>Registrar Medição</span>
+                  </Button>
                 </div>
+              </form>
+            </div>
+            {/* /* FIM DO FORMULÁRIO ENXUTO DE NOVO REGISTRO */}
 
-                <p style={{ fontSize: '0.84rem', color: '#5A5049', marginBottom: '1.25rem' }}>
-                  Transparência total para que mãe, pai e cuidadores autorizados acompanhem as doses aplicadas e evitem duplicações.
-                </p>
+            {/* /* INÍCIO DO HISTÓRICO DE LEITURAS RECENTES (TABELA LIMPA) */}
+            <div
+              style={{
+                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
+                marginBottom: '1.75rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3
+                  style={{
+                    fontFamily: 'var(--fonte-titulo, Fraunces)',
+                    fontSize: '1.15rem',
+                    color: 'var(--cor-texto, #2E2824)',
+                    margin: 0,
+                  }}
+                >
+                  Linha do Tempo Familiar & Auditoria
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#5A5049' }}>
+                  {filhoAtivo.leituras_recentes?.length || 0} registros sincronizados
+                </span>
+              </div>
 
-                <div style={{ display: 'grid', gap: '0.75rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.35rem' }}>
-                  {filhoAtivo.leituras_recentes?.map((leitura) => (
-                    <div
-                      key={leitura.id}
-                      style={{
-                        backgroundColor: '#F6F3EE',
-                        borderRadius: '12px',
-                        padding: '0.9rem 1.15rem',
-                        borderLeft: `4px solid ${obterCorGlicemia(leitura.valor_mg_dl)}`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span
-                            style={{
-                              fontSize: '1.25rem',
-                              fontWeight: 800,
-                              color: obterCorGlicemia(leitura.valor_mg_dl),
-                            }}
-                          >
-                            {leitura.valor_mg_dl}{' '}
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5A5049' }}>mg/dL</span>
-                          </span>
-
-                          <span
-                            style={{
-                              fontSize: '0.74rem',
-                              backgroundColor: '#FFFFFF',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontWeight: 700,
-                              color: '#7C533F',
-                              border: '1px solid rgba(124, 83, 63, 0.15)',
-                            }}
-                          >
-                            {leitura.momento_medicao}
-                          </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: '#5A5049', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                          {leitura.dose_insulina && (
-                            <span style={{ color: '#7C533F', fontWeight: 700 }}>💉 {leitura.dose_insulina} UI aplicada</span>
-                          )}
-                          {leitura.carboidratos_g && <span>🍞 {leitura.carboidratos_g}g carbos</span>}
-                          {leitura.fator_contexto && <span>📝 {leitura.fator_contexto}</span>}
-                        </div>
+              <div style={{ display: 'grid', gap: '0.6rem' }}>
+                {filhoAtivo.leituras_recentes?.map((leitura) => (
+                  <div
+                    key={leitura.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      padding: '0.85rem 1.15rem',
+                      borderRadius: '12px',
+                      backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                      border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.08))',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div
+                        style={{
+                          fontSize: '1.25rem',
+                          fontWeight: 800,
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontVariantNumeric: 'tabular-nums',
+                          color: obterCorGlicemia(leitura.valor_mg_dl),
+                          minWidth: '75px',
+                        }}
+                      >
+                        {leitura.valor_mg_dl}{' '}
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#7C533F' }}>mg/dL</span>
                       </div>
 
-                      <div style={{ textAlign: 'right' }}>
+                      <div>
                         <span
                           style={{
-                            display: 'inline-block',
-                            backgroundColor: leitura.registrado_por_rotulo?.includes('Pai') ? '#E8EEF5' : '#E8F5E9',
-                            color: leitura.registrado_por_rotulo?.includes('Pai') ? '#2C4C6C' : '#1E4620',
-                            borderRadius: '8px',
-                            padding: '3px 8px',
-                            fontSize: '0.72rem',
+                            fontSize: '0.74rem',
                             fontWeight: 700,
-                            marginBottom: '0.2rem',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: 'rgba(124, 83, 63, 0.08)',
+                            color: '#7C533F',
+                            marginRight: '0.5rem',
                           }}
                         >
-                          👤 {leitura.registrado_por_rotulo || 'Responsável'}
+                          {leitura.momento_medicao}
                         </span>
-                        <div style={{ fontSize: '0.74rem', color: '#7C533F' }}>
-                          {leitura.data_hora_medicao?.split(' ')[1] || leitura.data_hora_medicao}
-                        </div>
+
+                        <span style={{ fontSize: '0.78rem', color: '#5A5049' }}>
+                          {leitura.dose_insulina ? `${leitura.dose_insulina} UI • ` : ''}
+                          {leitura.carboidratos_g ? `${leitura.carboidratos_g}g carbos • ` : ''}
+                          {leitura.fator_contexto || ''}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          backgroundColor: leitura.registrado_por_rotulo?.includes('Pai') ? 'rgba(44, 76, 108, 0.1)' : 'rgba(59, 126, 72, 0.1)',
+                          color: leitura.registrado_por_rotulo?.includes('Pai') ? '#2C4C6C' : '#1E4620',
+                        }}
+                      >
+                        {leitura.registrado_por_rotulo || 'Responsável'}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: '#7C533F', fontFamily: 'Plus Jakarta Sans, sans-serif', fontVariantNumeric: 'tabular-nums' }}>
+                        {leitura.data_hora_medicao?.split(' ')[1] || leitura.data_hora_medicao}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+            {/* /* FIM DO HISTÓRICO DE LEITURAS RECENTES */}
 
             {/* INÍCIO BLOCO CARD DE DIAGNÓSTICO PARA DOWNLOAD (FASE 1) */}
             <CartaoDiagnosticoDownload
@@ -1444,179 +1646,112 @@ export default function PainelCuidador() {
         {/* FIM BLOCO FASE 2: TELEATENDIMENTOS E PAGAMENTOS */}
 
         {/* ==================================================================
-            CONTEÚDO DA ABA 3: EXAMES & ALERGIAS DA CRIANÇA
+            CONTEÚDO DA ABA 3: EXAMES & COMPARATIVO LABORATORIAL (FASE 1)
             ================================================================== */}
         {abaAtiva === 'exames' && (
-          <div>
+          <div style={{ display: 'grid', gap: '2rem' }}>
+            {/* /* INÍCIO DO COMPONENTE: COMPARATIVO AUTOMÁTICO DE EXAMES */}
+            <ComparativoExames exames={filhoAtivo.exames || []} />
+            {/* /* FIM DO COMPONENTE: COMPARATIVO AUTOMÁTICO DE EXAMES */}
+
+            {/* /* INÍCIO DA SEÇÃO ENXUTA DE ALERGIAS & SENSIBILIDADES */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: '1.75rem',
+                backgroundColor: 'var(--cor-superficie, #FFFFFF)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.12))',
               }}
             >
-              {/* Bloco de Alergias e Sensibilidades */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '1.75rem',
-                  border: '1px solid rgba(124, 83, 63, 0.15)',
-                  boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <div>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--fonte-titulo, Fraunces)',
-                        fontSize: '1.25rem',
-                        color: '#2E2824',
-                        margin: 0,
-                      }}
-                    >
-                      Alergias & Sensibilidades
-                    </h3>
-                    <p style={{ fontSize: '0.82rem', color: '#5A5049', margin: '0.2rem 0 0' }}>
-                      Proteção clínica obrigatória compartilhada com a escola e especialistas.
-                    </p>
-                  </div>
-
-                  <Button
-                    variante="secundario"
-                    onClick={() => setModalNovaAlergia(true)}
-                    style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, Fraunces)',
+                      fontSize: '1.15rem',
+                      color: 'var(--cor-texto, #2E2824)',
+                      margin: 0,
+                    }}
                   >
-                    + Adicionar
-                  </Button>
+                    Alergias & Sensibilidades de {filhoAtivo.nome_crianca}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#5A5049', margin: '0.2rem 0 0' }}>
+                    Proteção clínica compartilhada no cartão escolar e relatórios de emergência.
+                  </p>
                 </div>
 
-                {filhoAtivo.alergias?.length === 0 ? (
-                  <p style={{ color: '#5A5049', fontSize: '0.88rem', padding: '1rem 0' }}>
-                    Nenhuma alergia registrada para {filhoAtivo.nome_crianca}.
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gap: '0.75rem' }}>
-                    {filhoAtivo.alergias?.map((al) => (
-                      <div
-                        key={al.id}
-                        style={{
-                          backgroundColor: '#F6F3EE',
-                          borderRadius: '12px',
-                          padding: '1rem 1.25rem',
-                          borderLeft: `4px solid ${al.gravidade === 'GRAVE' ? '#C94A38' : al.gravidade === 'MODERADA' ? '#C88D2A' : '#3B7E48'}`,
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                          <span style={{ fontWeight: 800, color: '#2E2824', fontSize: '0.94rem' }}>
-                            {al.substancia_ou_item}
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                borderRadius: '6px',
-                                padding: '2px 8px',
-                                backgroundColor: al.gravidade === 'GRAVE' ? '#F8D7DA' : al.gravidade === 'MODERADA' ? '#FFF3CD' : '#D1E7DD',
-                                color: al.gravidade === 'GRAVE' ? '#842029' : al.gravidade === 'MODERADA' ? '#856404' : '#0F5132',
-                              }}
-                            >
-                              {al.gravidade} • {al.categoria}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoverAlergia(al.id, al.substancia_ou_item)}
-                              title="Remover alergia"
-                              aria-label={`Remover alergia ${al.substancia_ou_item}`}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#C94A38',
-                                fontSize: '0.85rem',
-                                padding: '2px 4px',
-                                borderRadius: '4px',
-                                lineHeight: 1,
-                              }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                        <p style={{ fontSize: '0.84rem', color: '#5A5049', margin: 0, lineHeight: 1.45 }}>
-                          {al.reacao_observada || 'Reação clínica observada em episódios anteriores.'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Button
+                  variante="secundario"
+                  onClick={() => setModalNovaAlergia(true)}
+                  style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+                >
+                  + Adicionar Alergia
+                </Button>
               </div>
 
-              {/* Bloco de Exames Laboratoriais */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  padding: '1.75rem',
-                  border: '1px solid rgba(124, 83, 63, 0.15)',
-                  boxShadow: '0 4px 16px rgba(46, 40, 36, 0.04)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <div>
-                    <h3
+              {filhoAtivo.alergias?.length === 0 ? (
+                <p style={{ color: '#5A5049', fontSize: '0.85rem', margin: 0, padding: '0.5rem 0' }}>
+                  Nenhuma alergia registrada para {filhoAtivo.nome_crianca}.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                  {filhoAtivo.alergias?.map((al) => (
+                    <div
+                      key={al.id}
                       style={{
-                        fontFamily: 'var(--fonte-titulo, Fraunces)',
-                        fontSize: '1.25rem',
-                        color: '#2E2824',
-                        margin: 0,
+                        backgroundColor: 'var(--cor-fundo, #FAF8F5)',
+                        borderRadius: '12px',
+                        padding: '0.85rem 1rem',
+                        borderLeft: `4px solid ${al.gravidade === 'GRAVE' ? '#C94A38' : al.gravidade === 'MODERADA' ? '#C88D2A' : '#3B7E48'}`,
+                        border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.08))',
                       }}
                     >
-                      Histórico de Exames Laboratoriais
-                    </h3>
-                    <p style={{ fontSize: '0.82rem', color: '#5A5049', margin: '0.2rem 0 0' }}>
-                      Laudos de HbA1c, glicemia de jejum e painéis pediátricos.
-                    </p>
-                  </div>
-                </div>
-
-                {filhoAtivo.exames?.length === 0 ? (
-                  <p style={{ color: '#5A5049', fontSize: '0.88rem', padding: '1rem 0' }}>
-                    Nenhum exame anexado até o momento.
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gap: '0.75rem' }}>
-                    {filhoAtivo.exames?.map((ex) => (
-                      <div
-                        key={ex.id}
-                        style={{
-                          backgroundColor: '#F6F3EE',
-                          borderRadius: '12px',
-                          padding: '1rem 1.25rem',
-                          border: '1px solid rgba(124, 83, 63, 0.15)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                          <span style={{ fontWeight: 700, color: '#2E2824', fontSize: '0.92rem' }}>
-                            {ex.nome_laboratorio}
-                          </span>
-                          <span style={{ fontSize: '0.76rem', color: '#7C533F', fontWeight: 600 }}>
-                            {ex.data_realizacao}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: '0.84rem', color: '#5A5049', margin: '0 0 0.5rem', lineHeight: 1.45 }}>
-                          {ex.observacoes_paciente}
-                        </p>
-                        <span style={{ fontSize: '0.78rem', color: '#3B7E48', fontWeight: 700, cursor: 'pointer' }}>
-                          📄 Laudo em PDF verificado
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--cor-texto, #2E2824)', fontSize: '0.9rem' }}>
+                          {al.substancia_ou_item}
                         </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              padding: '2px 6px',
+                              backgroundColor: al.gravidade === 'GRAVE' ? '#F8D7DA' : al.gravidade === 'MODERADA' ? '#FFF3CD' : '#D1E7DD',
+                              color: al.gravidade === 'GRAVE' ? '#842029' : al.gravidade === 'MODERADA' ? '#856404' : '#0F5132',
+                            }}
+                          >
+                            {al.gravidade} • {al.categoria}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoverAlergia(al.id, al.substancia_ou_item)}
+                            title="Remover alergia"
+                            aria-label={`Remover alergia ${al.substancia_ou_item}`}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#C94A38',
+                              fontSize: '0.85rem',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              lineHeight: 1,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <p style={{ fontSize: '0.78rem', color: '#5A5049', margin: 0, lineHeight: 1.4 }}>
+                        {al.reacao_observada || 'Reação clínica observada em episódios anteriores.'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+            {/* /* FIM DA SEÇÃO ENXUTA DE ALERGIAS & SENSIBILIDADES */}
           </div>
         )}
 
