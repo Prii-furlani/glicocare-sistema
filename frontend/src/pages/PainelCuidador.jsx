@@ -2925,15 +2925,26 @@ export default function PainelCuidador() {
         {/* ==================================================================
             MODAL DO CARTÃO DE DIAGNÓSTICO DO DEPENDENTE (PREVIEW + PNG/PDF)
             ================================================================== */}
+        {/* INÍCIO DO MODAL DO CARTÃO DE DIAGNÓSTICO DO DEPENDENTE (RESPIRO AMPLO & SEGURO) */}
         <Dialog open={modalCartaoDiagnosticoAberto} onOpenChange={setModalCartaoDiagnosticoAberto}>
-          <DialogContent style={{ maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <DialogContent
+            style={{
+              maxWidth: '820px',
+              maxHeight: 'calc(100vh - 48px)',
+              margin: '24px auto',
+              padding: '24px',
+              overflowY: 'auto',
+              borderRadius: '20px',
+              boxShadow: '0 16px 48px rgba(46, 40, 36, 0.16)',
+            }}
+          >
             <DialogHeader>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
                     backgroundColor: 'rgba(124, 83, 63, 0.1)',
                     display: 'flex',
                     alignItems: 'center',
@@ -2941,20 +2952,20 @@ export default function PainelCuidador() {
                     color: 'var(--cor-destaque)',
                   }}
                 >
-                  <FileText size={18} strokeWidth={2} />
+                  <FileText size={20} strokeWidth={2} />
                 </div>
                 <div>
-                  <DialogTitle style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.25rem' }}>
+                  <DialogTitle style={{ fontFamily: 'var(--fonte-titulo)', fontSize: '1.3rem' }}>
                     Cartão de Diagnóstico de {filhoAtivo?.nome_crianca}
                   </DialogTitle>
-                  <DialogDescription style={{ fontSize: '0.85rem' }}>
+                  <DialogDescription style={{ fontSize: '0.86rem', marginTop: '2px', lineHeight: 1.45 }}>
                     Documento oficial com parâmetros de segurança, contato do responsável legal e condutas de emergência para portar na mochila escolar ou salvar no celular.
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
 
-            <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ marginTop: '0.85rem' }}>
               <CartaoDiagnosticoDownload
                 paciente={filhoAtivo}
                 cuidador={{
@@ -2974,6 +2985,7 @@ export default function PainelCuidador() {
             </div>
           </DialogContent>
         </Dialog>
+        {/* FIM DO MODAL DO CARTÃO DE DIAGNÓSTICO DO DEPENDENTE */}
       </div>
     </div>
   );

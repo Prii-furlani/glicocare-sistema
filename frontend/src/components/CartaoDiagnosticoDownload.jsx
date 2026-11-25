@@ -347,11 +347,16 @@ export default function CartaoDiagnosticoDownload({
           }
         }
         @media (max-width: 640px) {
+          .cartao-diagnostico-print-area {
+            padding: 20px !important;
+          }
           .cartao-grade-parametros {
             grid-template-columns: 1fr !important;
+            gap: 12px !important;
           }
           .cartao-grade-emergencia {
             grid-template-columns: 1fr !important;
+            gap: 12px !important;
           }
           .cartao-cracha-print-area {
             flex-direction: column !important;
@@ -702,23 +707,27 @@ export default function CartaoDiagnosticoDownload({
         </div>
       )}
 
-      {/* VISÃO 1: FICHA COMPLETA (PANORÂMICA DETALHADA) */}
+      {/* VISÃO 1: FICHA COMPLETA (PANORÂMICA DETALHADA COM RESPIRO AMPLO) */}
+      {/* INÍCIO DO CARD DE DIAGNÓSTICO (FICHA COMPLETA) */}
       {formatoAtivo === 'ficha' && (
         <div
           ref={fichaRef}
           className="cartao-print-active cartao-diagnostico-print-area"
           style={{
             backgroundColor: '#F6F3EE',
-            borderRadius: '18px',
+            borderRadius: '20px',
             border: '1.5px solid rgba(124, 83, 63, 0.25)',
-            padding: '1.75rem',
+            padding: '28px 32px',
             maxWidth: '100%',
-            boxShadow: '0 8px 24px rgba(46, 40, 36, 0.08)',
+            boxShadow: '0 10px 30px rgba(46, 40, 36, 0.08)',
             color: '#2E2824',
             fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
             position: 'relative',
             overflow: 'hidden',
             boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
           }}
         >
         {/* TOPO: IDENTIDADE GLICOCARE E SELO OFICIAL */}
@@ -728,19 +737,18 @@ export default function CartaoDiagnosticoDownload({
             justifyContent: 'space-between',
             alignItems: 'center',
             borderBottom: '1.5px solid rgba(124, 83, 63, 0.2)',
-            paddingBottom: '1rem',
-            marginBottom: '1.25rem',
+            paddingBottom: '14px',
             gap: '1rem',
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <img
               src={logoGlicoCare}
               alt="Logo GlicoCare"
               style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '1.5px solid #7C533F',
@@ -750,7 +758,7 @@ export default function CartaoDiagnosticoDownload({
               <div
                 style={{
                   fontFamily: 'var(--fonte-titulo, Fraunces)',
-                  fontSize: '1.2rem',
+                  fontSize: '1.25rem',
                   fontWeight: 800,
                   color: '#2E2824',
                   lineHeight: 1.1,
@@ -768,9 +776,9 @@ export default function CartaoDiagnosticoDownload({
             style={{
               backgroundColor: '#7C533F',
               color: '#FFFFFF',
-              padding: '0.35rem 0.85rem',
+              padding: '0.4rem 0.95rem',
               borderRadius: '8px',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               fontWeight: 800,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
@@ -782,23 +790,23 @@ export default function CartaoDiagnosticoDownload({
         </div>
 
         {/* IDENTIFICAÇÃO DO PACIENTE */}
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Identificação do Paciente
           </div>
           <div
             style={{
               fontFamily: 'var(--fonte-titulo, Fraunces)',
-              fontSize: '1.45rem',
+              fontSize: '1.5rem',
               fontWeight: 800,
               color: '#2E2824',
               lineHeight: 1.2,
-              marginTop: '0.15rem',
+              marginTop: '0.2rem',
             }}
           >
             {nomePaciente}
           </div>
-          <div style={{ fontSize: '0.84rem', color: '#5A5049', marginTop: '0.2rem' }}>
+          <div style={{ fontSize: '0.86rem', color: '#5A5049', marginTop: '0.25rem' }}>
             {dataNascimento && (
               <span>
                 Nascimento: <strong>{new Date(dataNascimento).toLocaleDateString('pt-BR')}</strong>
@@ -813,26 +821,28 @@ export default function CartaoDiagnosticoDownload({
           </div>
         </div>
 
-        {/* BLOCO DE CONTATOS DE EMERGÊNCIA (DESTAQUE MÚLTIPLOS CONTATOS) */}
+        {/* BLOCO DE CONTATOS DE EMERGÊNCIA (DESTAQUE MÚLTIPLOS CONTATOS COM RESPIRO) */}
         {listaContatos && listaContatos.length > 0 ? (
           <div
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '14px',
-              padding: '1rem 1.15rem',
+              padding: '16px 18px',
               border: '1.5px solid #3B7E48',
-              marginBottom: '1.25rem',
               boxShadow: '0 2px 8px rgba(59, 126, 72, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ fontSize: '1.05rem' }}>📞</span>
-                <span style={{ fontSize: '0.78rem', color: '#285832', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>📞</span>
+                <span style={{ fontSize: '0.8rem', color: '#285832', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Contatos de Emergência ({listaContatos.length})
                 </span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#3B7E48', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.74rem', color: '#3B7E48', fontWeight: 700 }}>
                 Aviso Imediato em Hipoglicemia / Mal-estar
               </span>
             </div>
@@ -843,7 +853,7 @@ export default function CartaoDiagnosticoDownload({
                 style={{
                   backgroundColor: '#EFF7F1',
                   borderRadius: '10px',
-                  padding: '0.65rem 0.9rem',
+                  padding: '12px 16px',
                   border: '1px solid #3B7E48',
                   display: 'flex',
                   alignItems: 'center',
@@ -853,24 +863,24 @@ export default function CartaoDiagnosticoDownload({
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span
                       style={{
                         backgroundColor: '#3B7E48',
                         color: '#FFFFFF',
-                        fontSize: '0.66rem',
+                        fontSize: '0.68rem',
                         fontWeight: 800,
-                        padding: '1px 6px',
+                        padding: '2px 8px',
                         borderRadius: '4px',
                         textTransform: 'uppercase',
                       }}
                     >
                       1º Contato • Principal
                     </span>
-                    <strong style={{ fontSize: '0.96rem', color: '#2E2824' }}>
+                    <strong style={{ fontSize: '0.98rem', color: '#2E2824' }}>
                       {contatoPrincipal.nome_contato}
                     </strong>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#285832' }}>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#285832' }}>
                       ({contatoPrincipal.relacao})
                     </span>
                   </div>
@@ -881,7 +891,7 @@ export default function CartaoDiagnosticoDownload({
                   style={{
                     backgroundColor: '#3B7E48',
                     color: '#FFFFFF',
-                    padding: '0.4rem 0.9rem',
+                    padding: '0.45rem 0.95rem',
                     borderRadius: '8px',
                     fontSize: '0.92rem',
                     fontWeight: 800,
@@ -904,8 +914,7 @@ export default function CartaoDiagnosticoDownload({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '0.5rem',
-                  marginTop: '0.5rem',
+                  gap: '10px',
                 }}
               >
                 {contatosAdicionais.map((c, i) => (
@@ -914,7 +923,7 @@ export default function CartaoDiagnosticoDownload({
                     style={{
                       backgroundColor: '#F6F3EE',
                       borderRadius: '8px',
-                      padding: '0.5rem 0.75rem',
+                      padding: '10px 14px',
                       border: '1px solid rgba(124, 83, 63, 0.18)',
                       display: 'flex',
                       alignItems: 'center',
@@ -923,14 +932,14 @@ export default function CartaoDiagnosticoDownload({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '0.66rem', color: '#7C533F', fontWeight: 700 }}>
+                      <div style={{ fontSize: '0.68rem', color: '#7C533F', fontWeight: 700 }}>
                         {i + 2}º Contato ({c.relacao})
                       </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2E2824' }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2E2824' }}>
                         {c.nome_contato}
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#285832' }}>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#285832' }}>
                       📞 {c.telefone}
                     </span>
                   </div>
@@ -943,9 +952,8 @@ export default function CartaoDiagnosticoDownload({
             style={{
               backgroundColor: '#FFF4F2',
               borderRadius: '12px',
-              padding: '0.85rem 1rem',
+              padding: '14px 18px',
               border: '1.5px solid #C94A38',
-              marginBottom: '1.25rem',
               color: '#842029',
               fontSize: '0.86rem',
             }}
@@ -954,32 +962,31 @@ export default function CartaoDiagnosticoDownload({
           </div>
         )}
 
-        {/* GRADE CLÍNICA: TIPO DE DIABETES, TERAPIA E MONITORAMENTO (3 COLUNAS UNIFORMES) */}
+        {/* GRADE CLÍNICA: TIPO DE DIABETES, TERAPIA E MONITORAMENTO (3 COLUNAS UNIFORMES COM RESPIRO) */}
         <div
           className="cartao-grade-parametros"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '0.75rem',
-            marginBottom: '1.25rem',
+            gap: '14px',
           }}
         >
           {/* Item 1: Tipo & Tempo de Diagnóstico */}
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              padding: '0.75rem 0.9rem',
-              borderRadius: '10px',
+              padding: '16px 18px',
+              borderRadius: '12px',
               border: '1px solid rgba(124, 83, 63, 0.15)',
             }}
           >
-            <div style={{ fontSize: '0.7rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
               Classificação & Diagnóstico
             </div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#2E2824', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#2E2824', marginTop: '0.2rem' }}>
               {tipoDiabetes}
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#3B7E48', fontWeight: 600, marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.8rem', color: '#3B7E48', fontWeight: 600, marginTop: '0.3rem' }}>
               🌱 {tempoDiagnosticoExtenso}
             </div>
           </div>
@@ -988,18 +995,18 @@ export default function CartaoDiagnosticoDownload({
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              padding: '0.75rem 0.9rem',
-              borderRadius: '10px',
+              padding: '16px 18px',
+              borderRadius: '12px',
               border: '1px solid rgba(124, 83, 63, 0.15)',
             }}
           >
-            <div style={{ fontSize: '0.7rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
               Terapia & Monitoramento
             </div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2E2824', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#2E2824', marginTop: '0.2rem' }}>
               💉 {terapiaInsulina}
             </div>
-            <div style={{ fontSize: '0.76rem', color: '#5A5049', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.78rem', color: '#5A5049', marginTop: '0.3rem' }}>
               📟 {monitoramento}
             </div>
           </div>
@@ -1008,40 +1015,39 @@ export default function CartaoDiagnosticoDownload({
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              padding: '0.75rem 0.9rem',
-              borderRadius: '10px',
+              padding: '16px 18px',
+              borderRadius: '12px',
               border: '1px solid rgba(124, 83, 63, 0.15)',
             }}
           >
-            <div style={{ fontSize: '0.7rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.72rem', color: '#7C533F', fontWeight: 700, textTransform: 'uppercase' }}>
               FSI & Glicemia Alvo
             </div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2E2824', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#2E2824', marginTop: '0.2rem' }}>
               🎯 FSI: {fsi}
             </div>
-            <div style={{ fontSize: '0.76rem', color: '#5A5049', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.78rem', color: '#5A5049', marginTop: '0.3rem' }}>
               Alvo: {metaGlicemica}
             </div>
           </div>
         </div>
 
-        {/* BLOCO DE ALERTA: ALERGIAS & SENSIBILIDADES CLÍNICAS */}
+        {/* BLOCO DE ALERTA: ALERGIAS & SENSIBILIDADES CLÍNICAS COM RESPIRO */}
         <div
           style={{
             backgroundColor: alergias && alergias.length > 0 ? '#FFF5F4' : '#FFFFFF',
             border: `1.5px solid ${alergias && alergias.length > 0 ? '#C94A38' : 'rgba(124, 83, 63, 0.2)'}`,
             borderRadius: '12px',
-            padding: '0.85rem 1rem',
-            marginBottom: '1.25rem',
+            padding: '16px 18px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-            <span style={{ fontSize: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '1.05rem' }}>
               {alergias && alergias.length > 0 ? '⚠️' : '🛡️'}
             </span>
             <span
               style={{
-                fontSize: '0.76rem',
+                fontSize: '0.78rem',
                 fontWeight: 800,
                 color: alergias && alergias.length > 0 ? '#C94A38' : '#7C533F',
                 textTransform: 'uppercase',
@@ -1053,7 +1059,7 @@ export default function CartaoDiagnosticoDownload({
           </div>
 
           {alergias && alergias.length > 0 ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
               {alergias.map((al, idx) => (
                 <span
                   key={al.id || idx}
@@ -1061,9 +1067,9 @@ export default function CartaoDiagnosticoDownload({
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #C94A38',
                     color: '#942217',
-                    padding: '3px 8px',
+                    padding: '4px 10px',
                     borderRadius: '6px',
-                    fontSize: '0.8rem',
+                    fontSize: '0.82rem',
                     fontWeight: 700,
                   }}
                 >
@@ -1073,36 +1079,35 @@ export default function CartaoDiagnosticoDownload({
               ))}
             </div>
           ) : (
-            <div style={{ fontSize: '0.82rem', color: '#5A5049', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '0.84rem', color: '#5A5049', fontStyle: 'italic' }}>
               Nenhuma alergia alimentar, medicamentosa ou a insumos registrada.
             </div>
           )}
         </div>
 
-        {/* MEDICAMENTOS & INSULINAS EM USO */}
+        {/* MEDICAMENTOS & INSULINAS EM USO COM RESPIRO */}
         <div
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '12px',
-            padding: '0.85rem 1rem',
+            padding: '16px 18px',
             border: '1px solid rgba(124, 83, 63, 0.15)',
-            marginBottom: '1.25rem',
           }}
         >
-          <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+          <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
             💊 Medicamentos & Insulinas Ativas
           </div>
 
           {medicamentos && medicamentos.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.45rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
               {medicamentos.map((med, idx) => (
                 <div
                   key={med.id || idx}
                   style={{
-                    fontSize: '0.82rem',
+                    fontSize: '0.84rem',
                     color: '#2E2824',
-                    padding: '4px 8px',
-                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
                     backgroundColor: '#F6F3EE',
                     display: 'flex',
                     alignItems: 'center',
@@ -1110,14 +1115,14 @@ export default function CartaoDiagnosticoDownload({
                   }}
                 >
                   <strong>{med.nome_medicamento || med.nome}</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#5A5049' }}>
+                  <span style={{ fontSize: '0.76rem', color: '#5A5049' }}>
                     {med.dosagem ? `${med.dosagem} ${med.unidade_medida || 'UI'}` : (med.horario_administracao || med.frequencia_uso || 'Conforme prescrição')}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ fontSize: '0.82rem', color: '#5A5049' }}>
+            <div style={{ fontSize: '0.84rem', color: '#5A5049', lineHeight: 1.5 }}>
               • Insulina Ultrarrápida (Bolus de Refeição e Correção conforme contagem de carboidratos)
               <br />
               • Insulina Basal Diária (Conforme prescrição médica habitual)
@@ -1125,14 +1130,13 @@ export default function CartaoDiagnosticoDownload({
           )}
         </div>
 
-        {/* PROTOCOLO COMPLETO DE EMERGÊNCIA: HIPOGLICEMIA & HIPERGLICEMIA (2 COLUNAS LADO A LADO) */}
+        {/* PROTOCOLO COMPLETO DE EMERGÊNCIA: HIPOGLICEMIA & HIPERGLICEMIA (2 COLUNAS COM RESPIRO AMPLO) */}
         <div
           className="cartao-grade-emergencia"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '0.75rem',
-            marginBottom: '1rem',
+            gap: '14px',
           }}
         >
           {/* Card 1: Hipoglicemia (< 70 mg/dL) */}
@@ -1140,10 +1144,10 @@ export default function CartaoDiagnosticoDownload({
             style={{
               backgroundColor: '#FFF9F0',
               border: '1.5px solid #C88D2A',
-              borderRadius: '10px',
-              padding: '0.75rem 0.9rem',
-              fontSize: '0.8rem',
-              lineHeight: 1.45,
+              borderRadius: '12px',
+              padding: '16px 18px',
+              fontSize: '0.82rem',
+              lineHeight: 1.55,
               color: '#2E2824',
               display: 'flex',
               flexDirection: 'column',
@@ -1151,25 +1155,25 @@ export default function CartaoDiagnosticoDownload({
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.95rem' }}>🚨</span>
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#8A5D10', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.05rem' }}>🚨</span>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#8A5D10', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Hipoglicemia (&lt; 70 mg/dL)
                 </span>
               </div>
-              <div style={{ marginBottom: '0.35rem', fontSize: '0.78rem' }}>
+              <div style={{ marginBottom: '0.45rem' }}>
                 <strong>Sinais:</strong> Tremores, sudorese fria, palidez, tontura ou sonolência.
               </div>
-              <div style={{ fontSize: '0.78rem' }}>
+              <div>
                 <strong>Conduta:</strong> Aplicar a <strong>Regra dos 15g</strong> (1 sachê de mel, 150 ml de suco integral ou 1 colher de sopa de açúcar diluído em água). Aguardar 15 minutos em repouso e medir novamente.
               </div>
             </div>
             <div
               style={{
-                marginTop: '0.45rem',
-                paddingTop: '0.35rem',
+                marginTop: '0.65rem',
+                paddingTop: '0.5rem',
                 borderTop: '1px dashed rgba(200, 141, 42, 0.4)',
-                fontSize: '0.74rem',
+                fontSize: '0.76rem',
                 fontWeight: 700,
                 color: '#A23B2A',
               }}
@@ -1183,10 +1187,10 @@ export default function CartaoDiagnosticoDownload({
             style={{
               backgroundColor: '#FFF4F2',
               border: '1.5px solid #C94A38',
-              borderRadius: '10px',
-              padding: '0.75rem 0.9rem',
-              fontSize: '0.8rem',
-              lineHeight: 1.45,
+              borderRadius: '12px',
+              padding: '16px 18px',
+              fontSize: '0.82rem',
+              lineHeight: 1.55,
               color: '#2E2824',
               display: 'flex',
               flexDirection: 'column',
@@ -1194,25 +1198,25 @@ export default function CartaoDiagnosticoDownload({
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.95rem' }}>⚠️</span>
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#A23B2A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '1.05rem' }}>⚠️</span>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#A23B2A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Hiperglicemia (&gt; 250 mg/dL)
                 </span>
               </div>
-              <div style={{ marginBottom: '0.35rem', fontSize: '0.78rem' }}>
+              <div style={{ marginBottom: '0.45rem' }}>
                 <strong>Sinais:</strong> Sede intensa, boca seca, vontade frequente de urinar, cansaço ou visão turva.
               </div>
-              <div style={{ fontSize: '0.78rem' }}>
+              <div>
                 <strong>Conduta:</strong> Oferecer água pura para hidratação, verificar cetonas (se disponível) e checar cateter/aplicação. Realizar correção apenas conforme o <strong>FSI prescrito</strong> (respeitando a insulina ativa).
               </div>
             </div>
             <div
               style={{
-                marginTop: '0.45rem',
-                paddingTop: '0.35rem',
+                marginTop: '0.65rem',
+                paddingTop: '0.5rem',
                 borderTop: '1px dashed rgba(201, 74, 56, 0.4)',
-                fontSize: '0.74rem',
+                fontSize: '0.76rem',
                 fontWeight: 700,
                 color: '#842029',
               }}
@@ -1228,12 +1232,12 @@ export default function CartaoDiagnosticoDownload({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: '0.72rem',
+            fontSize: '0.74rem',
             color: '#6A5E57',
-            borderTop: '1px solid rgba(124, 83, 63, 0.15)',
-            paddingTop: '0.65rem',
+            borderTop: '1.5px solid rgba(124, 83, 63, 0.2)',
+            paddingTop: '14px',
             flexWrap: 'wrap',
-            gap: '0.5rem',
+            gap: '0.6rem',
           }}
         >
           <div>
@@ -1245,6 +1249,7 @@ export default function CartaoDiagnosticoDownload({
         </div>
       </div>
       )}
+      {/* FIM DO CARD DE DIAGNÓSTICO (FICHA COMPLETA) */}
 
       {/* ====================================================================
           VISÃO 2: CRACHÁ DE PESCOÇO FRENTE & VERSO (54mm × 86mm / PADRÃO CR80)
@@ -1677,13 +1682,15 @@ export default function CartaoDiagnosticoDownload({
         </div>
       )}
 
-      {/* BOTÕES DE AÇÃO ADAPTADOS AO FORMATO ATIVO */}
+      {/* INÍCIO DA BARRA DE AÇÕES DE DOWNLOAD E IMPRESSÃO COM RESPIRO SEGURO */}
       <div
         className="cartao-no-print"
         style={{
           display: 'flex',
-          gap: '0.75rem',
-          marginTop: '1.25rem',
+          gap: '12px',
+          marginTop: '1.5rem',
+          paddingTop: '16px',
+          borderTop: '1px solid rgba(124, 83, 63, 0.15)',
           flexWrap: 'wrap',
           alignItems: 'center',
         }}
@@ -1739,7 +1746,7 @@ export default function CartaoDiagnosticoDownload({
           </span>
         </Button>
 
-        <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
+        <span style={{ fontSize: '0.8rem', color: '#6A5E57', lineHeight: '1.4' }}>
           {listaContatos.length === 0
             ? '⚠️ Emissão bloqueada: adicione pelo menos 1 contato de emergência para desbloquear o download e a impressão.'
             : formatoAtivo === 'cracha'
@@ -1747,6 +1754,7 @@ export default function CartaoDiagnosticoDownload({
             : '💡 Ideal para salvar no álbum do celular ou na tela bloqueada para emergências.'}
         </span>
       </div>
+      {/* FIM DA BARRA DE AÇÕES DE DOWNLOAD E IMPRESSÃO */}
     </div>
   );
 }

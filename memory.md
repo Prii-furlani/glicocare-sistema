@@ -1233,6 +1233,42 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
 - **Barra de Progresso:** Micro-barra de 4px com transição suave refletindo o IOB atual em relação à escala de segurança.
 - **Painel de Detalhamento por Aplicação:** Lista compacta contendo cada dose ativa com horário, dose original aplicada, IOB restante e tempo de expiração individual (ex: `09:00 • 4.0 UI → restam 2.1 UI (expira em ~1h10)` e `11:35 • 5.0 UI → restam 4.8 UI (expira em ~2h35)`).
 
+---
+
+## 31. RESPIRO VISUAL, PADDING E ESPAÇAMENTO NO CARTÃO DE DIAGNÓSTICO & CUIDADO E MODAL DIALOG
+
+### A. Modal Dialog com Margem Segura e Rolagem Suave (`PerfilUsuario.jsx` & `PainelCuidador.jsx`)
+- **Proporções Seguras da Viewport:** O contêiner de diálogo (`DialogContent`) foi dimensionado para evitar qualquer contato indesejado com as extremidades da janela:
+  * `maxWidth`: `820px` (largura ideal para leitura e impressão).
+  * `maxHeight`: `calc(100vh - 48px)` (preserva 24px de folga superior e inferior).
+  * `margin`: `24px auto` centralizado.
+  * `padding`: `24px` uniforme interno.
+  * `borderRadius`: `20px` com cantos suaves acolhedores.
+  * `boxShadow`: `0 16px 48px rgba(46, 40, 36, 0.16)` conferindo profundidade sem agressividade.
+  * `overflowY`: `auto` com scrollbar suave preservada.
+
+### B. Contêiner Principal da Ficha Completa (`CartaoDiagnosticoDownload.jsx`)
+- **Padding e Ritmo Vertical:**
+  * Desktop: `padding: 28px 32px` garantindo respiro confortável entre as bordas e o conteúdo médico.
+  * Mobile (`@media (max-width: 640px)`): `padding: 20px !important;` prevenindo compressão em telas compactas.
+  * `borderRadius`: `20px`.
+  * `display: flex; flex-direction: column; gap: 18px;`: Elimina margens inferiores divergentes e assegura um ritmo vertical unificado e harmonioso entre todas as seções.
+  * Topo institucional: `padding-bottom: 14px` com divisória de alto contraste terroso.
+
+### C. Respiro Interno nos Blocos e Protocolos Clínicos
+- **Contatos de Emergência:** Container com `padding: 16px 18px` e `gap: 12px`; card principal de emergência com `padding: 12px 16px`, contatos extras com `padding: 10px 14px` e `gap: 10px`.
+- **Grade de Parâmetros Clínicos (3 Colunas):** `gap: 14px`, cada card com `padding: 16px 18px` e `border-radius: 12px`.
+- **Blocos de Alergias & Sensibilidades e Medicamentos & Insulinas:** Ambos com `padding: 16px 18px`, `border-radius: 12px` e itens internos com `padding: 8px 12px`.
+- **Protocolos de Emergência (Hipoglicemia e Hiperglicemia):** `gap: 14px`, cada bloco com `padding: 16px 18px`, `border-radius: 12px` e tipografia com `line-height: 1.55`.
+- **Rodapé de Emissão:** Divisória superior com `padding-top: 14px`.
+
+### D. Barra de Ações com Respiro Superior
+- **Botões Baixar Card (PNG) e Salvar PDF / Imprimir:**
+  * `margin-top: 1.5rem`, `padding-top: 16px` e borda divisória sutil `1px solid rgba(124, 83, 63, 0.15)`.
+  * `gap: 12px` entre botões de ação e linha de dica clínica.
+  * Previne que a barra de ferramentas fique colada à área de impressão ou ao rodapé do modal.
+
+
 
 
 
