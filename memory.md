@@ -1268,6 +1268,35 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
   * `gap: 12px` entre botões de ação e linha de dica clínica.
   * Previne que a barra de ferramentas fique colada à área de impressão ou ao rodapé do modal.
 
+---
+
+## 32. CORREÇÃO DEFINITIVA DO GRÁFICO CURVA GLICÊMICA & TENDÊNCIA (`GraficoCurvaGlicemia.jsx`)
+
+### A. Eliminação Definitiva do Corte do Tooltip
+- **Abertura de Overflow nos Contêineres:**
+  * O `Card` principal do gráfico recebeu `style={{ overflow: 'visible' }}` para sobrepor o `overflow: hidden` padrão dos cards.
+  * O `CardContent` recebeu `paddingTop: '1rem'` e `overflow: 'visible'`.
+  * O wrapper do SVG e do Tooltip teve o antigo `overflowX: 'auto'` (que forçava corte vertical no navegador) substituído por `overflow: 'visible'`.
+  * A tag `<svg>` mantém `overflow: 'visible'` para evitar cortes em marcadores e halos circulares.
+- **Posicionamento Inteligente Vertical (Bifurcação Superior/Inferior):**
+  * Quando o ponto ativo estiver na metade superior do gráfico (`pontoAtivo.y < 125`), o Tooltip é renderizado **abaixo do ponto** (`top: calc(${yPct}% + 14px)` e `transform: translate(..., 0%)`), eliminando 100% dos cortes no topo do gráfico.
+  * Quando o ponto estiver na metade inferior (`pontoAtivo.y >= 125`), o Tooltip é renderizado **acima do ponto** (`top: calc(${yPct}% - 14px)` e `transform: translate(..., -100%)`).
+- **Posicionamento Inteligente Horizontal (Bordas Esquerda e Direita):**
+  * Perto da margem esquerda (`xPct < 18%`): alinhamento à esquerda (`transform: translate(0%, ...)`, `left: calc(${xPct}% - 4px)`).
+  * Perto da margem direita (`xPct > 82%`): alinhamento à direita (`transform: translate(-100%, ...)`, `left: calc(${xPct}% + 4px)`).
+  * No centro: alinhamento centralizado (`transform: translate(-50%, ...)`).
+
+### B. Remoção do Rótulo Interno do Gráfico & Nova Legenda no Cabeçalho
+- **Limpeza do Canvas SVG:** Removido o elemento `<text>FAIXA-ALVO (70–180)</text>` de dentro da área interna do SVG, eliminando qualquer colisão com a curva Bezier ou com os pontos de glicemia.
+- **Legenda no Cabeçalho:** Adicionado badge estilizado `Faixa-Alvo: 70–180 mg/dL` com ponto indicador verde no cabeçalho do card, posicionado harmoniosamente ao lado das abas de período (`Hoje (24h)`, `7 dias`, `30 dias`).
+
+### C. Margem Horizontal do Primeiro e Último Ponto
+- **Respiro no Eixo X (`xMargin = 22px`):**
+  * A largura útil para o cálculo de `getX` foi ajustada para `usableWidth = graphWidth - xMargin * 2`.
+  * O primeiro ponto tem recuo seguro de 22px em relação ao eixo Y de valores (`45px + 22px = 67px`).
+  * O último ponto tem respiro de 22px antes do término da linha de grade pontilhada e mais de 60px antes da margem direita do SVG (`x = 778px` em canvas de `840px`), eliminando a sensação de sufocamento contra as bordas laterais.
+
+
 
 
 

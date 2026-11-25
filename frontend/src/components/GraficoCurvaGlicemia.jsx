@@ -122,12 +122,18 @@ export default function GraficoCurvaGlicemia({
     return { media, min, max, tir, percHipo, percHiper };
   }, [dadosGrafico, metaMin, metaMax]);
 
+  /* INÍCIO DO CÁLCULO DE DIMENSÕES E RESPIRO HORIZONTAL */
   // Dimensões do SVG
   const svgWidth = 840;
-  const svgHeight = 240;
-  const padding = { top: 20, right: 30, bottom: 30, left: 45 };
+  const svgHeight = 250;
+  const padding = { top: 24, right: 40, bottom: 32, left: 45 };
   const graphWidth = svgWidth - padding.left - padding.right;
   const graphHeight = svgHeight - padding.top - padding.bottom;
+
+  // Margem horizontal interna para que o primeiro e o último ponto tenham respiro claro em relação às bordas laterais
+  const xMargin = 22;
+  const usableWidth = graphWidth - xMargin * 2;
+  /* FIM DO CÁLCULO DE DIMENSÕES E RESPIRO HORIZONTAL */
 
   // Escalas matemáticas
   const yMinDomain = 40;
@@ -142,14 +148,16 @@ export default function GraficoCurvaGlicemia({
   const minTime = dadosGrafico[0]?.timeMs || 0;
   const maxTime = dadosGrafico[dadosGrafico.length - 1]?.timeMs || 1;
 
+  /* INÍCIO DA ESCALA DO EIXO X COM RESPIRO LATERAL */
   const getX = (timeMs, idx) => {
     if (dadosGrafico.length === 1) return padding.left + graphWidth / 2;
     if (maxTime === minTime) {
-      return padding.left + (idx / (dadosGrafico.length - 1)) * graphWidth;
+      return padding.left + xMargin + (idx / (dadosGrafico.length - 1)) * usableWidth;
     }
     const ratio = (timeMs - minTime) / (maxTime - minTime);
-    return padding.left + ratio * graphWidth;
+    return padding.left + xMargin + ratio * usableWidth;
   };
+  /* FIM DA ESCALA DO EIXO X COM RESPIRO LATERAL */
 
   // Pontos processados (coordenadas x, y no plano SVG)
   const pontosProcessados = useMemo(() => {
@@ -158,7 +166,7 @@ export default function GraficoCurvaGlicemia({
       x: getX(d.timeMs, i),
       y: getY(d.valor),
     }));
-  }, [dadosGrafico]);
+  }, [dadosGrafico, maxTime, minTime, graphWidth, graphHeight, padding.left, padding.top, usableWidth, xMargin]);
 
   // Geração do caminho Bezier suave e da área sombreada
   const { pathD, areaD } = useMemo(() => {
@@ -191,7 +199,7 @@ export default function GraficoCurvaGlicemia({
     const area = `${d} L ${lastPoint.x} ${yBottom} L ${firstPoint.x} ${yBottom} Z`;
 
     return { pathD: d, areaD: area };
-  }, [pontosProcessados]);
+  }, [pontosProcessados, padding.top, graphHeight]);
 
   // Linhas de grade horizontais pontilhadas (shadcn style strokeDasharray="3 3")
   const gridYValues = [70, 100, 140, 180, 220];
@@ -200,7 +208,8 @@ export default function GraficoCurvaGlicemia({
   const alturaFaixa = yMetaMin - yMetaMax;
 
   return (
-    <Card className="gc-chart-card">
+    /* INÍCIO DO CONTAINER DO CARD COM OVERFLOW VISIBLE (ANTI-CORTE DO TOOLTIP) */
+    <Card className="gc-chart-card" style={{ overflow: 'visible' }}>
       <CardHeader style={{ paddingBottom: '0.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -226,20 +235,52 @@ export default function GraficoCurvaGlicemia({
             </div>
           </div>
 
-          {/* Seletor de Período em Tabs Segmentadas (shadcn style) */}
-          <Tabs value={periodo} onValueChange={(val) => { setPeriodo(val); setPontoAtivo(null); }}>
-            <TabsList>
-              <TabsTrigger value="hoje">Hoje (24h)</TabsTrigger>
-              <TabsTrigger value="7dias">7 dias</TabsTrigger>
-              <TabsTrigger value="30dias">30 dias</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* INÍCIO DO CABEÇALHO COM TABS E LEGENDA EXTERNA DA FAIXA-ALVO */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Legenda limpa e acessível da Faixa-Alvo fora da área do SVG (livre de sobreposição) */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'rgba(59, 126, 72, 0.08)',
+                border: '1px solid rgba(59, 126, 72, 0.22)',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                color: 'var(--cor-cta, #3B7E48)',
+              }}
+              title={`Faixa glicêmica ideal definida para o perfil: ${metaMin} a ${metaMax} mg/dL`}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '2px',
+                  backgroundColor: 'var(--cor-cta, #3B7E48)',
+                  display: 'inline-block',
+                }}
+              />
+              <span>Faixa-Alvo: <strong>{metaMin}–{metaMax} mg/dL</strong></span>
+            </div>
+
+            {/* Seletor de Período em Tabs Segmentadas (shadcn style) */}
+            <Tabs value={periodo} onValueChange={(val) => { setPeriodo(val); setPontoAtivo(null); }}>
+              <TabsList>
+                <TabsTrigger value="hoje">Hoje (24h)</TabsTrigger>
+                <TabsTrigger value="7dias">7 dias</TabsTrigger>
+                <TabsTrigger value="30dias">30 dias</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {/* FIM DO CABEÇALHO COM TABS E LEGENDA EXTERNA DA FAIXA-ALVO */}
         </div>
       </CardHeader>
 
-      <CardContent style={{ position: 'relative', paddingTop: '0.75rem' }}>
-        {/* ÁREA DO GRÁFICO SVG RESPONSIVO */}
-        <div style={{ position: 'relative', width: '100%', overflowX: 'auto' }}>
+      <CardContent style={{ position: 'relative', paddingTop: '1rem', overflow: 'visible' }}>
+        {/* ÁREA DO GRÁFICO SVG RESPONSIVO COM OVERFLOW VISIBLE */}
+        <div style={{ position: 'relative', width: '100%', overflow: 'visible' }}>
           <svg
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             style={{
@@ -300,20 +341,6 @@ export default function GraficoCurvaGlicemia({
                 </text>
               </g>
             ))}
-
-            {/* Rótulo da Faixa-Alvo na extremidade direita */}
-            <text
-              x={padding.left + graphWidth - 6}
-              y={yMetaMax + 14}
-              textAnchor="end"
-              fontSize="10"
-              fontWeight="600"
-              fill="var(--cor-cta, #3B7E48)"
-              opacity="0.85"
-              letterSpacing="0.04em"
-            >
-              FAIXA-ALVO (70–180)
-            </text>
 
             {/* Área preenchida sob a curva (AreaChart) */}
             {areaD && <path d={areaD} fill="url(#gradienteAreaChart)" />}
@@ -384,89 +411,115 @@ export default function GraficoCurvaGlicemia({
             })}
           </svg>
 
-          {/* TOOLTIP ESTILO SHADCN (SURFACE ELEVADA, BORDA SUTIL, SHADOW COMPACTA) */}
-          {pontoAtivo && (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${Math.min(84, Math.max(16, (pontoAtivo.x / svgWidth) * 100))}%`,
-                top: `${Math.max(12, (pontoAtivo.y / svgHeight) * 100 - 45)}%`,
-                transform: 'translate(-50%, -100%)',
-                backgroundColor: 'var(--cor-superficie-elevada, #FFFFFF)',
-                color: 'var(--cor-texto, #2E2824)',
-                border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.15))',
-                borderRadius: '10px',
-                padding: '0.65rem 0.85rem',
-                boxShadow: '0 4px 16px rgba(46, 40, 36, 0.12)',
-                pointerEvents: 'none',
-                zIndex: 20,
-                minWidth: '165px',
-                fontSize: '0.82rem',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <Clock size={12} strokeWidth={1.75} />
-                  {new Date(pontoAtivo.timeMs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <Badge
-                  variant={pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'success' : pontoAtivo.valor < metaMin ? 'destructive' : 'warning'}
-                  style={{ fontSize: '10px', padding: '1px 6px' }}
-                >
-                  {pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'No alvo' : pontoAtivo.valor < metaMin ? 'Hipo' : 'Alta'}
-                </Badge>
-              </div>
+          {/* INÍCIO DO POSICIONAMENTO INTELIGENTE E ANTI-CORTE DO TOOLTIP */}
+          {pontoAtivo && (() => {
+            const xPct = (pontoAtivo.x / svgWidth) * 100;
+            const yPct = (pontoAtivo.y / svgHeight) * 100;
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '0.35rem' }}>
-                <span
-                  style={{
-                    fontSize: '1.45rem',
-                    fontWeight: 800,
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontVariantNumeric: 'tabular-nums',
-                    color: pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'var(--cor-cta, #3B7E48)' : pontoAtivo.valor < metaMin ? '#C94A38' : '#C88D2A',
-                    lineHeight: 1,
-                  }}
-                >
-                  {pontoAtivo.valor}
-                </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', marginLeft: 'auto' }}>
-                  {pontoAtivo.momento}
-                </span>
-              </div>
+            // Quando o ponto estiver na metade superior (y < 125) ou perto do topo, renderiza ABAIXO do ponto (+14px)
+            // Quando estiver na metade inferior, renderiza ACIMA do ponto (-14px)
+            const renderAbaixo = pontoAtivo.y < 125;
+            const topPos = renderAbaixo ? `calc(${yPct}% + 14px)` : `calc(${yPct}% - 14px)`;
+            const translateY = renderAbaixo ? '0%' : '-100%';
 
-              {(pontoAtivo.carbos > 0 || pontoAtivo.insulina > 0 || pontoAtivo.obs) && (
-                <div
-                  style={{
-                    borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))',
-                    paddingTop: '0.35rem',
-                    marginTop: '0.35rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    fontSize: '0.74rem',
-                    color: 'var(--cor-texto-suave, #5C534C)',
-                  }}
-                >
-                  {pontoAtivo.carbos > 0 && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Utensils size={11} strokeWidth={1.75} /> {pontoAtivo.carbos}g carboidratos
-                    </span>
-                  )}
-                  {pontoAtivo.insulina > 0 && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--cor-primaria, #7C533F)', fontWeight: 600 }}>
-                      <Zap size={11} strokeWidth={1.75} /> {pontoAtivo.insulina} UI insulina
-                    </span>
-                  )}
-                  {pontoAtivo.obs && <span>📝 {pontoAtivo.obs}</span>}
+            // Ajuste horizontal dinâmico para não vazar nem ser cortado pelas margens do card
+            let leftPos = `${xPct}%`;
+            let translateX = '-50%';
+
+            if (xPct < 18) {
+              leftPos = `calc(${xPct}% - 4px)`;
+              translateX = '0%';
+            } else if (xPct > 82) {
+              leftPos = `calc(${xPct}% + 4px)`;
+              translateX = '-100%';
+            }
+
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: leftPos,
+                  top: topPos,
+                  transform: `translate(${translateX}, ${translateY})`,
+                  backgroundColor: 'var(--cor-superficie-elevada, #FFFFFF)',
+                  color: 'var(--cor-texto, #2E2824)',
+                  border: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.15))',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem',
+                  boxShadow: '0 6px 20px rgba(46, 40, 36, 0.14)',
+                  pointerEvents: 'none',
+                  zIndex: 30,
+                  minWidth: '165px',
+                  fontSize: '0.82rem',
+                  transition: 'opacity 0.12s ease',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <Clock size={12} strokeWidth={1.75} />
+                    {new Date(pontoAtivo.timeMs).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <Badge
+                    variant={pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'success' : pontoAtivo.valor < metaMin ? 'destructive' : 'warning'}
+                    style={{ fontSize: '10px', padding: '1px 6px' }}
+                  >
+                    {pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'No alvo' : pontoAtivo.valor < metaMin ? 'Hipo' : 'Alta'}
+                  </Badge>
                 </div>
-              )}
-            </div>
-          )}
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                  <span
+                    style={{
+                      fontSize: '1.45rem',
+                      fontWeight: 800,
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontVariantNumeric: 'tabular-nums',
+                      color: pontoAtivo.valor >= metaMin && pontoAtivo.valor <= metaMax ? 'var(--cor-cta, #3B7E48)' : pontoAtivo.valor < metaMin ? '#C94A38' : '#C88D2A',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {pontoAtivo.valor}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--cor-primaria, #7C533F)' }}>mg/dL</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--cor-texto-suave, #5C534C)', marginLeft: 'auto' }}>
+                    {pontoAtivo.momento}
+                  </span>
+                </div>
+
+                {(pontoAtivo.carbos > 0 || pontoAtivo.insulina > 0 || pontoAtivo.obs) && (
+                  <div
+                    style={{
+                      borderTop: '1px solid var(--cor-borda-suave, rgba(124, 83, 63, 0.1))',
+                      paddingTop: '0.35rem',
+                      marginTop: '0.35rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px',
+                      fontSize: '0.74rem',
+                      color: 'var(--cor-texto-suave, #5C534C)',
+                    }}
+                  >
+                    {pontoAtivo.carbos > 0 && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Utensils size={11} strokeWidth={1.75} /> {pontoAtivo.carbos}g carboidratos
+                      </span>
+                    )}
+                    {pontoAtivo.insulina > 0 && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--cor-primaria, #7C533F)', fontWeight: 600 }}>
+                        <Zap size={11} strokeWidth={1.75} /> {pontoAtivo.insulina} UI insulina
+                      </span>
+                    )}
+                    {pontoAtivo.obs && <span>📝 {pontoAtivo.obs}</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {/* FIM DO POSICIONAMENTO INTELIGENTE E ANTI-CORTE DO TOOLTIP */}
         </div>
       </CardContent>
     </Card>
+    /* FIM DO CONTAINER DO CARD COM OVERFLOW VISIBLE (ANTI-CORTE DO TOOLTIP) */
   );
 }
 /* FIM DO COMPONENTE GRAFICOCURVAGLICEMIA */
