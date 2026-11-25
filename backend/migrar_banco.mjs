@@ -683,7 +683,31 @@ async function main() {
     console.log('ℹ️ cuidadores_dependentes:', err.message);
   }
   // ==========================================================================
-  // FIM — 20. ESTRUTURA DO PERFIL CUIDADOR (cuidadores_dependentes E MENORES DM1)
+  // INÍCIO — 21. TABELA contatos_emergencia (MÚLTIPLOS CONTATOS, MÍNIMO 1 OBRIGATÓRIO)
+  // ==========================================================================
+  try {
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`contatos_emergencia\` (
+        \`id\` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do contato de emergência',
+        \`perfil_saude_id\` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+        \`nome_contato\` VARCHAR(120) NOT NULL COMMENT 'Nome completo do contato de emergência',
+        \`relacao\` VARCHAR(60) NOT NULL DEFAULT 'Familiar' COMMENT 'Grau de parentesco ou relação',
+        \`telefone\` VARCHAR(25) NOT NULL COMMENT 'Telefone de emergência com DDD',
+        \`ordem\` INT NOT NULL DEFAULT 1 COMMENT 'Prioridade de contato (1 = principal)',
+        \`criado_em\` DATETIME NOT NULL COMMENT 'Data e hora do registro em America/Sao_Paulo',
+        PRIMARY KEY (\`id\`),
+        KEY \`idx_contatos_perfil\` (\`perfil_saude_id\`),
+        CONSTRAINT \`fk_contatos_perfil\`
+          FOREIGN KEY (\`perfil_saude_id\`) REFERENCES \`perfis_saude\` (\`id\`)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contatos de emergência do paciente ou dependente DM1';
+    `);
+    console.log('✅ Tabela contatos_emergencia criada/verificada com sucesso.');
+  } catch (err) {
+    console.log('ℹ️ contatos_emergencia:', err.message);
+  }
+  // ==========================================================================
+  // FIM — 21. TABELA contatos_emergencia
   // ==========================================================================
 
   const sqlPath = path.resolve('backend', 'database_tidb.sql');

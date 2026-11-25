@@ -11,19 +11,36 @@
 
 /* INÍCIO DO COMPONENTE CARTÃO DE DIAGNÓSTICO PARA DOWNLOAD */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { useNotify } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import Button from './Button';
+import CustomSelect from './CustomSelect';
 import { Tabs, TabsList, TabsTrigger } from './ui/Tabs';
+import { contatosEmergenciaService } from '../services/api';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
+
+/* FUNÇÃO AUXILIAR: MÁSCARA AUTOMÁTICA DE TELEFONE (XX) XXXXX-XXXX */
+const formatarTelefone = (valor) => {
+  if (!valor) return '';
+  const apenasNumeros = valor.replace(/\D/g, '').slice(0, 11);
+  if (apenasNumeros.length <= 2) return `(${apenasNumeros}`;
+  if (apenasNumeros.length <= 6) return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2)}`;
+  if (apenasNumeros.length <= 10) {
+    return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2, 6)}-${apenasNumeros.slice(6)}`;
+  }
+  return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2, 7)}-${apenasNumeros.slice(7, 11)}`;
+};
 
 export default function CartaoDiagnosticoDownload({
   paciente = {},
   cuidador = null,
   alergias = [],
   medicamentos = [],
+  contatos = [],
+  onAtualizarContatos = null,
   isCuidador = false,
   tituloSecao = 'Cartão de Diagnóstico & Identificação Médica',
   descricaoSecao = 'Mantenha este documento salvo no seu celular ou impresso na carteira para emergências e identificação clínica rápida.',
@@ -33,6 +50,7 @@ export default function CartaoDiagnosticoDownload({
   const crachaRef = useRef(null);
   const [formatoAtivo, setFormatoAtivo] = useState('ficha'); // 'ficha' | 'cracha'
   const notificar = useNotify();
+  const { confirmar } = useConfirm();
   const [gerandoImagem, setGerandoImagem] = useState(false);
 
   // Normalização de dados do paciente
@@ -65,22 +83,152 @@ export default function CartaoDiagnosticoDownload({
     ? `${paciente.glicemia_alvo} mg/dL (Faixa segura: 70–140 mg/dL)`
     : '100 mg/dL (Faixa segura: 70–140 mg/dL)';
 
-  // Dados do responsável legal (quando aplicável)
-  const temCuidador = isCuidador || !!cuidador || !!paciente?.is_menor_12;
-  const nomeResponsavel =
+  // Dados de fallback do cuidador / responsável
+  const nomeResponsavelPadrao =
     cuidador?.nome_responsavel ||
     cuidador?.nome ||
     paciente?.nome_responsavel ||
     'Mariana Silva';
-  const parentesco =
+  const parentescoPadrao =
     cuidador?.parentesco ||
     paciente?.parentesco ||
     'Responsável Legal (Mãe)';
-  const telefoneEmergencia =
+  const telefoneEmergenciaPadrao =
     cuidador?.telefone_emergencia ||
     cuidador?.contato_emergencia_telefone ||
     paciente?.contato_emergencia_telefone ||
     '(11) 97777-2001';
+
+  /* ==========================================================================
+     GERENCIAMENTO DE MÚLTIPLOS CONTATOS DE EMERGÊNCIA
+     ========================================================================== */
+  const montarContatosIniciais = () => {
+    if (contatos && contatos.length > 0) return contatos;
+    if (paciente?.contatos_emergencia && paciente.contatos_emergencia.length > 0) {
+      return paciente.contatos_emergencia;
+    }
+    // Fallback inicial acolhedor se não houver contatos registrados
+    return [
+      {
+        id: 1,
+        nome_contato: nomeResponsavelPadrao,
+        relacao: parentescoPadrao,
+        telefone: telefoneEmergenciaPadrao,
+        ordem: 1,
+      },
+    ];
+  };
+
+  const [listaContatos, setListaContatos] = useState(montarContatosIniciais);
+  const [painelContatosAberto, setPainelContatosAberto] = useState(false);
+  const [salvandoContato, setSalvandoContato] = useState(false);
+  const [novoContato, setNovoContato] = useState({
+    nome_contato: '',
+    relacao: 'Mãe',
+    telefone: '',
+  });
+
+  useEffect(() => {
+    if (contatos && contatos.length > 0) {
+      setListaContatos(contatos);
+    } else if (paciente?.contatos_emergencia && paciente.contatos_emergencia.length > 0) {
+      setListaContatos(paciente.contatos_emergencia);
+    }
+  }, [contatos, paciente?.contatos_emergencia]);
+
+  // Primeiro contato (Prioritário) e segundo contato (Secundário)
+  const contatoPrincipal = listaContatos[0] || null;
+  const contatoSecundario = listaContatos[1] || null;
+  const contatosAdicionais = listaContatos.slice(1);
+
+  // Adicionar novo contato de emergência
+  const handleAdicionarContato = async (e) => {
+    e?.preventDefault();
+    if (!novoContato.nome_contato.trim() || !novoContato.telefone.trim()) {
+      notificar.alerta('Informe o nome e o telefone do contato de emergência.');
+      return;
+    }
+
+    const numerosTel = novoContato.telefone.replace(/\D/g, '');
+    if (numerosTel.length < 10) {
+      notificar.alerta('Informe um telefone válido com DDD (mínimo 10 dígitos).');
+      return;
+    }
+
+    setSalvandoContato(true);
+    const novoItem = {
+      id: Date.now(),
+      nome_contato: novoContato.nome_contato.trim(),
+      relacao: novoContato.relacao || 'Familiar',
+      telefone: formatarTelefone(novoContato.telefone),
+      ordem: listaContatos.length + 1,
+    };
+
+    try {
+      if (paciente?.id || paciente?.perfil_saude_id) {
+        try {
+          const res = await contatosEmergenciaService.adicionar({
+            perfil_saude_id: paciente?.id || paciente?.perfil_saude_id,
+            ...novoItem,
+          });
+          if (res?.dados?.id) {
+            novoItem.id = res.dados.id;
+          }
+        } catch {
+          // Continua em fallback local
+        }
+      }
+
+      const atualizada = [...listaContatos, novoItem];
+      setListaContatos(atualizada);
+      if (onAtualizarContatos) onAtualizarContatos(atualizada);
+      setNovoContato({ nome_contato: '', relacao: 'Mãe', telefone: '' });
+      notificar.sucesso('Contato de emergência adicionado com sucesso!');
+    } catch {
+      notificar.erro('Erro ao cadastrar contato de emergência.');
+    } finally {
+      setSalvandoContato(false);
+    }
+  };
+
+  // Remover contato de emergência (RN-EMERG-01: Proibido remover se restar apenas 1)
+  const handleRemoverContato = async (contatoId) => {
+    if (listaContatos.length <= 1) {
+      notificar.alerta(
+        'Regra de Segurança: É obrigatório manter no mínimo 1 contato de emergência ativo para sua proteção.'
+      );
+      return;
+    }
+
+    const confirmado = await confirmar({
+      titulo: 'Remover Contato de Emergência?',
+      mensagem:
+        'Tem certeza que deseja remover este contato de emergência? Esta alteração impactará os cartões e crachás de identificação médica.',
+      textoConfirmar: 'Sim, remover',
+      textoCancelar: 'Manter contato',
+      variante: 'perigo',
+    });
+
+    if (!confirmado) return;
+
+    try {
+      try {
+        await contatosEmergenciaService.remover(contatoId);
+      } catch {
+        // Fallback local
+      }
+
+      const atualizada = listaContatos
+        .filter((c) => c.id !== contatoId)
+        .map((c, idx) => ({ ...c, ordem: idx + 1 }));
+
+      setListaContatos(atualizada);
+      if (onAtualizarContatos) onAtualizarContatos(atualizada);
+      notificar.sucesso('Contato de emergência removido com sucesso!');
+    } catch {
+      notificar.erro('Erro ao remover contato de emergência.');
+    }
+  };
 
   // Data e hora de emissão oficial (America/Sao_Paulo)
   const dataHoraEmissao = new Intl.DateTimeFormat('pt-BR', {
@@ -248,8 +396,18 @@ export default function CartaoDiagnosticoDownload({
         </div>
       )}
 
-      {/* SELETOR DE FORMATO DO DOCUMENTO (TABS SHADCN/UI) */}
-      <div className="cartao-no-print" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+      {/* SELETOR DE FORMATO DO DOCUMENTO (TABS SHADCN/UI) E GERENCIADOR DE CONTATOS */}
+      <div
+        className="cartao-no-print"
+        style={{
+          marginBottom: '1.25rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}
+      >
         <Tabs value={formatoAtivo} onValueChange={setFormatoAtivo} style={{ width: 'auto' }}>
           <TabsList style={{ backgroundColor: 'rgba(124, 83, 63, 0.08)', padding: '4px', borderRadius: '10px' }}>
             <TabsTrigger
@@ -282,7 +440,267 @@ export default function CartaoDiagnosticoDownload({
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* BOTÃO PARA GERENCIAR CONTATOS DE EMERGÊNCIA */}
+        <Button
+          tipo="button"
+          variante="secundario"
+          onClick={() => setPainelContatosAberto((prev) => !prev)}
+          style={{
+            fontSize: '0.82rem',
+            padding: '0.45rem 0.9rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            fontWeight: 700,
+          }}
+        >
+          <span>📞</span>
+          <span>
+            {painelContatosAberto ? 'Fechar Contatos' : `Editar Contatos de Emergência (${listaContatos.length})`}
+          </span>
+        </Button>
       </div>
+
+      {/* PAINEL INLINE COLAPSÁVEL DE GERENCIAMENTO DE CONTATOS */}
+      {painelContatosAberto && (
+        <div
+          className="cartao-no-print"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1.5px solid rgba(124, 83, 63, 0.3)',
+            borderRadius: '14px',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            boxShadow: '0 4px 14px rgba(46, 40, 36, 0.06)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+            <div>
+              <h4 style={{ fontFamily: 'var(--fonte-titulo, Fraunces)', fontSize: '1.1rem', margin: 0, color: '#2E2824' }}>
+                Gerenciar Contatos de Emergência
+              </h4>
+              <p style={{ fontSize: '0.8rem', color: '#5A5049', margin: '2px 0 0' }}>
+                Mantenha no mínimo 1 contato obrigatório. O 1º contato terá destaque prioritário em crachás e chamadas rápidas.
+              </p>
+            </div>
+            <span
+              style={{
+                backgroundColor: 'rgba(59, 126, 72, 0.1)',
+                color: '#3B7E48',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+              }}
+            >
+              RN-EMERG-01 Ativa
+            </span>
+          </div>
+
+          {/* LISTA ATUAL DE CONTATOS */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {listaContatos.map((contato, idx) => (
+              <div
+                key={contato.id || idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '10px',
+                  backgroundColor: idx === 0 ? '#EFF7F1' : '#F6F3EE',
+                  border: idx === 0 ? '1.5px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.15)',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span
+                    style={{
+                      backgroundColor: idx === 0 ? '#3B7E48' : '#7C533F',
+                      color: '#FFFFFF',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <div>
+                    <strong style={{ fontSize: '0.88rem', color: '#2E2824' }}>{contato.nome_contato}</strong>
+                    <span
+                      style={{
+                        marginLeft: '0.45rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        color: idx === 0 ? '#285832' : '#7C533F',
+                        backgroundColor: '#FFFFFF',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        border: `1px solid ${idx === 0 ? '#3B7E48' : 'rgba(124, 83, 63, 0.3)'}`,
+                      }}
+                    >
+                      {contato.relacao} {idx === 0 ? '• Principal' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#2E2824' }}>
+                    📞 {contato.telefone}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoverContato(contato.id)}
+                    title={
+                      listaContatos.length <= 1
+                        ? 'Obrigatório manter no mínimo 1 contato de emergência.'
+                        : 'Remover contato'
+                    }
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: listaContatos.length <= 1 ? '#A89F91' : '#C94A38',
+                      cursor: listaContatos.length <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>🗑️</span>
+                    <span>Remover</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* FORMULÁRIO RÁPIDO INLINE PARA NOVO CONTATO */}
+          <form
+            onSubmit={handleAdicionarContato}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) 140px',
+              gap: '0.65rem',
+              alignItems: 'flex-end',
+              backgroundColor: '#FBF9F7',
+              padding: '0.85rem',
+              borderRadius: '10px',
+              border: '1px dashed rgba(124, 83, 63, 0.25)',
+            }}
+          >
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
+                Nome do Contato *
+              </label>
+              <input
+                type="text"
+                value={novoContato.nome_contato}
+                onChange={(e) => setNovoContato({ ...novoContato, nome_contato: e.target.value })}
+                placeholder="Ex: Carlos Silva"
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(124, 83, 63, 0.25)',
+                  fontSize: '0.84rem',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
+                Relação / Vínculo *
+              </label>
+              <CustomSelect
+                value={novoContato.relacao}
+                onChange={(e) => setNovoContato({ ...novoContato, relacao: e.target.value })}
+                options={[
+                  { value: 'Mãe', label: 'Mãe' },
+                  { value: 'Pai', label: 'Pai' },
+                  { value: 'Cônjuge', label: 'Cônjuge' },
+                  { value: 'Responsável', label: 'Responsável Legal' },
+                  { value: 'Familiar', label: 'Familiar' },
+                  { value: 'Escola', label: 'Escola / Coordenação' },
+                  { value: 'Cuidador', label: 'Cuidador / Acompanhante' },
+                  { value: 'Outro', label: 'Outro' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#7C533F', marginBottom: '2px' }}>
+                Telefone com DDD *
+              </label>
+              <input
+                type="tel"
+                value={novoContato.telefone}
+                onChange={(e) => setNovoContato({ ...novoContato, telefone: formatarTelefone(e.target.value) })}
+                placeholder="(11) 98888-7777"
+                maxLength={15}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(124, 83, 63, 0.25)',
+                  fontSize: '0.84rem',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div>
+              <Button
+                tipo="submit"
+                variante="primario"
+                loading={salvandoContato}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.8rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                }}
+              >
+                + Adicionar
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* AVISO DE SEGURANÇA SE A LISTA DE CONTATOS ESTIVER VAZIA */}
+      {listaContatos.length === 0 && (
+        <div
+          className="cartao-no-print"
+          style={{
+            backgroundColor: '#FFF4F2',
+            border: '1.5px solid #C94A38',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '1.25rem',
+            color: '#842029',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800 }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <span>Nenhum contato de emergência cadastrado!</span>
+          </div>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.84rem', lineHeight: 1.4 }}>
+            Para a segurança clínica e emissão do Cartão e Crachá de Identificação, é obrigatório cadastrar pelo menos 1 contato de emergência com telefone ativo.
+          </p>
+        </div>
+      )}
 
       {/* VISÃO 1: FICHA COMPLETA (PANORÂMICA DETALHADA) */}
       {formatoAtivo === 'ficha' && (
@@ -395,47 +813,144 @@ export default function CartaoDiagnosticoDownload({
           </div>
         </div>
 
-        {/* BLOCO CONDICIONAL DO CUIDADOR / RESPONSÁVEL LEGAL (DESTAQUE) */}
-        {temCuidador && (
+        {/* BLOCO DE CONTATOS DE EMERGÊNCIA (DESTAQUE MÚLTIPLOS CONTATOS) */}
+        {listaContatos && listaContatos.length > 0 ? (
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              padding: '0.85rem 1rem',
+              borderRadius: '14px',
+              padding: '1rem 1.15rem',
               border: '1.5px solid #3B7E48',
               marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
+              boxShadow: '0 2px 8px rgba(59, 126, 72, 0.08)',
             }}
           >
-            <div>
-              <div style={{ fontSize: '0.72rem', color: '#3B7E48', fontWeight: 800, textTransform: 'uppercase' }}>
-                🛡️ Responsável Legal / Contato de Emergência
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ fontSize: '1.05rem' }}>📞</span>
+                <span style={{ fontSize: '0.78rem', color: '#285832', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Contatos de Emergência ({listaContatos.length})
+                </span>
               </div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#2E2824' }}>
-                {nomeResponsavel} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#5A5049' }}>({parentesco})</span>
-              </div>
+              <span style={{ fontSize: '0.72rem', color: '#3B7E48', fontWeight: 700 }}>
+                Aviso Imediato em Hipoglicemia / Mal-estar
+              </span>
             </div>
 
-            <div
-              style={{
-                backgroundColor: 'rgba(59, 126, 72, 0.1)',
-                color: '#285832',
-                padding: '0.4rem 0.85rem',
-                borderRadius: '8px',
-                fontSize: '0.9rem',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              <span>📞</span>
-              <span>{telefoneEmergencia}</span>
-            </div>
+            {/* Contato 1 (Prioridade 1 em destaque) */}
+            {contatoPrincipal && (
+              <div
+                style={{
+                  backgroundColor: '#EFF7F1',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.9rem',
+                  border: '1px solid #3B7E48',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span
+                      style={{
+                        backgroundColor: '#3B7E48',
+                        color: '#FFFFFF',
+                        fontSize: '0.66rem',
+                        fontWeight: 800,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      1º Contato • Principal
+                    </span>
+                    <strong style={{ fontSize: '0.96rem', color: '#2E2824' }}>
+                      {contatoPrincipal.nome_contato}
+                    </strong>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#285832' }}>
+                      ({contatoPrincipal.relacao})
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={`tel:${contatoPrincipal.telefone.replace(/\D/g, '')}`}
+                  style={{
+                    backgroundColor: '#3B7E48',
+                    color: '#FFFFFF',
+                    padding: '0.4rem 0.9rem',
+                    borderRadius: '8px',
+                    fontSize: '0.92rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    textDecoration: 'none',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  <span>📞</span>
+                  <span>{contatoPrincipal.telefone}</span>
+                </a>
+              </div>
+            )}
+
+            {/* Contatos Adicionais (2, 3...) em grid limpo */}
+            {contatosAdicionais && contatosAdicionais.length > 0 && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem',
+                }}
+              >
+                {contatosAdicionais.map((c, i) => (
+                  <div
+                    key={c.id || i}
+                    style={{
+                      backgroundColor: '#F6F3EE',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.75rem',
+                      border: '1px solid rgba(124, 83, 63, 0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.66rem', color: '#7C533F', fontWeight: 700 }}>
+                        {i + 2}º Contato ({c.relacao})
+                      </div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2E2824' }}>
+                        {c.nome_contato}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#285832' }}>
+                      📞 {c.telefone}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            style={{
+              backgroundColor: '#FFF4F2',
+              borderRadius: '12px',
+              padding: '0.85rem 1rem',
+              border: '1.5px solid #C94A38',
+              marginBottom: '1.25rem',
+              color: '#842029',
+              fontSize: '0.86rem',
+            }}
+          >
+            ⚠️ Nenhum contato de emergência ativo registrado.
           </div>
         )}
 
@@ -934,25 +1449,69 @@ export default function CartaoDiagnosticoDownload({
               )}
             </div>
 
-            {/* Contato de Emergência */}
+            {/* Contato de Emergência (Crachá Frente) */}
             <div
               style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: '8px',
                 border: '1.5px solid #3B7E48',
-                padding: '6px 8px',
+                padding: '5px 7px',
                 marginTop: '3px',
               }}
             >
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#3B7E48', textTransform: 'uppercase' }}>
-                📞 Contato de Emergência
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1px' }}>
+                <span style={{ fontSize: '0.58rem', fontWeight: 800, color: '#3B7E48', textTransform: 'uppercase' }}>
+                  📞 Emergência • 1º Contato
+                </span>
+                {contatoPrincipal && (
+                  <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#285832' }}>
+                    {contatoPrincipal.relacao}
+                  </span>
+                )}
               </div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2E2824', marginTop: '1px' }}>
-                {nomeResponsavel} <span style={{ fontSize: '0.66rem', fontWeight: 500, color: '#5A5049' }}>({parentesco})</span>
-              </div>
-              <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#285832', letterSpacing: '0.02em', marginTop: '1px' }}>
-                {telefoneEmergencia}
-              </div>
+
+              {contatoPrincipal ? (
+                <>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#2E2824', lineHeight: 1.15 }}>
+                    {contatoPrincipal.nome_contato}
+                  </div>
+                  <div style={{ fontSize: '0.94rem', fontWeight: 900, color: '#285832', letterSpacing: '0.02em', marginTop: '1px' }}>
+                    {contatoPrincipal.telefone}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: '0.68rem', color: '#C94A38', fontWeight: 700 }}>
+                  Sem contato cadastrado
+                </div>
+              )}
+
+              {/* 2º Contato de Emergência (se houver) */}
+              {contatoSecundario && (
+                <div
+                  style={{
+                    marginTop: '3px',
+                    paddingTop: '3px',
+                    borderTop: '1px dashed rgba(59, 126, 72, 0.35)',
+                    fontSize: '0.64rem',
+                    color: '#2E2824',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>
+                    <strong>2º:</strong> {contatoSecundario.nome_contato} ({contatoSecundario.relacao})
+                  </span>
+                  <strong style={{ color: '#285832' }}>{contatoSecundario.telefone}</strong>
+                </div>
+              )}
+
+              {/* Indicador se houver 3 ou mais contatos */}
+              {listaContatos.length > 2 && (
+                <div style={{ fontSize: '0.55rem', color: '#7C533F', fontWeight: 600, marginTop: '2px', textAlign: 'right' }}>
+                  + {listaContatos.length - 2} outro(s) contato(s) no verso/app
+                </div>
+              )}
             </div>
 
             {/* Rodapé: Aviso do Verso */}
@@ -1133,7 +1692,8 @@ export default function CartaoDiagnosticoDownload({
           variante="cta"
           onClick={handleBaixarPNG}
           loading={gerandoImagem}
-          disabled={gerandoImagem}
+          disabled={gerandoImagem || listaContatos.length === 0}
+          title={listaContatos.length === 0 ? 'Cadastre ao menos 1 contato de emergência para baixar' : ''}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -1141,6 +1701,8 @@ export default function CartaoDiagnosticoDownload({
             padding: '0.65rem 1.3rem',
             fontWeight: 700,
             fontSize: '0.88rem',
+            opacity: listaContatos.length === 0 ? 0.6 : 1,
+            cursor: listaContatos.length === 0 ? 'not-allowed' : 'pointer',
           }}
         >
           <span>🖼️</span>
@@ -1156,6 +1718,8 @@ export default function CartaoDiagnosticoDownload({
         <Button
           variante="secundario"
           onClick={handleImprimirPDF}
+          disabled={listaContatos.length === 0}
+          title={listaContatos.length === 0 ? 'Cadastre ao menos 1 contato de emergência para imprimir' : ''}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -1163,6 +1727,8 @@ export default function CartaoDiagnosticoDownload({
             padding: '0.65rem 1.3rem',
             fontWeight: 700,
             fontSize: '0.88rem',
+            opacity: listaContatos.length === 0 ? 0.6 : 1,
+            cursor: listaContatos.length === 0 ? 'not-allowed' : 'pointer',
           }}
         >
           <span>🖨️</span>
@@ -1174,7 +1740,9 @@ export default function CartaoDiagnosticoDownload({
         </Button>
 
         <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
-          {formatoAtivo === 'cracha'
+          {listaContatos.length === 0
+            ? '⚠️ Emissão bloqueada: adicione pelo menos 1 contato de emergência para desbloquear o download e a impressão.'
+            : formatoAtivo === 'cracha'
             ? '💡 Dimensão exata 54×86mm para porta-crachá CR80 de pescoço, mochila ou carteira.'
             : '💡 Ideal para salvar no álbum do celular ou na tela bloqueada para emergências.'}
         </span>

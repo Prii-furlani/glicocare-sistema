@@ -99,6 +99,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             );
             $stmtAlergias->execute([':pid' => $perfil['id']]);
             $alergias = $stmtAlergias->fetchAll(PDO::FETCH_ASSOC);
+
+            // Busca contatos de emergência vinculados a este perfil (RN-EMERG-01)
+            $stmtContatos = $db->prepare(
+                'SELECT id, perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em
+                 FROM contatos_emergencia
+                 WHERE perfil_saude_id = :pid
+                 ORDER BY ordem ASC, id ASC'
+            );
+            $stmtContatos->execute([':pid' => $perfil['id']]);
+            $contatosEmergencia = $stmtContatos->fetchAll(PDO::FETCH_ASSOC);
         }
 
         http_response_code(200);
@@ -115,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'perfil_saude' => $perfil,
                 'medicamentos' => $medicamentos,
                 'alergias'     => $alergias,
+                'contatos_emergencia' => $contatosEmergencia ?? [],
             ]
         ]);
         exit;
@@ -394,6 +405,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
                     $usuarioId,
                     $usuarioLogado['nome_completo']
                 );
+            }
+
+            // Sincroniza contatos de emergência (RN-EMERG-01)
+            $contatosPayload = $payload['contatos_emergencia'] ?? null;
+            if (is_array($contatosPayload) && !empty($contatosPayload)) {
+                $stmtDelContatos = $db->prepare('DELETE FROM contatos_emergencia WHERE perfil_saude_id = :pid');
+                $stmtDelContatos->execute([':pid' => $perfilSaudeId]);
+
+                $stmtInContato = $db->prepare('
+                    INSERT INTO contatos_emergencia (perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em)
+                    VALUES (:pid, :nome, :relacao, :tel, :ordem, NOW())
+                ');
+
+                $ordemIdx = 1;
+                $telPrincipal = null;
+                foreach ($contatosPayload as $ct) {
+                    $nomeCt = trim($ct['nome_contato'] ?? '');
+                    $telCt = trim($ct['telefone'] ?? '');
+                    $relCt = trim($ct['relacao'] ?? 'Familiar');
+                    if (!empty($nomeCt) && !empty($telCt)) {
+                        $stmtInContato->execute([
+                            ':pid' => $perfilSaudeId,
+                            ':nome' => $nomeCt,
+                            ':relacao' => $relCt,
+                            ':tel' => $telCt,
+                            ':ordem' => $ordemIdx,
+                        ]);
+                        if ($ordemIdx === 1) {
+                            $telPrincipal = $telCt;
+                        }
+                        $ordemIdx++;
+                    }
+                }
+
+                if ($telPrincipal) {
+                    $stmtUpdTel = $db->prepare('UPDATE perfis_saude SET contato_emergencia_telefone = :tel WHERE id = :pid');
+                    $stmtUpdTel->execute([':tel' => $telPrincipal, ':pid' => $perfilSaudeId]);
+                }
             }
         }
 

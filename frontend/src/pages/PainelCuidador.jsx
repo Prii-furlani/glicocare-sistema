@@ -88,6 +88,29 @@ const DEPENDENTE_PADRAO_THEO = {
   parentesco: 'MAE',
   nivel_acesso: 'ADMINISTRADOR_LEGAL',
   codigo_convite_familia: 'THEO-FAM-2026',
+  contatos_emergencia: [
+    {
+      id: 1,
+      nome_contato: 'Mariana Silva',
+      relacao: 'Mãe (Responsável Legal)',
+      telefone: '(11) 97777-2001',
+      ordem: 1,
+    },
+    {
+      id: 2,
+      nome_contato: 'Carlos Eduardo Souza',
+      relacao: 'Pai',
+      telefone: '(11) 98888-3333',
+      ordem: 2,
+    },
+    {
+      id: 3,
+      nome_contato: 'Colégio Viver Bem (Coordenação)',
+      relacao: 'Escola',
+      telefone: '(11) 3456-7890',
+      ordem: 3,
+    },
+  ],
   co_cuidadores: [
     {
       id: 2,
@@ -2843,6 +2866,10 @@ export default function PainelCuidador() {
                 }}
                 alergias={filhoAtivo.alergias || []}
                 medicamentos={filhoAtivo.medicamentos || []}
+                contatos={filhoAtivo.contatos_emergencia || []}
+                onAtualizarContatos={(novosContatos) => {
+                  setFilhoAtivo((prev) => ({ ...prev, contatos_emergencia: novosContatos }));
+                }}
                 isCuidador={true}
                 exibirCabecalhoSecao={false}
               />

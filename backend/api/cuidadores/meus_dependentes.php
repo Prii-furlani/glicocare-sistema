@@ -201,6 +201,16 @@ try {
         $stmtMeds->execute([':pid' => $perfilId]);
         $medicamentos = $stmtMeds->fetchAll(PDO::FETCH_ASSOC);
 
+        // 4b. Contatos de emergência vinculados (RN-EMERG-01)
+        $stmtContatos = $db->prepare('
+            SELECT id, perfil_saude_id, nome_contato, relacao, telefone, ordem, criado_em
+            FROM contatos_emergencia
+            WHERE perfil_saude_id = :pid
+            ORDER BY ordem ASC, id ASC
+        ');
+        $stmtContatos->execute([':pid' => $perfilId]);
+        $contatosEmergencia = $stmtContatos->fetchAll(PDO::FETCH_ASSOC);
+
         // 5. Histórico recente de glicemia e cálculo de IOB
         $stmtGlic = $db->prepare('
             SELECT id, valor_mg_dl, momento_medicao, tipo_leitura, acao_realizada,
@@ -357,6 +367,7 @@ try {
             'co_cuidadores'                => $coCuidadores,
             'alergias'                     => $alergias,
             'medicamentos'                 => $medicamentos,
+            'contatos_emergencia'          => $contatosEmergencia,
             'leituras_recentes'            => $leiturasGlicemia,
             'ultima_leitura'               => !empty($leiturasGlicemia) ? $leiturasGlicemia[0] : null,
             'iob_ativa'                    => $iobTotal,

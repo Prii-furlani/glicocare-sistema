@@ -87,4 +87,10 @@ export const alergiasService = {
   remover: (id, params) => api.delete(`/perfil/gerenciar_alergias.php?id=${id}`, { params }),
 };
 
+export const contatosEmergenciaService = {
+  listar: (params) => api.get('/perfil/contatos_emergencia.php', { params }),
+  adicionar: (dados) => api.post('/perfil/contatos_emergencia.php', dados),
+  remover: (id, params) => api.delete(`/perfil/contatos_emergencia.php?id=${id}`, { params }),
+};
+
 export default api;

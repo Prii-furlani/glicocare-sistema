@@ -997,3 +997,28 @@ INSERT INTO `configuracoes_home` (`secao`, `chave`, `tipo_campo`, `rotulo_admin`
 ('cta_final', 'cta_final_subtitulo', 'TEXTO_LONGO', 'Chamada Final: Subtítulo', 'Junte-se a centenas de famílias que transformaram o medo em aprendizado e confiança diária.', NOW()),
 ('cta_final', 'cta_final_botao', 'TEXTO_CURTO', 'Chamada Final: Texto do Botão', 'Conheça nossos planos e comece hoje', NOW())
 ON DUPLICATE KEY UPDATE `rotulo_admin` = VALUES(`rotulo_admin`), `valor` = VALUES(`valor`), `atualizado_em` = VALUES(`atualizado_em`);
+
+-- =============================================================================
+-- INÍCIO: TABELA contatos_emergencia (Múltiplos contatos com mínimo 1 obrigatório)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `contatos_emergencia` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID único do contato de emergência',
+  `perfil_saude_id` INT UNSIGNED NOT NULL COMMENT 'FK para perfis_saude(id)',
+  `nome_contato` VARCHAR(120) NOT NULL COMMENT 'Nome completo do contato de emergência',
+  `relacao` VARCHAR(60) NOT NULL DEFAULT 'Familiar' COMMENT 'Grau de parentesco ou relação (Mãe, Pai, Cônjuge, Responsável, Escola)',
+  `telefone` VARCHAR(25) NOT NULL COMMENT 'Telefone de emergência com DDD',
+  `ordem` INT NOT NULL DEFAULT 1 COMMENT 'Prioridade de contato (1 = principal)',
+  `criado_em` DATETIME NOT NULL COMMENT 'Data e hora do registro em America/Sao_Paulo',
+  PRIMARY KEY (`id`),
+  KEY `idx_contatos_perfil` (`perfil_saude_id`),
+  CONSTRAINT `fk_contatos_perfil` FOREIGN KEY (`perfil_saude_id`) REFERENCES `perfis_saude` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contatos de emergência do paciente ou dependente DM1';
+
+-- Carga inicial demonstrativa de contatos de emergência
+INSERT INTO `contatos_emergencia` (`id`, `perfil_saude_id`, `nome_contato`, `relacao`, `telefone`, `ordem`, `criado_em`) VALUES
+(1, 1, 'Mariana Silva', 'Cônjuge / Familiar', '(11) 97777-2001', 1, NOW()),
+(2, 1, 'Dra. Camila Alencar', 'Endocrinologista', '(11) 98888-3002', 2, NOW())
+ON DUPLICATE KEY UPDATE `nome_contato` = VALUES(`nome_contato`), `telefone` = VALUES(`telefone`);
+-- =============================================================================
+-- FIM: TABELA contatos_emergencia
+-- =============================================================================

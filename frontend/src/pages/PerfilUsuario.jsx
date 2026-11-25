@@ -163,6 +163,22 @@ export default function PerfilUsuario() {
   const [perfilSaude, setPerfilSaude] = useState(null);
   const [medicamentos, setMedicamentos] = useState([]);
   const [alergias, setAlergias] = useState([]);
+  const [contatosEmergencia, setContatosEmergencia] = useState([
+    {
+      id: 1,
+      nome_contato: 'Mariana Silva',
+      relacao: 'Cônjuge / Familiar',
+      telefone: '(11) 97777-2001',
+      ordem: 1,
+    },
+    {
+      id: 2,
+      nome_contato: 'Roberto Souza',
+      relacao: 'Irmão',
+      telefone: '(11) 98888-3333',
+      ordem: 2,
+    },
+  ]);
   const [carregando, setCarregando] = useState(true);
 
   // Controle de Gaveta Lateral (Sheet) para Novo Registro de Glicemia
@@ -252,6 +268,9 @@ export default function PerfilUsuario() {
             setPerfilSaude(dados.perfil || null);
             setMedicamentos(dados.medicamentos || []);
             setAlergias(dados.alergias || []);
+            if (dados.contatos_emergencia && dados.contatos_emergencia.length > 0) {
+              setContatosEmergencia(dados.contatos_emergencia);
+            }
             if (dados.perfil?.fsi) setFsi(dados.perfil.fsi);
             if (dados.perfil?.glicemia_alvo) setGlicemiaAlvo(Number(dados.perfil.glicemia_alvo));
             if (dados.perfil?.duracao_insulina_horas) setDuracaoInsulinaHoras(Number(dados.perfil.duracao_insulina_horas));
@@ -1472,6 +1491,8 @@ export default function PerfilUsuario() {
               paciente={perfilSaude}
               alergias={alergias}
               medicamentos={medicamentos}
+              contatos={contatosEmergencia}
+              onAtualizarContatos={setContatosEmergencia}
               isCuidador={false}
               exibirCabecalhoSecao={false}
             />

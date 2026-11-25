@@ -1145,5 +1145,55 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
 - **Captura em PNG:** Botão dinâmico `Baixar Crachá (PNG)` que gera via `html2canvas` (escala 2x) o arquivo `cartao-cracha-frente-verso-glicocare-[paciente].png` com as duas faces lado a lado em alta definição.
 - **Impressão em Tamanho Real:** Regras `@media print` dedicadas que fixam cada face exatamente em `width: 54mm; height: 86mm` com borda tracejada de corte (`border: 1px dashed #7C533F`), prontas para recorte e encaixe direto em porta-crachás de PVC.
 
+---
+
+## 29. MÚLTIPLOS CONTATOS DE EMERGÊNCIA (RN-EMERG-01) NA FICHA E NO CRACHÁ CR80
+
+### A. Banco de Dados & Migração (`contatos_emergencia`)
+- **Tabela `contatos_emergencia`:**
+  * `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY.
+  * `perfil_saude_id` INT UNSIGNED NOT NULL (FK referenciando `perfis_saude(id)` com `ON DELETE CASCADE`).
+  * `nome_contato` VARCHAR(120) NOT NULL.
+  * `relacao` VARCHAR(60) NOT NULL (ex: `'Mãe'`, `'Pai'`, `'Cônjuge'`, `'Responsável'`, `'Familiar'`, `'Escola'`).
+  * `telefone` VARCHAR(25) NOT NULL.
+  * `ordem` INT NOT NULL DEFAULT 1.
+  * `criado_em` DATETIME NOT NULL.
+- **Sincronização de Scripts:**
+  * Atualizado `backend/database_tidb.sql` com a DDL oficial e inserção demonstrativa.
+  * Atualizado `backend/migrar_banco.mjs` para execução de migração segura no TiDB Cloud.
+
+### B. Back-End PHP Protegido e Auditado (`/backend/api/perfil/contatos_emergencia.php`)
+- **Segurança & Controle de Acesso:** Protegido por `AuthMiddleware::autenticar()` e validação de vínculo do perfil ou dependente.
+- **Auditoria Imutável:** Todas as operações geram registros na tabela `logs_auditoria` via `AuditLogger::registrar()` no fuso horário oficial `America/Sao_Paulo`.
+- **Regra de Segurança RN-EMERG-01 (Mínimo 1 Contato Obrigatório):**
+  * `GET`: Retorna a lista de contatos ordenados por prioridade (`ordem ASC`).
+  * `POST`: Insere novo contato validando campos obrigatórios (`nome_contato` e `telefone`).
+  * `DELETE`: Remove contato pelo ID, **mas bloqueia a exclusão e retorna erro 400 se restar apenas 1 contato ativo**, impedindo que qualquer usuário ou dependente fique sem socorro clínico emergencial.
+- **Sincronização Sistêmica:**
+  * `backend/api/perfil/index.php`: Retorna `contatos_emergencia` no `GET` e realiza sincronização automática no `POST`/`PUT`.
+  * `backend/api/cuidadores/meus_dependentes.php`: Inclui a lista `contatos_emergencia` para cada criança acompanhada.
+
+### C. Front-End: Gerenciador de Contatos e Máscara Automática
+- **Serviço de API (`frontend/src/services/api.js`):** `contatosEmergenciaService` provê os métodos `listar()`, `adicionar()` e `remover()`.
+- **Componente `<CartaoDiagnosticoDownload />`:**
+  * **Botão no Topo:** `Editar Contatos de Emergência ({total})` com alternância limpa.
+  * **Painel Inline Expansível:** Lista ordenada dos contatos com badges (`Principal`, `Familiar`, `Escola`), formulário rápido inline com `<CustomSelect>` para vínculo e input com máscara automática `(XX) XXXXX-XXXX`.
+  * **Exclusão Segura:** Protegida por `useConfirm()` e validação preventiva no cliente (`listaContatos.length <= 1`), reforçando a regra de negócio antes do request à API.
+  * **Bloqueio de Emissão:** Caso a lista de contatos fique vazia, exibe banner `<Alert>` de perigo e desabilita os botões de download e impressão.
+
+### D. Exibição na Ficha Completa e Crachá de Pescoço CR80
+- **Na Ficha Completa (Celular / A4):**
+  * Bloco destacado **`📞 CONTATOS DE EMERGÊNCIA`**: Contato prioritário 1 em destaque total com botão de chamada direta `tel:`, seguido pelos contatos adicionais em grade responsiva organizada.
+- **No Crachá Frente (Lado A — 54×86mm):**
+  * **1º Contato de Emergência (Prioritário):** Caixa de alto contraste verde/branco (`1.5px solid #3B7E48`) no rodapé frontal com nome, parentesco e telefone em tipografia de alta legibilidade (`0.94rem`, `font-weight: 900`).
+  * **2º Contato de Emergência:** Exibição nítida logo abaixo em linha compacta separada por divisor pontilhado.
+  * **Contatos Extras:** Indicador discreto `+ X contato(s) no verso/app`.
+
+### E. Cadastro Inicial no Wizard (`ConfigurarPerfil.jsx`)
+- **Etapa 1 (Dados Base):** Inclusão da seção obrigatória de contatos de emergência com ordenação visual, auto-máscara e botão `+ Adicionar outro contato de emergência`.
+- **Validação de Bloqueio:** O usuário é impedido de pular para as etapas seguintes sem preencher ao menos 1 contato com telefone válido com DDD (mínimo 10 dígitos).
+- **Persistência Integrada:** Salva contatos na API e em fallback no `localStorage ('glicocare_contatos_emergencia')`.
+
+
 
 

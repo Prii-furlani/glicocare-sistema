@@ -101,6 +101,15 @@ export default function ConfigurarPerfil() {
     },
   ]);
 
+  // Contatos de Emergência (RN-EMERG-01: Mínimo 1 obrigatório)
+  const [contatosEmergencia, setContatosEmergencia] = useState([
+    {
+      nome_contato: '',
+      relacao: 'Familiar',
+      telefone: '',
+    },
+  ]);
+
   /**
    * Busca dados existentes prévios do perfil se já cadastrados
    */
@@ -140,6 +149,18 @@ export default function ConfigurarPerfil() {
           if (json.dados.alergias && json.dados.alergias.length > 0) {
             setAlergias(json.dados.alergias);
           }
+
+          if (json.dados.contatos_emergencia && json.dados.contatos_emergencia.length > 0) {
+            setContatosEmergencia(json.dados.contatos_emergencia);
+          } else if (p.contato_emergencia_telefone || p.nome_responsavel) {
+            setContatosEmergencia([
+              {
+                nome_contato: p.nome_responsavel || usuario?.nome_completo || '',
+                relacao: p.parentesco || 'Responsável',
+                telefone: p.contato_emergencia_telefone || '',
+              },
+            ]);
+          }
         }
       } catch (e) {
         // Usa valores padrão se ainda não existir
@@ -147,6 +168,64 @@ export default function ConfigurarPerfil() {
     }
     carregarPerfilExistente();
   }, [token, usuario]);
+
+  // Manipuladores de contatos de emergência (RN-EMERG-01)
+  const formatarTelefoneInput = (valor) => {
+    if (!valor) return '';
+    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 11);
+    if (apenasNumeros.length <= 2) return `(${apenasNumeros}`;
+    if (apenasNumeros.length <= 6) return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2)}`;
+    if (apenasNumeros.length <= 10) {
+      return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2, 6)}-${apenasNumeros.slice(6)}`;
+    }
+    return `(${apenasNumeros.slice(0, 2)}) ${apenasNumeros.slice(2, 7)}-${apenasNumeros.slice(7, 11)}`;
+  };
+
+  const adicionarContatoEmergencia = () => {
+    setContatosEmergencia((prev) => [
+      ...prev,
+      {
+        nome_contato: '',
+        relacao: 'Familiar',
+        telefone: '',
+      },
+    ]);
+  };
+
+  const atualizarItemContato = (index, campo, valor) => {
+    const novos = [...contatosEmergencia];
+    novos[index][campo] = campo === 'telefone' ? formatarTelefoneInput(valor) : valor;
+    setContatosEmergencia(novos);
+  };
+
+  const removerContatoEmergencia = (index) => {
+    if (contatosEmergencia.length <= 1) {
+      setMensagemStatus({
+        tipo: 'erro',
+        texto: 'Regra de Segurança: É obrigatório manter no mínimo 1 contato de emergência cadastrado.',
+      });
+      return;
+    }
+    setContatosEmergencia(contatosEmergencia.filter((_, i) => i !== index));
+  };
+
+  // Validação segura para avanço da Etapa 1 (Nome e Contato de Emergência Obrigatório)
+  const validarAvancoEtapa1 = () => {
+    if (!nomeCompleto.trim()) {
+      setMensagemStatus({ tipo: 'erro', texto: 'Por favor, preencha o nome antes de prosseguir.' });
+      return false;
+    }
+    const primeiro = contatosEmergencia[0];
+    const telDigitos = primeiro?.telefone ? primeiro.telefone.replace(/\D/g, '') : '';
+    if (!primeiro?.nome_contato?.trim() || telDigitos.length < 10) {
+      setMensagemStatus({
+        tipo: 'erro',
+        texto: 'Segurança Médica (RN-EMERG-01): Por favor, informe ao menos 1 contato de emergência com nome e telefone válido com DDD.',
+      });
+      return false;
+    }
+    return true;
+  };
 
   // Manipuladores de medicamentos dinâmicos
   const adicionarMedicamento = () => {
@@ -234,6 +313,9 @@ export default function ConfigurarPerfil() {
       alergias: possuiAlergias
         ? alergias.filter((a) => a.substancia_ou_item.trim() !== '')
         : [],
+      contatos_emergencia: contatosEmergencia.filter(
+        (c) => c.nome_contato.trim() !== '' && c.telefone.trim() !== ''
+      ),
     };
 
     try {
@@ -261,6 +343,7 @@ export default function ConfigurarPerfil() {
       }));
       localStorage.setItem('glicocare_medicamentos', JSON.stringify(payload.medicamentos));
       localStorage.setItem('glicocare_alergias', JSON.stringify(payload.alergias));
+      localStorage.setItem('glicocare_contatos_emergencia', JSON.stringify(payload.contatos_emergencia));
 
       atualizarUsuario({ perfil_configurado: true, nome_completo: nomeCompleto });
       const destinoFinal = usuario?.tipo_usuario === 'cuidador' ? '/painel-cuidador' : '/meu-perfil';
@@ -318,8 +401,7 @@ export default function ConfigurarPerfil() {
                   role="tab"
                   aria-selected={ativo}
                   onClick={() => {
-                    if (p.num > 1 && !nomeCompleto.trim()) {
-                      setMensagemStatus({ tipo: 'erro', texto: 'Por favor, preencha o nome antes de prosseguir.' });
+                    if (p.num > 1 && !validarAvancoEtapa1()) {
                       return;
                     }
                     setMensagemStatus(null);
@@ -608,6 +690,178 @@ export default function ConfigurarPerfil() {
                     {opt}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* SEÇÃO OBRIGATÓRIA: CONTATOS DE EMERGÊNCIA (RN-EMERG-01) */}
+            <div
+              style={{
+                backgroundColor: 'var(--cor-superficie-elevada, #FAF8F5)',
+                border: '1.5px solid rgba(124, 83, 63, 0.25)',
+                borderRadius: '14px',
+                padding: '1.25rem',
+                marginTop: '0.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.2rem' }}>📞</span>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--cor-texto)' }}>
+                      Contatos de Emergência *
+                    </h3>
+                    <span style={{ fontSize: '0.76rem', color: '#6A5E57' }}>
+                      Pelo menos 1 contato com telefone válido é obrigatório para emissão de cartões e segurança clínica.
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    backgroundColor: 'rgba(59, 126, 72, 0.12)',
+                    color: '#285832',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Mínimo 1 Obrigatório
+                </span>
+              </div>
+
+              {/* LISTA DINÂMICA DE CONTATOS */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.85rem' }}>
+                {contatosEmergencia.map((c, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      padding: '0.9rem',
+                      border: idx === 0 ? '1.5px solid #3B7E48' : '1px solid rgba(124, 83, 63, 0.2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          color: idx === 0 ? '#285832' : '#7C533F',
+                          backgroundColor: idx === 0 ? '#EFF7F1' : '#F6F3EE',
+                          padding: '2px 8px',
+                          borderRadius: '5px',
+                        }}
+                      >
+                        {idx + 1}º Contato {idx === 0 ? '• Prioritário / Principal' : ''}
+                      </span>
+
+                      {contatosEmergencia.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removerContatoEmergencia(idx)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#C94A38',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <span>🗑️</span>
+                          <span>Remover</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: '#5A5049', marginBottom: '2px' }}>
+                          Nome do Contato *
+                        </label>
+                        <input
+                          type="text"
+                          value={c.nome_contato}
+                          onChange={(e) => atualizarItemContato(idx, 'nome_contato', e.target.value)}
+                          placeholder="Ex: Mariana Silva"
+                          style={{
+                            width: '100%',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(124, 83, 63, 0.25)',
+                            fontSize: '0.88rem',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: '#5A5049', marginBottom: '2px' }}>
+                          Relação / Vínculo *
+                        </label>
+                        <CustomSelect
+                          value={c.relacao}
+                          onChange={(e) => atualizarItemContato(idx, 'relacao', e.target.value)}
+                          options={[
+                            { value: 'Mãe', label: 'Mãe' },
+                            { value: 'Pai', label: 'Pai' },
+                            { value: 'Cônjuge', label: 'Cônjuge' },
+                            { value: 'Responsável', label: 'Responsável Legal' },
+                            { value: 'Familiar', label: 'Familiar' },
+                            { value: 'Escola', label: 'Escola / Coordenação' },
+                            { value: 'Cuidador', label: 'Cuidador / Acompanhante' },
+                            { value: 'Outro', label: 'Outro' },
+                          ]}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: '#5A5049', marginBottom: '2px' }}>
+                          Telefone com DDD *
+                        </label>
+                        <input
+                          type="tel"
+                          value={c.telefone}
+                          onChange={(e) => atualizarItemContato(idx, 'telefone', e.target.value)}
+                          placeholder="(11) 98888-7777"
+                          maxLength={15}
+                          style={{
+                            width: '100%',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(124, 83, 63, 0.25)',
+                            fontSize: '0.88rem',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '0.85rem' }}>
+                <Button
+                  tipo="button"
+                  variante="secundario"
+                  onClick={adicionarContatoEmergencia}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  <span>+</span>
+                  <span>Adicionar outro contato de emergência</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -1490,8 +1744,7 @@ export default function ConfigurarPerfil() {
             <Button
               variante="primario"
               onClick={() => {
-                if (etapa === 1 && !nomeCompleto.trim()) {
-                  setMensagemStatus({ tipo: 'erro', texto: 'Por favor, preencha o nome antes de prosseguir.' });
+                if (etapa === 1 && !validarAvancoEtapa1()) {
                   return;
                 }
                 setMensagemStatus(null);
