@@ -16,6 +16,7 @@ import html2canvas from 'html2canvas';
 import { useNotify } from '../context/ToastContext';
 import { calcularTempoDiagnostico } from '../utils/dateUtils';
 import Button from './Button';
+import { Tabs, TabsList, TabsTrigger } from './ui/Tabs';
 import logoGlicoCare from '../assets/logo-glicocare.jpg';
 
 export default function CartaoDiagnosticoDownload({
@@ -28,7 +29,9 @@ export default function CartaoDiagnosticoDownload({
   descricaoSecao = 'Mantenha este documento salvo no seu celular ou impresso na carteira para emergências e identificação clínica rápida.',
   exibirCabecalhoSecao = true,
 }) {
-  const cardRef = useRef(null);
+  const fichaRef = useRef(null);
+  const crachaRef = useRef(null);
+  const [formatoAtivo, setFormatoAtivo] = useState('ficha'); // 'ficha' | 'cracha'
   const notificar = useNotify();
   const [gerandoImagem, setGerandoImagem] = useState(false);
 
@@ -90,31 +93,37 @@ export default function CartaoDiagnosticoDownload({
      HANDLERS DE EXPORTAÇÃO (PNG EM ALTA RESOLUÇÃO E PDF / IMPRESSÃO)
      ========================================================================== */
 
-  // 1. Download do Card em PNG (html2canvas)
+  // 1. Download do Card ou Crachá em PNG (html2canvas)
   const handleBaixarPNG = async () => {
-    if (!cardRef.current) return;
+    const alvoRef = formatoAtivo === 'cracha' ? crachaRef.current : fichaRef.current;
+    if (!alvoRef) return;
     setGerandoImagem(true);
 
     try {
-      const canvas = await html2canvas(cardRef.current, {
+      const canvas = await html2canvas(alvoRef, {
         scale: 2, // 2x para nitidez em telas retina e celulares
         useCORS: true,
         backgroundColor: '#F6F3EE', // Garante o fundo marfim acolhedor no PNG
         logging: false,
-        windowWidth: 1200,
+        windowWidth: formatoAtivo === 'cracha' ? 900 : 1200,
       });
 
       const imagemData = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       const nomeLimpo = nomePaciente.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      link.download = `cartao-diagnostico-glicocare-${nomeLimpo}.png`;
+      const prefixo = formatoAtivo === 'cracha' ? 'cartao-cracha-frente-verso-glicocare' : 'cartao-diagnostico-glicocare';
+      link.download = `${prefixo}-${nomeLimpo}.png`;
       link.href = imagemData;
       link.click();
 
-      notificar.sucesso('Cartão de diagnóstico pronto!');
+      notificar.sucesso(
+        formatoAtivo === 'cracha'
+          ? 'Crachá frente e verso pronto para impressão!'
+          : 'Cartão de diagnóstico gerado com sucesso!'
+      );
     } catch (err) {
-      console.error('Erro ao gerar PNG do cartão:', err);
-      notificar.erro('Não foi possível gerar a imagem do cartão. Tente novamente.');
+      console.error('Erro ao gerar PNG do documento:', err);
+      notificar.erro('Não foi possível gerar a imagem. Tente novamente.');
     } finally {
       setGerandoImagem(false);
     }
@@ -130,14 +139,18 @@ export default function CartaoDiagnosticoDownload({
       {/* ESTILOS DE IMPRESSÃO DEDICADOS (@media print) E RESPONSIVIDADE */}
       <style>{`
         @media print {
+          @page {
+            margin: 8mm;
+            size: auto;
+          }
           body * {
             visibility: hidden !important;
           }
-          .cartao-diagnostico-print-area,
-          .cartao-diagnostico-print-area * {
+          .cartao-print-active,
+          .cartao-print-active * {
             visibility: visible !important;
           }
-          .cartao-diagnostico-print-area {
+          .cartao-diagnostico-print-area.cartao-print-active {
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
@@ -150,6 +163,37 @@ export default function CartaoDiagnosticoDownload({
             padding: 1.5rem !important;
             z-index: 999999 !important;
           }
+          .cartao-cracha-print-area.cartao-print-active {
+            position: fixed !important;
+            left: 50% !important;
+            top: 15mm !important;
+            transform: translateX(-50%) !important;
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 8mm !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            z-index: 999999 !important;
+          }
+          .cartao-cracha-face {
+            width: 54mm !important;
+            height: 86mm !important;
+            min-width: 54mm !important;
+            min-height: 86mm !important;
+            max-width: 54mm !important;
+            max-height: 86mm !important;
+            border: 1px dashed #7C533F !important;
+            border-radius: 3mm !important;
+            padding: 3mm !important;
+            background-color: #FFFFFF !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+          }
           .cartao-no-print {
             display: none !important;
           }
@@ -160,6 +204,10 @@ export default function CartaoDiagnosticoDownload({
           }
           .cartao-grade-emergencia {
             grid-template-columns: 1fr !important;
+          }
+          .cartao-cracha-print-area {
+            flex-direction: column !important;
+            align-items: center !important;
           }
         }
       `}</style>
@@ -200,24 +248,61 @@ export default function CartaoDiagnosticoDownload({
         </div>
       )}
 
-      {/* PREVIEW DO CARD OFICIAL (ALVO DE CAPTURA DO HTML2CANVAS E IMPRESSÃO) */}
-      <div
-        ref={cardRef}
-        className="cartao-diagnostico-print-area"
-        style={{
-          backgroundColor: '#F6F3EE',
-          borderRadius: '18px',
-          border: '1.5px solid rgba(124, 83, 63, 0.25)',
-          padding: '1.75rem',
-          maxWidth: '100%',
-          boxShadow: '0 8px 24px rgba(46, 40, 36, 0.08)',
-          color: '#2E2824',
-          fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
-          position: 'relative',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}
-      >
+      {/* SELETOR DE FORMATO DO DOCUMENTO (TABS SHADCN/UI) */}
+      <div className="cartao-no-print" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+        <Tabs value={formatoAtivo} onValueChange={setFormatoAtivo} style={{ width: 'auto' }}>
+          <TabsList style={{ backgroundColor: 'rgba(124, 83, 63, 0.08)', padding: '4px', borderRadius: '10px' }}>
+            <TabsTrigger
+              value="ficha"
+              style={{
+                fontSize: '0.84rem',
+                fontWeight: 600,
+                padding: '6px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>📄</span>
+              <span>Ficha Completa (Celular / A4)</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="cracha"
+              style={{
+                fontSize: '0.84rem',
+                fontWeight: 600,
+                padding: '6px 16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>🪪</span>
+              <span>Crachá Frente & Verso (54×86mm)</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* VISÃO 1: FICHA COMPLETA (PANORÂMICA DETALHADA) */}
+      {formatoAtivo === 'ficha' && (
+        <div
+          ref={fichaRef}
+          className="cartao-print-active cartao-diagnostico-print-area"
+          style={{
+            backgroundColor: '#F6F3EE',
+            borderRadius: '18px',
+            border: '1.5px solid rgba(124, 83, 63, 0.25)',
+            padding: '1.75rem',
+            maxWidth: '100%',
+            boxShadow: '0 8px 24px rgba(46, 40, 36, 0.08)',
+            color: '#2E2824',
+            fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
+            position: 'relative',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
+        >
         {/* TOPO: IDENTIDADE GLICOCARE E SELO OFICIAL */}
         <div
           style={{
@@ -644,8 +729,396 @@ export default function CartaoDiagnosticoDownload({
           </div>
         </div>
       </div>
+      )}
 
-      {/* BOTÕES DE AÇÃO: BAIXAR PNG E SALVAR PDF / IMPRIMIR */}
+      {/* ====================================================================
+          VISÃO 2: CRACHÁ DE PESCOÇO FRENTE & VERSO (54mm × 86mm / PADRÃO CR80)
+          ==================================================================== */}
+      {formatoAtivo === 'cracha' && (
+        <div
+          ref={crachaRef}
+          className="cartao-print-active cartao-cracha-print-area"
+          style={{
+            display: 'flex',
+            gap: '24px',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            padding: '10px 0',
+            backgroundColor: 'transparent',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* ----------------------------------------------------------------
+              LADO A — FRENTE DO CRACHÁ (IDENTIFICAÇÃO & CONTATO)
+              ---------------------------------------------------------------- */}
+          <div
+            className="cartao-cracha-face"
+            style={{
+              width: '260px',
+              minWidth: '260px',
+              height: '414px',
+              backgroundColor: '#F6F3EE',
+              borderRadius: '14px',
+              border: '1.5px solid rgba(124, 83, 63, 0.3)',
+              padding: '12px 14px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 6px 18px rgba(46, 40, 36, 0.08)',
+              color: '#2E2824',
+              fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Topo: Logo + Alerta Médico */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1.5px solid rgba(124, 83, 63, 0.2)',
+                paddingBottom: '6px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <img
+                  src={logoGlicoCare}
+                  alt="Logo GlicoCare"
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '1px solid #7C533F',
+                  }}
+                />
+                <div>
+                  <div
+                    style={{
+                      fontFamily: 'var(--fonte-titulo, Fraunces)',
+                      fontSize: '0.9rem',
+                      fontWeight: 800,
+                      color: '#2E2824',
+                      lineHeight: 1,
+                    }}
+                  >
+                    GlicoCare
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: '#7C533F', fontWeight: 700, letterSpacing: '0.04em' }}>
+                    PORTADOR DE DM1
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: '#7C533F',
+                  color: '#FFFFFF',
+                  padding: '2px 6px',
+                  borderRadius: '5px',
+                  fontSize: '0.6rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                ALERTA MÉDICO
+              </div>
+            </div>
+
+            {/* Identificação Central */}
+            <div style={{ margin: '4px 0' }}>
+              <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Paciente / Portador
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--fonte-titulo, Fraunces)',
+                  fontSize: '1.15rem',
+                  fontWeight: 800,
+                  color: '#2E2824',
+                  lineHeight: 1.15,
+                  marginTop: '1px',
+                }}
+              >
+                {nomePaciente}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#5A5049', marginTop: '2px' }}>
+                {dataNascimento && (
+                  <span>Nasc: <strong>{new Date(dataNascimento).toLocaleDateString('pt-BR')}</strong></span>
+                )}
+                {idadeFormatada && <span> • <strong>{idadeFormatada}</strong></span>}
+              </div>
+
+              {/* Tags: Tipo DM1 e Insulina */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '5px', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    backgroundColor: 'rgba(124, 83, 63, 0.1)',
+                    color: '#7C533F',
+                    padding: '1px 6px',
+                    borderRadius: '5px',
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {tipoDiabetes}
+                </span>
+                <span
+                  style={{
+                    backgroundColor: 'rgba(59, 126, 72, 0.12)',
+                    color: '#285832',
+                    border: '1px solid #3B7E48',
+                    padding: '1px 6px',
+                    borderRadius: '5px',
+                    fontSize: '0.66rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  💉 Usa Insulina
+                </span>
+              </div>
+            </div>
+
+            {/* Bloco de Segurança: Alergias */}
+            <div
+              style={{
+                backgroundColor: alergias && alergias.length > 0 ? '#FFF4F2' : '#FFFFFF',
+                border: `1px solid ${alergias && alergias.length > 0 ? '#C94A38' : 'rgba(124, 83, 63, 0.18)'}`,
+                borderRadius: '8px',
+                padding: '5px 7px',
+                margin: '3px 0',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  color: alergias && alergias.length > 0 ? '#C94A38' : '#7C533F',
+                  textTransform: 'uppercase',
+                  marginBottom: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <span>{alergias && alergias.length > 0 ? '⚠️' : '🛡️'}</span>
+                <span>Alergias & Sensibilidades</span>
+              </div>
+              {alergias && alergias.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                  {alergias.map((al, idx) => (
+                    <span
+                      key={al.id || idx}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #C94A38',
+                        color: '#942217',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        fontSize: '0.64rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {al.substancia_ou_item || al.nome || al.substancia}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.66rem', color: '#5A5049', fontStyle: 'italic' }}>
+                  Sem alergias conhecidas registradas.
+                </div>
+              )}
+            </div>
+
+            {/* Contato de Emergência */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '8px',
+                border: '1.5px solid #3B7E48',
+                padding: '6px 8px',
+                marginTop: '3px',
+              }}
+            >
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#3B7E48', textTransform: 'uppercase' }}>
+                📞 Contato de Emergência
+              </div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2E2824', marginTop: '1px' }}>
+                {nomeResponsavel} <span style={{ fontSize: '0.66rem', fontWeight: 500, color: '#5A5049' }}>({parentesco})</span>
+              </div>
+              <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#285832', letterSpacing: '0.02em', marginTop: '1px' }}>
+                {telefoneEmergencia}
+              </div>
+            </div>
+
+            {/* Rodapé: Aviso do Verso */}
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                color: '#7C533F',
+                borderTop: '1px solid rgba(124, 83, 63, 0.15)',
+                paddingTop: '3px',
+                marginTop: '3px',
+              }}
+            >
+              Conduta de emergência no verso ↻
+            </div>
+          </div>
+
+          {/* ----------------------------------------------------------------
+              LADO B — VERSO DO CRACHÁ (PROTOCOLO RÁPIDO HIPO & HIPER)
+              ---------------------------------------------------------------- */}
+          <div
+            className="cartao-cracha-face"
+            style={{
+              width: '260px',
+              minWidth: '260px',
+              height: '414px',
+              backgroundColor: '#F6F3EE',
+              borderRadius: '14px',
+              border: '1.5px solid rgba(124, 83, 63, 0.3)',
+              padding: '12px 14px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 6px 18px rgba(46, 40, 36, 0.08)',
+              color: '#2E2824',
+              fontFamily: 'var(--fonte-corpo, "Plus Jakarta Sans", sans-serif)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Topo do Verso: Terapia e Parâmetros */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '8px',
+                border: '1px solid rgba(124, 83, 63, 0.15)',
+                padding: '5px 7px',
+              }}
+            >
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, color: '#7C533F', textTransform: 'uppercase' }}>
+                Conduta Clínica & Parâmetros
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#2E2824', marginTop: '2px', lineHeight: 1.3 }}>
+                💉 <strong>{terapiaInsulina.includes('Caneta') ? 'Caneta MDI' : terapiaInsulina}</strong> • 📟 <strong>{monitoramento.includes('Libre') ? 'FreeStyle Libre' : 'Sensor Contínuo'}</strong>
+              </div>
+              <div style={{ fontSize: '0.66rem', color: '#2E2824', lineHeight: 1.3 }}>
+                🎯 FSI: <strong>{fsi}</strong> • Alvo: <strong>70–140 mg/dL</strong>
+              </div>
+              {medicamentos && medicamentos.length > 0 && (
+                <div style={{ fontSize: '0.6rem', color: '#5A5049', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  💊 <strong>Insulinas:</strong> {medicamentos.map((m) => m.nome_medicamento || m.nome).join(', ')}
+                </div>
+              )}
+            </div>
+
+            {/* Card Compacto: Hipoglicemia (< 70 mg/dL) */}
+            <div
+              style={{
+                backgroundColor: '#FFF9F0',
+                border: '1.2px solid #C88D2A',
+                borderRadius: '8px',
+                padding: '6px 8px',
+                margin: '2px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '0.72rem' }}>🚨</span>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#8A5D10', textTransform: 'uppercase' }}>
+                    Hipoglicemia (&lt; 70 mg/dL)
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#2E2824', lineHeight: 1.25 }}>
+                  <strong>Sinais:</strong> Tremores, suor frio, tontura, palidez.
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#2E2824', lineHeight: 1.25, marginTop: '2px' }}>
+                  <strong>Conduta:</strong> Dar 15g de açúcar, mel ou suco. Aguardar 15 min e medir.
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: '3px',
+                  paddingTop: '2px',
+                  borderTop: '1px dashed rgba(200, 141, 42, 0.4)',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  color: '#A23B2A',
+                }}
+              >
+                ⚠️ NUNCA aplique insulina durante hipoglicemia.
+              </div>
+            </div>
+
+            {/* Card Compacto: Hiperglicemia (> 250 mg/dL) */}
+            <div
+              style={{
+                backgroundColor: '#FFF4F2',
+                border: '1.2px solid #C94A38',
+                borderRadius: '8px',
+                padding: '6px 8px',
+                margin: '2px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '0.72rem' }}>⚠️</span>
+                  <span style={{ fontSize: '0.66rem', fontWeight: 800, color: '#A23B2A', textTransform: 'uppercase' }}>
+                    Hiperglicemia (&gt; 250 mg/dL)
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#2E2824', lineHeight: 1.25 }}>
+                  <strong>Sinais:</strong> Sede intensa, boca seca, mal-estar ou cansaço.
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#2E2824', lineHeight: 1.25, marginTop: '2px' }}>
+                  <strong>Conduta:</strong> Oferecer água pura, checar cetonas/cateter. Corrigir pelo FSI prescrito.
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: '3px',
+                  paddingTop: '2px',
+                  borderTop: '1px dashed rgba(201, 74, 56, 0.4)',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  color: '#842029',
+                }}
+              >
+                🚨 Buscar médico se houver vômitos ou sonolência.
+              </div>
+            </div>
+
+            {/* Rodapé do Verso */}
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: '0.58rem',
+                color: '#6A5E57',
+                borderTop: '1px solid rgba(124, 83, 63, 0.15)',
+                paddingTop: '3px',
+              }}
+            >
+              Emissão oficial: <strong>{dataHoraEmissao}</strong> • GlicoCare
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BOTÕES DE AÇÃO ADAPTADOS AO FORMATO ATIVO */}
       <div
         className="cartao-no-print"
         style={{
@@ -671,7 +1144,13 @@ export default function CartaoDiagnosticoDownload({
           }}
         >
           <span>🖼️</span>
-          <span>{gerandoImagem ? 'Gerando Imagem...' : 'Baixar Card (PNG)'}</span>
+          <span>
+            {gerandoImagem
+              ? 'Gerando Imagem...'
+              : formatoAtivo === 'cracha'
+              ? 'Baixar Crachá (PNG)'
+              : 'Baixar Card (PNG)'}
+          </span>
         </Button>
 
         <Button
@@ -687,11 +1166,17 @@ export default function CartaoDiagnosticoDownload({
           }}
         >
           <span>🖨️</span>
-          <span>Salvar PDF / Imprimir</span>
+          <span>
+            {formatoAtivo === 'cracha'
+              ? 'Imprimir Crachá (Tamanho Real)'
+              : 'Salvar PDF / Imprimir'}
+          </span>
         </Button>
 
         <span style={{ fontSize: '0.8rem', color: '#6A5E57' }}>
-          💡 Ideal para salvar no álbum do celular ou na tela bloqueada para emergências.
+          {formatoAtivo === 'cracha'
+            ? '💡 Dimensão exata 54×86mm para porta-crachá CR80 de pescoço, mochila ou carteira.'
+            : '💡 Ideal para salvar no álbum do celular ou na tela bloqueada para emergências.'}
         </span>
       </div>
     </div>

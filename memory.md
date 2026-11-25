@@ -1118,4 +1118,32 @@ A interface da Fase 1 adota rigorosamente a linguagem de design, proporções, e
      * *Conduta:* Hidratação abundante com água pura, verificação de cetonas e correção baseada estritamente no **FSI prescrito** e insulina ativa. Alerta de pronto-atendimento imediato em caso de náuseas, vômitos, dor abdominal ou sonolência intensa.
 - **Paleta Forçada de Alto Contraste:** Cores claras e nítidas fixadas no documento para garantir legibilidade perfeita tanto em tela quanto em ambientes escuros, exportação PNG (`html2canvas` 2x) e impressão física/PDF (`@media print` com `position: fixed` e corte zero de bordas).
 
+---
+
+## 28. CRACHÁ DE IDENTIFICAÇÃO FRENTE E VERSO (54mm × 86mm / PADRÃO CR80)
+
+### A. Seletor de Formato via `<Tabs>` no Modal de Diagnóstico
+- **Componente de Abas Integrado:** No topo do `CartaoDiagnosticoDownload.jsx`, foi introduzido um seletor `<Tabs>` (estilo *Segmented Control* do `shadcn/ui`) com duas visões selecionáveis:
+  * **`Ficha Completa (Celular / A4)`**: Formato panorâmico tradicional detalhado com grade de 3 colunas e blocos clínicos expandidos.
+  * **`Crachá Frente & Verso (54×86mm)`**: Formato compacto vertical proporcional ao padrão internacional CR80 (ID-1) para porta-crachás plásticos de pescoço, mochilas escolares e carteiras.
+
+### B. Arquitetura Visual do Crachá (Proporção Real CR80)
+- **Lado A — Frente do Crachá (`Identificação & Contato`):**
+  * Assinatura visual oficial GlicoCare com selo `ALERTA MÉDICO`.
+  * Nome Completo do Paciente em destaque com tipografia `Fraunces`, idade e data de nascimento.
+  * Tag de classificação de diabetes (`Tipo 1A` / `DM1`) e badge de segurança `💉 Usa Insulina`.
+  * Bloco de alergias e sensibilidades conhecidas em destaque terracota/vermelho suave.
+  * Box de alto contraste para o **Contato de Emergência do Responsável Legal** com telefone em destaque imediato.
+  * Micro-aviso no rodapé: *"Conduta de emergência no verso ↻"*.
+- **Lado B — Verso do Crachá (`Protocolo Rápido Hipo & Hiper`):**
+  * Resumo executivo dos parâmetros: Terapia (`Caneta MDI`), Sensor (`FreeStyle Libre`), FSI e insulinas em uso.
+  * Card compacto de **Hipoglicemia (`< 70 mg/dL`)**: Sinais, conduta com 15g de carboidrato e aviso estrito proibindo insulina.
+  * Card compacto de **Hiperglicemia (`> 250 mg/dL`)**: Sinais, hidratação com água pura, correção restrita ao FSI e busca médica imediata em caso de náuseas/vômitos.
+  * Carimbo oficial de data e hora no fuso de Brasília (`America/Sao_Paulo`).
+
+### C. Exportação PNG e Impressão em Tamanho Real (Milímetros)
+- **Captura em PNG:** Botão dinâmico `Baixar Crachá (PNG)` que gera via `html2canvas` (escala 2x) o arquivo `cartao-cracha-frente-verso-glicocare-[paciente].png` com as duas faces lado a lado em alta definição.
+- **Impressão em Tamanho Real:** Regras `@media print` dedicadas que fixam cada face exatamente em `width: 54mm; height: 86mm` com borda tracejada de corte (`border: 1px dashed #7C533F`), prontas para recorte e encaixe direto em porta-crachás de PVC.
+
+
 
