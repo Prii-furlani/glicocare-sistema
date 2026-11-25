@@ -1422,3 +1422,22 @@ Tanto no espaço individual do paciente quanto no painel do cuidador, o Card de 
   * No 1º Contato de emergência, exibe o nome e o número principal em destaque tipográfico (`0.90rem`, negrito 900) acompanhado de badge de tipo.
   * Se o 1º Contato possuir um segundo telefone cadastrado (ex: Trabalho ou Recado), exibe-o em uma linha secundária discreta (`• Trabalho: (11) 3333-4444`).
   * O 2º Contato (se houver) é exibido logo abaixo com seu número principal, preservando rigorosamente a altura máxima do crachá para não quebrar a proporção física de 54mm × 86mm nem a exportação em PNG/PDF.
+
+---
+
+## 37. CONTROLE GLOBAL DE ROLAGEM DE ROTAS (SCROLL TO TOP) E INÍCIO NO TOPO EM ARTIGOS EDITORIAIS
+
+### A. Componente Global de Reset de Rolagem (`ScrollToTop.jsx` + `App.jsx`)
+- **Problema Solucionado:** Em SPAs com React Router, a navegação entre rotas (`<Link to="...">`) mantinha a coordenada de rolagem da janela (`window.scrollY`) da página de origem (por exemplo, se o usuário rolou 2000px na Biblioteca para clicar num artigo, a página do artigo carregava posicionada no final, próxima aos comentários e rodapé).
+- **Implementação do `<ScrollToTop />`:**
+  * Componente conectado ao hook `useLocation()` do `react-router-dom`.
+  * Monitora mudanças em `pathname` e verifica a ausência de `hash`.
+  * Executa instantaneamente `window.scrollTo({ top: 0, left: 0, behavior: 'instant' })` (com fallback seguro `window.scrollTo(0, 0)`).
+  * Montado na raiz da árvore de componentes dentro do `<BrowserRouter>` em `App.jsx`, garantindo que **todas as páginas e rotas da aplicação iniciem rigorosamente no topo**.
+
+### B. Proteção Adicional no Detalhe do Artigo (`ArtigoDetalhe.jsx`)
+- **Reset de Rolagem Dedicado no Ciclo de Vida:**
+  * Inclusão de `useEffect` vinculado aos parâmetros do artigo (`slug` / `id` / `param`).
+  * Executa rolagem imediata no início da renderização e um segundo disparo no tick subsequente via `setTimeout` de 20ms, assegurando que o carregamento assíncrono de capas editoriais e fontes não desloque a viewport para baixo.
+- **Auditoria de Foco Automático no Rodapé:**
+  * Verificado o formulário de comentários e depoimentos (`FormInput.jsx` e `ArtigoDetalhe.jsx`); confirmado que nenhum elemento possui atributo `autoFocus` ou invocação imperativa `.focus()`, prevenindo que o navegador puxe o foco e a tela para a base.

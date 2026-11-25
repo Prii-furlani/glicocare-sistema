@@ -605,6 +605,29 @@ export default function ArtigoDetalhe() {
     }
   };
 
+  /* INÍCIO DO RESET DE ROLAGEM AO TOPO DO ARTIGO EDITORIAL */
+  useEffect(() => {
+    const rolarParaTopo = () => {
+      try {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'instant',
+        });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Executa no início da renderização do artigo
+    rolarParaTopo();
+
+    // Executa complementarmente após o ciclo de montagem/carregamento da capa e fontes
+    const timer = setTimeout(rolarParaTopo, 20);
+    return () => clearTimeout(timer);
+  }, [param, artigo?.id]);
+  /* FIM DO RESET DE ROLAGEM AO TOPO DO ARTIGO EDITORIAL */
+
   // Monitora a rolagem para a barra de progresso de leitura fluida
   useEffect(() => {
     const handleScroll = () => {

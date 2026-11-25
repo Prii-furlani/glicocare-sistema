@@ -11,6 +11,7 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LufyChatbot from './components/LufyChatbot';
+import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -41,6 +42,9 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <ConfirmProvider>
+          {/* INÍCIO DO RESET GLOBAL DE ROLAGEM DE PÁGINA (SCROLL TO TOP) */}
+          <ScrollToTop />
+          {/* FIM DO RESET GLOBAL DE ROLAGEM DE PÁGINA (SCROLL TO TOP) */}
           <div
             style={{
               minHeight: '100vh',      // Garante que o layout ocupe toda a altura da tela
